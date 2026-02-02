@@ -2,6 +2,16 @@
 
 Data‑Oriented Agents for accountable multi‑agent systems.
 
+Agentic systems often lack interpretability, traceability, and accountability. DOAgent addresses this by making shared data the primary interface between agents.
+
+DOAgent is a library for building [data‑oriented](https://dl.acm.org/doi/10.1145/3769292)[1] multi‑agent systems with configurable coordination and transparent interaction.
+
+**Goals**:
+- Shared data model as the communication substrate.
+- Support for decentralisation from centralised to federated and peer‑to‑peer agents orchestrationg.
+- Open multi-agent systems architectures.
+- Improved interpretability, traceability, provenance, and accountability.
+
 ## Quickstart
 
 Use these commands to run the example and the tests.
@@ -54,3 +64,6 @@ See `examples/minimal_usage.py` for a runnable example, or run it with:
 ```bash
 python -m examples.minimal_usage
 ```
+
+## References
+[1] Christian Cabrera, Andrei Paleyes, Pierre Thodoroff, and Neil D. Lawrence. 2025. Machine Learning Systems: A Survey from a Data-Oriented Perspective. ACM Computing Surveys. [Available online](https://dl.acm.org/doi/10.1145/3769292)
