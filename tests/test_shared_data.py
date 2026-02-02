@@ -71,7 +71,21 @@ class TestSharedData(unittest.TestCase):
             path = Path(temp_dir) / "records.jsonl"
             file_adapter = FileSharedData(path)
 
-            first = new_record(actor="agent-1", kind="note", payload={"n": 1})
+            first = new_record(
+                actor="agent-1",
+                kind="note",
+                payload={"n": 1},
+                provenance={
+                    "contributions": [
+                        {
+                            "id": "c-1",
+                            "agent": "agent-1",
+                            "sources": ["r1"],
+                            "tools": ["t1"],
+                        }
+                    ]
+                },
+            )
             second = new_record(actor="agent-2", kind="note", payload={"n": 2})
             self.shared_data.write(first)
             self.shared_data.write(second)
@@ -84,6 +98,10 @@ class TestSharedData(unittest.TestCase):
                 list(self.shared_data.listen("note")),
                 list(file_adapter.listen("note")),
             )
+
+            file_round_trip = file_adapter.read(first.id)
+            self.assertIsNotNone(file_round_trip)
+            self.assertEqual(file_round_trip, first)
 
 
 if __name__ == "__main__":

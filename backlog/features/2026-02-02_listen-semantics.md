@@ -1,7 +1,7 @@
 ---
 id: "2026-02-02_listen-semantics"
 title: "Document listen semantics and filters"
-status: "In Progress"
+status: "Completed"
 priority: "High"
 created: "2026-02-02"
 last_updated: "2026-02-02"
@@ -46,3 +46,6 @@ Set to In Progress. Defining ordering and filter rules.
 
 ### 2026-02-02
 Defined listen filters for `actor`, `since`, and `until` with insertion ordering.
+
+### 2026-02-02
+Marked complete after implementation and tests.
