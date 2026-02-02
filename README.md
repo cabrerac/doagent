@@ -1,6 +1,6 @@
 # DOAgent
 
-DOAgent — Data‑Oriented Agents for accountable multi‑agent systems.
+Data‑Oriented Agents for accountable multi‑agent systems.
 
 ## Quickstart
 
