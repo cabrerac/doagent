@@ -4,7 +4,7 @@ Data‑Oriented Agents for accountable multi‑agent systems.
 
 Agentic systems often lack interpretability, traceability, and accountability. DOAgent addresses this by making shared data the primary interface between agents.
 
-DOAgent is a library for building [data‑oriented](https://dl.acm.org/doi/10.1145/3769292)[1] multi‑agent systems with configurable coordination and transparent interaction.
+DOAgent is a library for building [data‑oriented](https://dl.acm.org/doi/10.1145/3769292) multi‑agent systems with configurable coordination and transparent interaction [1].
 
 **Goals**:
 - Shared data model as the communication substrate.
