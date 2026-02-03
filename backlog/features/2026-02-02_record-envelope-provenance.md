@@ -1,7 +1,7 @@
 ---
 id: "2026-02-02_record-envelope-provenance"
 title: "Define record envelope and provenance schema"
-status: "In Progress"
+status: "Completed"
 priority: "High"
 created: "2026-02-02"
 last_updated: "2026-02-02"
@@ -45,3 +45,6 @@ Set to In Progress. Drafting record envelope and provenance schema.
 
 ### 2026-02-02
 Defined provenance with `contributions` entries, each tied to a single agent with sources/tools/notes.
+
+### 2026-02-02
+Marked complete using the simplest contribution model. A richer multi-agent mapping may be needed later.
