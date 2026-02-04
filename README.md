@@ -40,8 +40,24 @@ The current public API used by the PoC includes:
 - `doagent.core.InMemorySharedData` — in-memory shared data adapter
 - `doagent.core.FileSharedData` — file-backed shared data adapter
 - `doagent.core.StubAgent` — minimal agent adapter
+- `doagent.core.FunctionAgent` — function-backed decision agent
 - `doagent.core.new_record` — helper to create records
+- `doagent.core.new_explanation_record` — helper to create explanation records
+- `doagent.core.new_trace_record` — helper to create trace records
+- `doagent.core.Topology` — coordination topology modes
+- `doagent.core.TopologyConfig` — topology configuration
+- `doagent.core.select_routing` — coordination hook stub
+- `doagent.core.ParticipationRecord` — participation record
+- `doagent.core.InMemoryParticipationRegistry` — in-memory participation registry
 - `doagent.records.SimpleRecord` — record envelope type
+- `doagent.records.DecisionRequest` — decision request payload
+- `doagent.records.DecisionResponse` — decision response payload
+- `doagent.records.ExplanationPayload` — interpretability payload
+- `doagent.records.ExplanationRecord` — explanation record envelope
+- `doagent.records.TracePayload` — trace payload
+- `doagent.records.new_provenance` — helper to build provenance for records
+- `doagent.records.Accountability` — accountability envelope type (owner, policy_id, responsibility_scope)
+- `doagent.records.new_accountability` — helper to build accountability for records
 
 ## Minimal usage
 
@@ -63,6 +79,200 @@ See `examples/minimal_usage.py` for a runnable example, or run it with:
 
 ```bash
 python -m examples.minimal_usage
+```
+
+## Model-agnostic agent example
+
+This section shows how to wrap a callable decision function.
+
+```python
+from doagent.core import FunctionAgent, InMemorySharedData
+
+def decide_fn(request: dict) -> dict:
+    return {"decision": {"action": "log", "message": request.get("goal")}}
+
+shared_data = InMemorySharedData()
+agent = FunctionAgent("agent-1", shared_data, decide_fn)
+
+request = {"id": "req-1", "actor": "agent-1", "goal": "store a decision"}
+response = agent.decide(request)
+
+record = list(shared_data.listen("decision"))[0]
+assert record.payload["response"]["id"] == response["id"]
+```
+
+Run the example with:
+
+```bash
+python -m examples.model_agnostic_agent
+```
+
+## Interpretability example
+
+This section shows how to attach explanations to decision records.
+
+```python
+from doagent.core import InMemorySharedData, new_explanation_record, new_record
+
+shared_data = InMemorySharedData()
+
+decision = new_record(
+    actor="agent-1",
+    kind="decision",
+    payload={"decision": {"action": "approve"}},
+)
+shared_data.write(decision)
+
+explanation = new_explanation_record(
+    actor="agent-1",
+    decision_id=decision.id,
+    summary="Approved due to policy compliance.",
+    details="The request met all mandatory checks.",
+    evidence=["policy-1"],
+)
+shared_data.write(explanation)
+
+record = list(shared_data.listen("explanation"))[0]
+assert record.payload["decision_id"] == decision.id
+```
+
+Run the example with:
+
+```bash
+python -m examples.interpretability_usage
+```
+
+## Traceability example
+
+This section shows how to link records via trace edges.
+
+```python
+from doagent.core import InMemorySharedData, new_record, new_trace_record
+
+shared_data = InMemorySharedData()
+
+upstream = new_record(
+    actor="agent-1",
+    kind="note",
+    payload={"text": "source"},
+)
+downstream = new_record(
+    actor="agent-2",
+    kind="decision",
+    payload={"decision": {"action": "use"}},
+)
+shared_data.write(upstream)
+shared_data.write(downstream)
+
+trace = new_trace_record(
+    actor="agent-2",
+    from_id=upstream.id,
+    to_id=downstream.id,
+    relation="used",
+    notes="Decision used upstream note.",
+)
+shared_data.write(trace)
+
+record = list(shared_data.listen("trace"))[0]
+assert record.payload["from_id"] == upstream.id
+```
+
+Run the example with:
+
+```bash
+python -m examples.traceability_usage
+```
+
+## Provenance example
+
+Provenance records who created a record and what they used (sources, tools). Use `new_provenance` to build provenance for `new_record`. Trace sync from provenance (one trace edge per source) is planned for a later iteration.
+
+```python
+from doagent.core import InMemorySharedData, new_record
+from doagent.records import new_provenance
+
+shared_data = InMemorySharedData()
+
+provenance = new_provenance(
+    agent="agent-1",
+    sources=["r1", "r2"],
+    tools=["search"],
+    notes="Created from upstream records.",
+)
+record = new_record(
+    actor="agent-1",
+    kind="decision",
+    payload={"decision": {"action": "approve"}},
+    provenance=provenance,
+)
+shared_data.write(record)
+
+fetched = shared_data.read(record.id)
+assert len(fetched.provenance["contributions"]) == 1
+assert fetched.provenance["contributions"][0]["sources"] == ["r1", "r2"]
+```
+
+Run the example with:
+
+```bash
+python -m examples.provenance_usage
+```
+
+## Accountability example
+
+Accountability attaches ownership and governance context to a record (owner, policy_id, responsibility_scope) so decisions can be reviewed and governed. Use `new_accountability` to build accountability for `new_record`.
+
+```python
+from doagent.core import InMemorySharedData, new_record
+from doagent.records import new_accountability
+
+shared_data = InMemorySharedData()
+
+accountability = new_accountability(
+    owner="team-a",
+    policy_id="policy-001",
+    responsibility_scope="decisions",
+)
+record = new_record(
+    actor="agent-1",
+    kind="decision",
+    payload={"decision": {"action": "approve"}},
+    accountability=accountability,
+)
+shared_data.write(record)
+
+fetched = shared_data.read(record.id)
+assert fetched.accountability["owner"] == "team-a"
+assert fetched.accountability["policy_id"] == "policy-001"
+```
+
+Run the example with:
+
+```bash
+python -m examples.accountability_usage
+```
+
+## Topology example
+
+This section shows how to select a topology and obtain a routing decision.
+
+```python
+from doagent.core import Topology, TopologyConfig, select_routing
+
+config = TopologyConfig(mode=Topology.FEDERATED)
+decision = select_routing(config)
+```
+
+## Participation example
+
+This section shows how to register and query agent participation.
+
+```python
+from doagent.core import InMemoryParticipationRegistry, ParticipationRecord
+
+registry = InMemoryParticipationRegistry()
+registry.register(ParticipationRecord(agent_id="agent-1", capabilities=["compute"]))
+record = registry.get("agent-1")
 ```
 
 ## References

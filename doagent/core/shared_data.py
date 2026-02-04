@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, Optional
 from uuid import uuid4
 
 from ..interface.shared_data import SharedDataAdapter
-from ..records import SimpleRecord
+from ..records import ExplanationRecord, SimpleRecord
 
 class InMemorySharedData(SharedDataAdapter):
     """In-memory adapter for the shared data model."""
@@ -56,6 +56,7 @@ def new_record(
     kind: str,
     payload: Dict[str, Any],
     provenance: Optional[Dict[str, Any]] = None,
+    accountability: Optional[Dict[str, Any]] = None,
     record_id: Optional[str] = None,
 ) -> SimpleRecord:
     """Create a record with a standard envelope."""
@@ -68,4 +69,64 @@ def new_record(
         kind=kind,
         payload=payload,
         provenance=provenance or {},
+        accountability=accountability or {},
+    )
+
+
+def new_explanation_record(
+    *,
+    actor: str,
+    decision_id: str,
+    summary: str,
+    details: Optional[str] = None,
+    evidence: Optional[list[str]] = None,
+    provenance: Optional[Dict[str, Any]] = None,
+    record_id: Optional[str] = None,
+) -> ExplanationRecord:
+    """Create an explanation record linked to a decision."""
+    payload: Dict[str, Any] = {"decision_id": decision_id, "summary": summary}
+    if details is not None:
+        payload["details"] = details
+    if evidence is not None:
+        payload["evidence"] = evidence
+    record = new_record(
+        actor=actor,
+        kind="explanation",
+        payload=payload,
+        provenance=provenance,
+        record_id=record_id,
+    )
+    return ExplanationRecord(**record.__dict__)
+
+
+def new_trace_record(
+    *,
+    actor: str,
+    from_id: str,
+    to_id: str,
+    relation: str,
+    trace_actor: Optional[str] = None,
+    trace_timestamp: Optional[str] = None,
+    notes: Optional[str] = None,
+    provenance: Optional[Dict[str, Any]] = None,
+    record_id: Optional[str] = None,
+) -> SimpleRecord:
+    """Create a trace record linking two records."""
+    payload: Dict[str, Any] = {
+        "from_id": from_id,
+        "to_id": to_id,
+        "relation": relation,
+    }
+    if trace_actor is not None:
+        payload["actor"] = trace_actor
+    if trace_timestamp is not None:
+        payload["timestamp"] = trace_timestamp
+    if notes is not None:
+        payload["notes"] = notes
+    return new_record(
+        actor=actor,
+        kind="trace",
+        payload=payload,
+        provenance=provenance,
+        record_id=record_id,
     )

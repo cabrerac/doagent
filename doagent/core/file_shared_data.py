@@ -39,6 +39,7 @@ class FileSharedData(SharedDataAdapter):
         with self._path.open("r", encoding="utf-8") as handle:
             for line in handle:
                 payload = json.loads(line)
+                payload.setdefault("accountability", {})
                 records.append(SimpleRecord(**payload))
         return records
 

@@ -1,5 +1,25 @@
 """Record types and envelopes."""
 
-from .record import SimpleRecord
+from .record import (
+    Accountability,
+    DecisionRequest,
+    DecisionResponse,
+    ExplanationPayload,
+    ExplanationRecord,
+    TracePayload,
+    SimpleRecord,
+    new_accountability,
+    new_provenance,
+)
 
-__all__ = ["SimpleRecord"]
+__all__ = [
+    "Accountability",
+    "DecisionRequest",
+    "DecisionResponse",
+    "ExplanationPayload",
+    "ExplanationRecord",
+    "TracePayload",
+    "SimpleRecord",
+    "new_accountability",
+    "new_provenance",
+]
