@@ -2,8 +2,8 @@
 author: "Christian Cabrera"
 created: "2026-02-04"
 id: "0007"
-last_updated: "2026-02-04"
-status: "Accepted"
+last_updated: "2026-02-05"
+status: "In Progress"
 compressed: false
 related_requirements:
 - "0007"
@@ -24,7 +24,7 @@ title: "Trace Records and Lineage Links"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [ ] In Progress - Actively being implemented
+- [x] In Progress - Actively being implemented
 - [ ] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
@@ -95,7 +95,7 @@ This CIP addresses the following requirements:
 ## Progress Updates
 
 ### 2026-02-04
-Iteration 1 complete. Trace payload, helper, tests, and examples added. Tests passed. Next iteration should focus on trace retrieval patterns (e.g., graph traversal helpers) and optional provenance links at scale.
+Iteration 1 complete. Trace payload, helper, tests, and examples added. Tests passed. Iteration 2 planned. Next iteration should focus on trace retrieval patterns (e.g., graph traversal helpers) and optional provenance links at scale.
 
 Trace records now link decisions and messages through append-only edges. The payload stays compact while allowing optional context fields, which supports traceability without heavy write overhead.
 

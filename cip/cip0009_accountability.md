@@ -2,8 +2,8 @@
 author: "Christian Cabrera"
 created: "2026-02-04"
 id: "0009"
-last_updated: "2026-02-04"
-status: "Proposed"
+last_updated: "2026-02-05"
+status: "In Progress"
 compressed: false
 related_requirements:
 - "0009"
@@ -17,14 +17,14 @@ title: "Accountability on Record Envelope"
 
 # CIP-0009: Accountability on Record Envelope
 
-> **Note**: CIPs describe HOW to achieve requirements (WHAT).  
+> **Note**: CIPs describe HOW to achieve requirements (WHAT).
 > Use `related_requirements` to link to the requirements this CIP implements.
 
 ## Status
 
 - [x] Proposed - Initial idea documented
-- [ ] Accepted - Approved, ready to start work
-- [ ] In Progress - Actively being implemented
+- [x] Accepted - Approved, ready to start work
+- [x] In Progress - Actively being implemented
 - [ ] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
@@ -78,9 +78,20 @@ This CIP addresses the following requirements:
 - REQ-0009: System Wide Accountability
 
 ## Implementation Status
-- [ ] Define accountability structure
-- [ ] Extend record envelope and new_record
-- [ ] Add helper, example, tests, and README
+- [x] Define accountability structure
+- [x] Extend record envelope and new_record
+- [x] Add helper, example, tests, and README
+
+## Progress Updates
+
+### 2026-02-05
+Iteration 1 complete. Accountability TypedDict, optional envelope field, `new_accountability` helper, file-adapter backward compatibility, tests, example, and README added. Tests passed. Iteration 2 planned.
+
+Accountability is now an optional envelope field (owner, policy_id, responsibility_scope) separate from provenance; the helper and default empty dict keep existing records and call paths valid. Audits can read ownership and governance context from the same record.
+
+Gaps and follow-on needs (candidates for iteration 2):
+- Consider threading accountability through agent write path (e.g. optional accountability on `AgentAdapter.write` or decision agents) so agents can attach ownership without calling `new_record` directly.
+- Optional validation or conventions for policy_id / responsibility_scope (e.g. namespaced identifiers) if governance tooling is added later.
 
 ## References
 - None yet

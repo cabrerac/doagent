@@ -2,8 +2,8 @@
 author: "Christian Cabrera"
 created: "2026-02-04"
 id: "0008"
-last_updated: "2026-02-04"
-status: "Accepted"
+last_updated: "2026-02-05"
+status: "In Progress"
 compressed: false
 related_requirements:
 - "0008"
@@ -24,7 +24,7 @@ title: "Provenance Semantics and Helper"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [ ] In Progress - Actively being implemented
+- [x] In Progress - Actively being implemented
 - [ ] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
@@ -87,7 +87,7 @@ This CIP addresses the following requirements:
 ## Progress Updates
 
 ### 2026-02-04
-Iteration 1 complete. Provenance semantics documented, helper added, tests and example added. Tests passed. Trace sync from provenance (one trace per source) deferred to a later iteration.
+Iteration 1 complete. Provenance semantics documented, helper added, tests and example added. Tests passed. Iteration 2 planned. Trace sync from provenance (one trace per source) deferred to a later iteration.
 
 Provenance is now explicit as creation-time attribution with one contribution per agent; the helper makes it easy to attach provenance when creating records. Outputs can be traced to inputs and tools via contribution.sources and contribution.tools. Trace edges derived from provenance will be added in a later iteration so graph traversal stays in sync with record-level attribution.
 
