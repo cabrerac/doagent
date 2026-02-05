@@ -1,10 +1,10 @@
 ---
 id: "2026-02-04_accountability-envelope"
 title: "Extend record envelope and new_record for accountability"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-02-04"
-last_updated: "2026-02-04"
+last_updated: "2026-02-05"
 category: "features"
 related_cips:
 - "0009"
@@ -17,16 +17,16 @@ tags:
 ---
 # Task: Extend record envelope and new_record for accountability
 
-> **Note**: Backlog tasks are DOING the work defined in CIPs (HOW).  
+> **Note**: Backlog tasks are DOING the work defined in CIPs (HOW).
 > Use `related_cips` to link to CIPs. Don't link directly to requirements (bottom-up pattern).
 
 ## Description
 Add optional accountability field to SimpleRecord and update new_record to accept and pass through optional accountability. Ensure adapters (in-memory, file) handle the new field.
 
 ## Acceptance Criteria
-- [ ] SimpleRecord has optional accountability field with a safe default.
-- [ ] new_record accepts optional accountability and sets it on the record.
-- [ ] Existing record creation paths remain valid (backward compatible).
+- [x] SimpleRecord has optional accountability field with a safe default.
+- [x] new_record accepts optional accountability and sets it on the record.
+- [x] Existing record creation paths remain valid (backward compatible).
 
 ## Implementation Notes
 Default accountability to empty dict or equivalent; update serialisation (e.g. asdict) if needed for file adapter.
@@ -40,3 +40,6 @@ Default accountability to empty dict or equivalent; update serialisation (e.g. a
 
 ### 2026-02-04
 Task created.
+
+### 2026-02-05
+SimpleRecord and new_record updated for accountability; file adapter handles missing field.
