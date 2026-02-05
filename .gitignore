@@ -54,4 +54,9 @@ docs/yaml_frontmatter_examples.md
 
 # Output files
 output/
+
+# Python temp files
+__pycache__/
+*.py[cod]
+*$py.class
 *.pyc
