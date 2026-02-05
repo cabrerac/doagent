@@ -47,10 +47,14 @@ class FunctionAgent(DecisionAgent):
             "request": dict(request),
             "response": dict(response),
         }
+        record_provenance = response.get("provenance") or request.get("provenance")
+        record_accountability = response.get("accountability") or request.get("accountability")
         record = new_record(
             actor=response_actor,
             kind=self._decision_kind,
             payload=payload,
+            provenance=record_provenance,
+            accountability=record_accountability,
         )
         self._shared_data.write(record)
         return response

@@ -252,6 +252,66 @@ Run the example with:
 python -m examples.accountability_usage
 ```
 
+## Validation example (simple push)
+
+This end-to-end validation runs a multi-round simple push scenario with policies, explanations, traces, and provenance. It exercises the shared data model and produces decision, explanation, trace, and outcome records.
+
+The PettingZoo simple push environment has 1 good agent, 1 adversary, and 1 landmark. The good agent is rewarded based on the distance to the landmark. The adversary is rewarded if it is close to the landmark, and if the good agent is far from the landmark (the difference of the distances). Thus the adversary must learn to push the good agent away from the landmark.
+
+```python
+from doagent.validation import (
+    PolicyRegistry,
+    PushAgentConfig,
+    make_push_env,
+    run_push_validation,
+)
+from doagent.core import InMemorySharedData
+from doagent.records import new_provenance
+
+shared_data = InMemorySharedData()
+env = make_push_env(
+    "pettingzoo:mpe2:simple_push_v3",
+    {"max_cycles": 25, "continuous_actions": False, "dynamic_rescaling": False},
+)
+registry = PolicyRegistry()
+
+def fixed_policy(params):
+    action = params.get("action", 0)
+    def decide(request):
+        return {"decision": {"action": action}}
+    return decide
+
+registry.register("fixed", fixed_policy)
+
+configs = [
+    PushAgentConfig(
+        id="adversary_0",
+        policy={"name": "fixed", "params": {"action": 0}},
+        metadata={
+            "explanation": "Hold position (noop) in push task.",
+            "provenance": new_provenance(agent="adversary_0", sources=[]),
+        },
+    ),
+]
+
+summary = run_push_validation(
+    shared_data=shared_data,
+    env=env,
+    registry=registry,
+    configs=configs,
+    rounds=2,
+    seed=123,
+)
+print(summary.outcomes)
+```
+
+Run the example with:
+
+```bash
+pip install pettingzoo
+python -m examples.push_validation
+```
+
 ## Topology example
 
 This section shows how to select a topology and obtain a routing decision.

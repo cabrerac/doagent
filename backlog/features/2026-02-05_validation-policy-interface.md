@@ -1,7 +1,7 @@
 ---
 id: "2026-02-05_validation-policy-interface"
 title: "Define reusable policy interface for validation"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-02-05"
 last_updated: "2026-02-05"
@@ -24,9 +24,9 @@ tags:
 Define a policy interface/config that maps to the FunctionAgent decision function so policies are reusable across scenarios (REQ-0011/0012 later).
 
 ## Acceptance Criteria
-- [ ] Policy interface maps to FunctionAgent/DecisionAgent decision function.
-- [ ] Policy assignment is configurable per agent.
-- [ ] Policy design is scenario-agnostic.
+- [x] Policy interface maps to FunctionAgent/DecisionAgent decision function.
+- [x] Policy assignment is configurable per agent.
+- [x] Policy design is scenario-agnostic.
 
 ## Implementation Notes
 Keep policies lightweight and deterministic with a seeded RNG for tests.
@@ -40,3 +40,6 @@ Keep policies lightweight and deterministic with a seeded RNG for tests.
 
 ### 2026-02-05
 Task created.
+
+### 2026-02-05
+Added validation policy interface, registry, and config types mapping to FunctionAgent callables.

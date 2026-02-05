@@ -37,7 +37,9 @@ Validate DOAgent on a representative multi-agent game that exercises coordinatio
 Multi-agent games are canonical benchmarks for coordination. A toy game example provides an end-to-end validation of the current architecture with reproducible inputs and outputs.
 
 ## Detailed Description
-Iteration 1 focuses on a traffic light control scenario that produces decision, explanation, trace, provenance, accountability, and outcome records. The same scenario should run against both in-memory and file-backed shared data adapters, using a minimal Gym/MARL dependency.
+Iteration 1 focuses on the PettingZoo MPE simple_push_v3 scenario that produces decision, explanation, trace, provenance, accountability, and outcome records. The same scenario should run against both in-memory and file-backed shared data adapters, using a minimal Gym/MARL dependency. We also include a baseline run that disables data-oriented writes to estimate overhead.
+
+The simple push environment has 1 good agent, 1 adversary, and 1 landmark. The good agent is rewarded based on the distance to the landmark. The adversary is rewarded if it is close to the landmark, and if the good agent is far from the landmark (the difference of the distances). Thus the adversary must learn to push the good agent away from the landmark.
 
 Options considered:
 - **Option A**: Use a full external traffic simulator (higher fidelity, heavier dependency).
@@ -50,30 +52,98 @@ Key points:
 - Shared data records capture decisions, explanations, traces, provenance, accountability, and outcomes.
 - Policy callables map directly to the `DecisionAgent`/`FunctionAgent` decision function so policies are reusable across scenarios (REQ-0011/0012).
 - Tests validate both InMemorySharedData and FileSharedData adapters.
+- Baseline mode runs the same policies and environment without shared-data writes for overhead comparison.
 
 ## Iteration Deliverable (PoC)
-- Traffic light control validation example using a minimal Gym/MARL dependency.
+- Simple push validation example using a minimal Gym/MARL dependency.
 - Policy registry/config that assigns reusable policies to agents (maps to FunctionAgent).
 - End-to-end tests for in-memory and file adapters.
+- Baseline run for overhead comparison (no data-oriented writes).
 - README section documenting the validation example.
 
 ## Implementation Plan
 1. **Define scenario and policy interface**
-   - Select a traffic light control environment and rounds/seed settings.
+   - Select the simple_push_v3 environment and rounds/seed settings.
    - Define a reusable policy interface that maps to the decision function used by FunctionAgent.
 2. **Implement example**
    - Run multi-round simulation, write decision/explanation/trace/outcome records with provenance and accountability.
 3. **Add tests**
    - Verify record counts, provenance/accountability presence, and trace links for both adapters.
-4. **Document usage**
+4. **Add baseline comparison**
+   - Run the same scenario with data-oriented writes disabled and collect timing/size metrics.
+5. **Document usage**
    - README section with run command, expected outputs, and scenario description.
+
+## Configuration Schema (Draft)
+The validation runner should accept a minimal config that specifies environment settings and per-agent policy assignment. This keeps policy selection reusable across scenarios.
+
+```yaml
+run:
+  id: "push-demo-001"
+  seed: 123
+  rounds: 5
+  deterministic: true
+
+adapters:
+  - type: "in_memory"
+  - type: "file"
+    params:
+      path: "output/push_records.jsonl"
+
+output:
+  base_dir: "output/push_demo"
+  records_path: "output/push_demo/records.jsonl"
+  summary_path: "output/push_demo/summary.json"
+  metrics_path: "output/push_demo/metrics.json"
+
+logging:
+  level: "INFO"
+  console: true
+  file: "output/push_demo/run.log"
+  log_records: true
+
+scenario:
+  name: "simple_push"
+  env:
+    name: "pettingzoo:mpe2:simple_push_v3"
+    params:
+      max_cycles: 25
+      continuous_actions: false
+      dynamic_rescaling: false
+  interpretability: "default"
+  traceability: "default"
+  provenance: "default"
+  accountability: "default"
+
+agents:
+  - id: "adversary_0"
+    policy:
+      name: "epsilon_greedy"
+      params:
+        epsilon: 0.2
+        decay: 0.99
+        min_epsilon: 0.05
+  - id: "agent_0"
+    policy:
+      name: "fixed"
+      params:
+        action: 0
+
+metrics:
+  track:
+    - "good_distance_to_landmark"
+    - "adversary_distance_to_landmark"
+    - "distance_gap"
+  aggregation: "mean"
+```
 
 ## Backward Compatibility
 Additive only; no breaking changes.
 
 ## Testing Strategy
 - Unit test executes the scenario for InMemorySharedData and FileSharedData.
-- Assertions verify interpretability, traceability, provenance, and accountability artefacts exist.
+- Assertions verify default interpretability, traceability, provenance, and accountability artefacts exist.
+- Baseline run records timing/size metrics for comparison (no assertions on absolute values).
 
 ## Related Requirements
 This CIP addresses the following requirements:

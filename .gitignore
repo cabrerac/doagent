@@ -11,7 +11,7 @@ backlog/task_template.md
 backlog/update_index.py
 backlog/index.md
 
-# CIP system files  
+# CIP system files
 cip/README.md
 cip/cip_template.md
 
@@ -47,3 +47,11 @@ tenets/combine_tenets.py
 # VibeSafe documentation (system files)
 docs/whats_next_script.md
 docs/yaml_frontmatter_examples.md
+
+# Local environment files
+.env
+.wvenv/
+
+# Output files
+output/
+*.pyc
