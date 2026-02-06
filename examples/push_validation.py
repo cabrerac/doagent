@@ -1,6 +1,7 @@
 """Simple push validation example."""
 
 from datetime import datetime
+import random
 from time import perf_counter
 from pathlib import Path
 
@@ -19,6 +20,18 @@ from doagent.validation import (
 
 
 def register_policies(registry: PolicyRegistry) -> None:
+    def _action_from_vector(dx: float, dy: float) -> int:
+        if abs(dx) < 1e-6 and abs(dy) < 1e-3:
+            return 0
+        if abs(dx) >= abs(dy):
+            return 2 if dx > 0 else 1
+        return 4 if dy > 0 else 3
+
+    def _epsilon_greedy(base_action: int, epsilon: float, rng: random.Random) -> int:
+        if rng.random() < epsilon:
+            return rng.choice([0, 1, 2, 3, 4])
+        return base_action
+
     def fixed_policy(params):
         action = params.get("action", 0)
 
@@ -29,17 +42,57 @@ def register_policies(registry: PolicyRegistry) -> None:
 
     registry.register("fixed", fixed_policy)
 
+    def heuristic_goal_seek(params):
+        epsilon = float(params.get("epsilon", 0.0))
+        seed = params.get("seed", 0)
+        rng = random.Random(seed)
+
+        def decide(request):
+            observation = request.get("inputs", {}).get("observation", [])
+            dx, dy = 0.0, 0.0
+            if len(observation) >= 4:
+                dx, dy = float(observation[2]), float(observation[3])
+            base_action = _action_from_vector(dx, dy)
+            action = _epsilon_greedy(base_action, epsilon, rng)
+            return {"decision": {"action": action}}
+
+        return decide
+
+    registry.register("heuristic_goal_seek", heuristic_goal_seek)
+
+    def heuristic_push_block(params):
+        epsilon = float(params.get("epsilon", 0.0))
+        seed = params.get("seed", 0)
+        rng = random.Random(seed)
+
+        def decide(request):
+            observation = request.get("inputs", {}).get("observation", [])
+            dx, dy = 0.0, 0.0
+            if len(observation) >= 8:
+                dx, dy = float(observation[6]), float(observation[7])
+            base_action = _action_from_vector(dx, dy)
+            action = _epsilon_greedy(base_action, epsilon, rng)
+            return {"decision": {"action": action}}
+
+        return decide
+
+    registry.register("heuristic_push_block", heuristic_push_block)
+
 
 def main() -> None:
-    rounds = 10
+    rounds = 100
     seed = 123
     try:
         render_demo = True
         print_every = 10
+        record_reward_series = True
+        series_every = 1
+        record_entropy = True
+        action_space = 5
         env_params = {
             "max_cycles": rounds,
             "continuous_actions": False,
-            "dynamic_rescaling": True,
+            "dynamic_rescaling": False,
         }
         if render_demo:
             env_params["render_mode"] = "human"
@@ -58,9 +111,12 @@ def main() -> None:
     configs = [
         PushAgentConfig(
             id="adversary_0",
-            policy={"name": "fixed", "params": {"action": 3}},
+            policy={
+                "name": "heuristic_push_block",
+                "params": {"epsilon": 0.2, "seed": 1},
+            },
             metadata={
-                "explanation": "Hold position (noop) in push task.",
+                "explanation": "Heuristic push/block with epsilon-greedy exploration.",
                 "provenance": new_provenance(agent="adversary_0", sources=[]),
                 "accountability": {
                     "owner": "team-a",
@@ -71,9 +127,12 @@ def main() -> None:
         ),
         PushAgentConfig(
             id="agent_0",
-            policy={"name": "fixed", "params": {"action": 4}},
+            policy={
+                "name": "heuristic_goal_seek",
+                "params": {"epsilon": 0.2, "seed": 2},
+            },
             metadata={
-                "explanation": "Move left in push task.",
+                "explanation": "Heuristic goal-seek with epsilon-greedy exploration.",
                 "provenance": new_provenance(agent="agent_0", sources=[]),
                 "accountability": {
                     "owner": "team-b",
@@ -85,7 +144,14 @@ def main() -> None:
     ]
 
     shared_data = InMemorySharedData()
-    in_memory_reporter = RunReporter("in_memory", print_every=print_every)
+    in_memory_reporter = RunReporter(
+        "in_memory",
+        print_every=print_every,
+        record_series=record_reward_series,
+        series_every=series_every,
+        record_entropy=record_entropy,
+        action_space=action_space,
+    )
     in_memory_summary = None
 
     def in_memory_run() -> None:
@@ -112,7 +178,14 @@ def main() -> None:
     )
 
     baseline_shared = NoOpSharedData()
-    baseline_reporter = RunReporter("baseline", print_every=print_every)
+    baseline_reporter = RunReporter(
+        "baseline",
+        print_every=print_every,
+        record_series=record_reward_series,
+        series_every=series_every,
+        record_entropy=record_entropy,
+        action_space=action_space,
+    )
     baseline_summary = None
 
     def baseline_run() -> None:
@@ -144,7 +217,14 @@ def main() -> None:
     file_path = output_dir / "push_records.jsonl"
     file_shared = FileSharedData(file_path)
 
-    file_reporter = RunReporter("file", print_every=print_every)
+    file_reporter = RunReporter(
+        "file",
+        print_every=print_every,
+        record_series=record_reward_series,
+        series_every=series_every,
+        record_entropy=record_entropy,
+        action_space=action_space,
+    )
     file_summary = None
 
     def file_run() -> None:
@@ -183,10 +263,25 @@ def main() -> None:
             "elapsed_seconds": file_metrics.elapsed_seconds,
             "output_bytes": file_metrics.output_bytes,
         },
+        "runs": {
+            "in_memory": in_memory_reporter.metrics(
+                outcomes=in_memory_summary.outcomes if in_memory_summary else 0
+            ),
+            "baseline": baseline_reporter.metrics(
+                outcomes=baseline_summary.outcomes if baseline_summary else 0
+            ),
+            "file": file_reporter.metrics(
+                outcomes=file_summary.outcomes if file_summary else 0
+            ),
+        },
     }
     summary_path = output_dir / "push_validation_summary.json"
     write_summary(summary_path, summary_payload)
     print(f"Summary written to {summary_path}")
+    print(
+        "Plot metrics with: "
+        f"python -m examples.plot_validation_metrics \"{summary_path}\""
+    )
 
 
 if __name__ == "__main__":

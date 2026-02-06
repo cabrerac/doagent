@@ -1,3 +1,7 @@
+# Environment dependencies
 pettingzoo[mpe]
 mpe2
 pygame
+
+# Visualization dependencies
+matplotlib
