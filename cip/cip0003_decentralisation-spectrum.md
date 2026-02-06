@@ -95,5 +95,8 @@ Gaps and follow-on needs:
 - Support dynamic topology changes and negotiation.
 - Align routing with participation registry and trust policies.
 
+### 2026-02-06
+Iteration 2 discussion item: The current simple_push validation example does not exercise decentralisation modes. Iteration 2 should include a scenario that demonstrates centralised vs federated vs peer-to-peer coordination choices.
+
 ## References
 - None yet

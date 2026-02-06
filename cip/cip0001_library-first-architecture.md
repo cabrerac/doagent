@@ -93,7 +93,7 @@ This CIP addresses the following requirements:
 Iteration 1 complete. Minimal library scaffold, in-memory shared data, stub agent adapter, example, and tests passed. Iteration 2 planned.
 
 ### 2026-02-02
-Next iteration may extend the library definition (more methods, more record types). If this introduces an architectural shift, open a new CIP.
+Next iteration may extend the library definition (more methods, more record types). If this introduces an architectural shift, open a new CIP. Next iteration can also redefine what we expose and what is transparent for users.
 
 ## References
 - None yet

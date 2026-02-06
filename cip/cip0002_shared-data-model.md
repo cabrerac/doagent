@@ -99,5 +99,14 @@ This CIP addresses the following requirements:
 ### 2026-02-02
 Iteration 1 complete. Record envelope, listen semantics, file adapter, and tests updated. Tests passed. Iteration 2 planned. Next iteration should implement more complex adapters. This might require an architectural shift (i.e., a new CIP).
 
+### 2026-02-06
+Iteration 2 discussion item: review record envelope redundancy observed in validation output. Candidates include duplicate `accountability`/`provenance` inside decision payloads (already present at the record level) and empty `accountability`/`provenance` fields on explanation/trace/outcome records. Consider making these optional or removing duplicates to reduce noise.
+
+### 2026-02-06
+Iteration 2 discussion items:
+- Provenance has a defined type but accountability does not; assess whether to formalize an accountability type (reduce ambiguity) or keep it loose (reduce redundancy).
+- Decide on acceptable redundancy in the record envelope (read-vs-write tradeoff) and document a standard.
+- Clarify whether shared data is primarily a world log, a medium for agent-to-agent exchange, or both. In the current validation flow agents and the environment writes outcomes but agents do not read from shared data; decide if this is intentional or should change in later iterations.
+
 ## References
 - None yet

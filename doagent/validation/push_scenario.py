@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 from uuid import uuid4
 
 from ..core.shared_data import new_explanation_record, new_record, new_trace_record
@@ -68,6 +68,7 @@ def run_push_validation(
     rounds: int,
     seed: int,
     render: bool = False,
+    on_outcome: Callable[[int, Dict[str, Any], Dict[str, float]], None] | None = None,
 ) -> PushRunSummary:
     """Run the simple push validation scenario for a fixed number of rounds."""
     agents = build_push_agents(shared_data, registry, configs)
@@ -96,6 +97,8 @@ def run_push_validation(
             actions[agent_id] = response.get("decision", {}).get("action", 0)
 
         step = env.step(actions)
+        if on_outcome is not None:
+            on_outcome(round_id, actions, step.rewards)
         if render:
             env.render()
         observations = step.observations

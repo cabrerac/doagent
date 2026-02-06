@@ -94,5 +94,8 @@ Gaps and follow-on needs:
 - Consider streaming or multi-step decision protocols.
 - Provide guidance for structured decision payload schemas.
 
+### 2026-02-06
+Iteration 2 discussion item: The current policies are too simple. We should implement more sophisticated ones. Unsure if this is part of this cip or the validation cip.
+
 ## References
 - None yet

@@ -18,6 +18,7 @@ from .policy import (
 from .push_agents import AgentMetadata, PushAgentConfig, build_push_agents
 from .push_envs import make_push_env
 from .push_scenario import PushRunSummary, run_push_validation
+from .reporting import RunReporter
 
 __all__ = [
     "AgentPolicyAssignment",
@@ -36,6 +37,7 @@ __all__ = [
     "make_push_env",
     "PushRunSummary",
     "run_push_validation",
+    "RunReporter",
     "measure_baseline",
     "output_bytes_from_path",
     "write_summary",

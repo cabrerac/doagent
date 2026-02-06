@@ -95,5 +95,8 @@ Gaps and follow-on needs:
 - Provide distributed or pluggable registry backends.
 - Add admission and policy enforcement hooks.
 
+### 2026-02-06
+Iteration 2 discussion item: The current simple_push validation example does not demonstrate open participation. Iteration 2 should include a scenario that exercises join/leave and capability discovery.
+
 ## References
 - None yet

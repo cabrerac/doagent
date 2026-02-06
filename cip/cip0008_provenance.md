@@ -95,5 +95,14 @@ Gaps and follow-on needs:
 - Implement automatic trace record creation from contribution.sources when a record is written (provenance as source of truth).
 - Consider making provenance attachment transparent at the write path (e.g. adapter or agent layer) with optional user controls, consistent with CIP-0007 reflection.
 
+### 2026-02-06
+Iteration 2 questions to support across scenarios (environment-agnostic):
+- What exact inputs and context produced this decision?
+- Which external factors (randomness, initial conditions, configs) were in play?
+- Can we reproduce outcomes from recorded provenance alone?
+- What hidden state should be surfaced to make provenance complete?
+
+These questions should be answerable without assuming a specific environment or toolchain.
+
 ## References
 - None yet

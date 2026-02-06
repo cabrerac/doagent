@@ -93,5 +93,14 @@ Gaps and follow-on needs (candidates for iteration 2):
 - Consider threading accountability through agent write path (e.g. optional accountability on `AgentAdapter.write` or decision agents) so agents can attach ownership without calling `new_record` directly.
 - Optional validation or conventions for policy_id / responsibility_scope (e.g. namespaced identifiers) if governance tooling is added later.
 
+### 2026-02-06
+Iteration 2 questions to support across scenarios (environment-agnostic):
+- Who is responsible for a poor outcome: policy owner, configuration owner, or environment setup?
+- How do we attribute accountability in competitive or adversarial settings?
+- Should accountability capture policy versions and run configurations?
+- What accountability scope is appropriate for multi-agent interactions?
+
+These questions should be answerable without relying on a specific environment.
+
 ## References
 - None yet

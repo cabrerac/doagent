@@ -60,3 +60,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.pyc
+
+# IDE files
+.vscode/
+.idea/
+.cursor/

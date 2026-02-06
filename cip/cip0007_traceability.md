@@ -105,5 +105,14 @@ Gaps and follow-on needs:
 - Make trace creation transparent to library users with configurable defaults (global vs local tracing).
 - Align trace/explanation automation so users can tune granularity without manual record handling.
 
+### 2026-02-06
+Iteration 2 questions to support across scenarios (environment-agnostic):
+- Which actions most directly influenced an outcome?
+- Where do causal chains fork or converge across agents?
+- Are observed changes immediate or delayed effects?
+- Can outcomes be traced to a minimal set of upstream decisions?
+
+These questions should be answerable without relying on environment-specific mechanics.
+
 ## References
 - None yet

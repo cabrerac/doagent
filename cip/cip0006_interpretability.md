@@ -93,5 +93,14 @@ Gaps and follow-on needs:
 - Define interpretability artefacts layered on top of explanation records (generation, summarisation, or aggregation).
 - Consider guidance for explanation granularity and evidence conventions. We should define how detailed explanations should be (short rationales, full rationales, or multiple tiers) and what counts as evidence.
 
+### 2026-02-06
+Iteration 2 questions to support across scenarios (environment-agnostic):
+- Which observation features most influenced an action?
+- Is the agent pursuing its goal or reacting to other agents?
+- Are actions consistent with the stated objective over time?
+- What is the minimal evidence needed to justify an action?
+
+These questions should be answerable without assuming a specific environment or observation schema.
+
 ## References
 - None yet
