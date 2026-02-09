@@ -61,6 +61,24 @@ Key points:
 - Baseline run for overhead comparison (no data-oriented writes).
 - README section documenting the validation example.
 
+## Iteration 2 Extension (Grid-World Communication)
+Iteration 2 adds a lightweight grid-world mapping scenario to validate agent-to-agent communication via the shared data model, plus decentralisation and open participation.
+
+Goals:
+- Agents publish and consume shared data records during each round (shared data as a medium, not just a world log).
+- Partial observations; agents collaborate to build a map or discover landmarks.
+- Topology modes change information flow (centralised vs federated vs peer-to-peer).
+- Agents can join/leave mid-run; registry updates affect available resources.
+
+Candidate policies:
+- Frontier exploration (greedy coverage of unknown cells).
+- Random walk baseline (biased toward unexplored cells).
+- Auction-based task allocation (centralised or P2P bidding for frontiers).
+
+Key outputs:
+- Shared-data messages are traceable back to decisions and map outcomes.
+- Metrics include map coverage, discovery time, and per-agent contributions.
+
 ## Implementation Plan
 1. **Define scenario and policy interface**
    - Select the simple_push_v3 environment and rounds/seed settings.
@@ -73,6 +91,22 @@ Key points:
    - Run the same scenario with data-oriented writes disabled and collect timing/size metrics.
 5. **Document usage**
    - README section with run command, expected outputs, and scenario description.
+
+## Iteration 2 Plan (Grid-World Communication)
+1. **Define environment + shared data flow**
+   - Grid size, partial observation radius, map update payloads.
+   - Specify how shared data is consumed (centralised hub or agent-local reads).
+2. **Implement policies**
+   - Frontier explorer, random baseline, optional auction allocator.
+3. **Support topology + open participation**
+   - Join/leave events and registry updates during a run.
+   - Topology-driven visibility and routing.
+4. **Add tests + metrics**
+   - Coverage, discovery time, and per-agent contributions.
+5. **Add graphical interfac**
+   - Render the grid-world game to show how the agents operate.
+6. **Document usage**
+   - Example run + plots/CSV for the new scenario.
 
 ## Configuration Schema (Draft)
 The validation runner should accept a minimal config that specifies environment settings and per-agent policy assignment. This keeps policy selection reusable across scenarios.
@@ -138,7 +172,7 @@ metrics:
 ```
 
 ## Backward Compatibility
-Additive only; no breaking changes.
+Additive only; no breaking changes. Iteration 2 work must fit the current architecture; if new components are introduced, they must interoperate with existing adapters, records, and scenarios.
 
 ## Testing Strategy
 - Unit test executes the scenario for InMemorySharedData and FileSharedData.
@@ -154,6 +188,12 @@ This CIP addresses the following requirements:
 - [x] Implement example
 - [x] Add tests for both adapters
 - [x] Document usage
+- [ ] Define grid-world environment + shared-data flow
+- [ ] Implement grid-world policies
+- [ ] Add topology + open participation hooks
+- [ ] Add tests + metrics for grid-world scenario
+- [ ] Add graphical interface for grid-world
+- [ ] Document grid-world usage
 
 ## Progress Updates
 
@@ -167,6 +207,11 @@ Reflection (Iteration 1):
 - The record pipeline behaves more like a world log than a shared data medium between agents; future iterations should include environments where agents read and communicate via shared data.
 - The scenario does not exercise decentralisation or open participation; these remain unvalidated and should be addressed with future environments.
 - Metrics tooling (baseline, reward series, entropy, plots/CSVs) enables clearer behaviour comparisons, but reward scales are not comparable across agents.
+
+### 2026-02-09
+Iteration 2 kickoff:
+- Confirmed the grid-world communication scenario and its stages (environment, policies, topology/participation, tests/metrics, UI, docs).
+- All Iteration 2 changes must fit the current architecture; any new components must interoperate with existing records, adapters, and scenarios.
 
 ## References
 - None yet
