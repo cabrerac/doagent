@@ -8,7 +8,7 @@ DOAgent is a library for building [data‑oriented](https://dl.acm.org/doi/10.11
 
 **Goals**:
 - Shared data model as the communication substrate.
-- Support for decentralisation from centralised to federated and peer‑to‑peer agents orchestrationg.
+- Support for decentralisation from centralised to federated and peer‑to‑peer agent orchestration.
 - Open multi-agent systems architectures.
 - Improved interpretability, traceability, provenance, and accountability.
 
@@ -17,6 +17,7 @@ DOAgent is a library for building [data‑oriented](https://dl.acm.org/doi/10.11
 Use these commands to run the example and the tests.
 
 ```bash
+pip install -r requirements.txt
 python -m examples.minimal_usage
 python -m unittest -v
 ```
@@ -254,17 +255,12 @@ python -m examples.accountability_usage
 
 ## Validation example (simple push)
 
-This end-to-end validation runs a multi-round simple push scenario with policies, explanations, traces, and provenance. It exercises the shared data model and produces decision, explanation, trace, and outcome records.
+This end-to-end validation runs a multi-round simple push scenario with policies, explanations, traces, and provenance. It exercises the shared data model and produces decision, explanation, trace, and outcome records plus run metrics.
 
-The PettingZoo simple push environment has 1 good agent, 1 adversary, and 1 landmark. The good agent is rewarded based on the distance to the landmark. The adversary is rewarded if it is close to the landmark, and if the good agent is far from the landmark (the difference of the distances). Thus the adversary must learn to push the good agent away from the landmark.
+The PettingZoo simple push environment has 1 good agent, 1 adversary, and 2 landmarks (one is randomly selected as the goal). The good agent is rewarded based on the distance to the goal landmark. The adversary is rewarded if it is close to the goal landmark, and if the good agent is far from the goal landmark (the difference of the distances). Thus the adversary must learn to push the good agent away from the goal.
 
 ```python
-from doagent.validation import (
-    PolicyRegistry,
-    PushAgentConfig,
-    make_push_env,
-    run_push_validation,
-)
+from doagent.validation import PolicyRegistry, PushAgentConfig, make_push_env, run_push_validation
 from doagent.core import InMemorySharedData
 from doagent.records import new_provenance
 
@@ -308,8 +304,15 @@ print(summary.outcomes)
 Run the example with:
 
 ```bash
-pip install pettingzoo
+pip install -r requirements.txt
 python -m examples.push_validation
+```
+
+Plots and CSVs (requires matplotlib):
+
+```bash
+pip install matplotlib
+python -m examples.plot_validation_metrics "output/push_run_YYYYMMDD_HHMMSS/push_validation_summary.json"
 ```
 
 ## Topology example
