@@ -133,6 +133,8 @@ class GridWorldEnv(ValidationEnv):
             "position": {"x": x, "y": y},
             "cells": cells,
             "radius": self._observation_radius,
+            "width": self._width,
+            "height": self._height,
         }
 
 

@@ -1,7 +1,7 @@
 ---
 id: "2016-02-09_validation-gridworld-topology-participation"
 title: "Add topology modes and open participation to grid-world"
-status: "Pending"
+status: "Completed"
 priority: "High"
 created: "2016-02-09"
 last_updated: "2016-02-09"
@@ -27,9 +27,9 @@ tags:
 Implement topology-driven visibility (centralised/federated/peer-to-peer) and support join/leave events using the participation registry during a run.
 
 ## Acceptance Criteria
-- [ ] Topology mode affects which shared-data updates agents receive.
-- [ ] Agents can join/leave mid-run with registry updates.
-- [ ] Scenario reflects resource changes when agents join/leave.
+- [x] Topology mode affects which shared-data updates agents receive.
+- [x] Agents can join/leave mid-run with registry updates.
+- [x] Scenario reflects resource changes when agents join/leave.
 
 ## Implementation Notes
 Prefer opt-in flags for topology modes to keep current architecture intact and backward compatible.
@@ -42,4 +42,4 @@ Prefer opt-in flags for topology modes to keep current architecture intact and b
 ## Progress Updates
 
 ### 2016-02-09
-Task created.
+Completed topology-driven visibility and stochastic join/leave via energy model.

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from multiprocessing import get_context
+import random
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
+from ..core.participation import ParticipationRecord, ParticipationRegistry
 from ..core.shared_data import new_explanation_record, new_record, new_trace_record
 from ..core.topology import Topology, TopologyConfig
 from ..interface.shared_data import SharedDataAdapter
@@ -124,6 +126,13 @@ def run_gridworld_validation(
     use_multiprocessing: bool = False,
     mp_context: str = "spawn",
     mp_interface: MultiProcessInterface | None = None,
+    participation_registry: ParticipationRegistry | None = None,
+    energy_model: bool = False,
+    energy_min: int = 6,
+    energy_max: int = 12,
+    energy_decay: int = 1,
+    energy_recharge: int = 1,
+    energy_leave_threshold: int = 2,
 ) -> GridWorldRunSummary:
     """Run the grid-world validation scenario for a fixed number of rounds."""
     agents = build_grid_agents(shared_data, registry, configs)
@@ -132,14 +141,45 @@ def run_gridworld_validation(
 
     outcome_count = 0
     active_shared = mp_interface if use_multiprocessing else shared_data
+    rng = random.Random(seed)
+    config_map = {config["id"]: config for config in configs}
+    active_agents = set(agents.keys())
+    energy_levels = {
+        agent_id: rng.randint(energy_min, energy_max) for agent_id in agents.keys()
+    }
+    if participation_registry is not None:
+        for agent_id in active_agents:
+            participation_registry.register(ParticipationRecord(agent_id=agent_id))
 
     for round_id in range(1, rounds + 1):
         actions: Dict[str, Any] = {}
         responses: Dict[str, DecisionResponse] = {}
         decision_record_ids: Dict[str, Optional[str]] = {}
 
+        if energy_model:
+            for agent_id in list(active_agents):
+                energy_levels[agent_id] -= energy_decay
+                if energy_levels[agent_id] <= 0:
+                    active_agents.remove(agent_id)
+                    if participation_registry is not None:
+                        participation_registry.deregister(agent_id)
+            for agent_id in agents.keys():
+                if agent_id in active_agents:
+                    continue
+                energy_levels[agent_id] = min(
+                    energy_levels[agent_id] + energy_recharge, energy_max
+                )
+                if energy_levels[agent_id] > energy_leave_threshold:
+                    active_agents.add(agent_id)
+                    if participation_registry is not None:
+                        participation_registry.register(
+                            ParticipationRecord(agent_id=agent_id)
+                        )
+
+        active_agent_ids = sorted(active_agents)
+
         update_payloads: Dict[str, Dict[str, Any]] = {}
-        for agent_id in agents.keys():
+        for agent_id in active_agent_ids:
             observation = observations.get(agent_id, {})
             update_payloads[agent_id] = {
                 "type": "map_update",
@@ -178,7 +218,7 @@ def run_gridworld_validation(
 
         shared_maps: Dict[str, Dict[str, Any]] = {}
         requests: Dict[str, DecisionRequest] = {}
-        for agent_id in agents.keys():
+        for agent_id in active_agent_ids:
             observation = observations.get(agent_id, {})
             shared_map = _collect_shared_map(
                 active_shared,
@@ -194,13 +234,13 @@ def run_gridworld_validation(
                 round_id=round_id,
             )
 
-        if use_multiprocessing:
+        if use_multiprocessing and active_agent_ids:
             factories = registry.factories()
             ctx = get_context(mp_context)
-            with ctx.Pool(processes=len(agents)) as pool:
+            with ctx.Pool(processes=len(active_agent_ids)) as pool:
                 tasks = []
-                for agent_id, config in zip(agents.keys(), configs):
-                    policy = config["policy"]
+                for agent_id in active_agent_ids:
+                    policy = config_map[agent_id]["policy"]
                     tasks.append(
                         (
                             policy["name"],
@@ -210,14 +250,15 @@ def run_gridworld_validation(
                         )
                     )
                 results = pool.starmap(_decide_worker, tasks)
-            for agent_id, response in zip(agents.keys(), results):
+            for agent_id, response in zip(active_agent_ids, results):
                 responses[agent_id] = response
                 decision_record_ids[agent_id] = _find_decision_record_id(
                     shared_data, response["id"]
                 )
                 actions[agent_id] = response.get("decision", {}).get("action", 0)
-        else:
-            for agent_id, agent in agents.items():
+        elif not use_multiprocessing:
+            for agent_id in active_agent_ids:
+                agent = agents[agent_id]
                 request = requests[agent_id]
                 response = agent.decide(request)
                 responses[agent_id] = response

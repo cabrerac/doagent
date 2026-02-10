@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-02-05"
 id: "0010"
-last_updated: "2026-02-05"
+last_updated: "2026-02-10"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -188,9 +188,9 @@ This CIP addresses the following requirements:
 - [x] Implement example
 - [x] Add tests for both adapters
 - [x] Document usage
-- [ ] Define grid-world environment + shared-data flow
-- [ ] Implement grid-world policies
-- [ ] Add topology + open participation hooks
+- [x] Define grid-world environment + shared-data flow
+- [x] Implement grid-world policies
+- [x] Add topology + open participation hooks
 - [ ] Add tests + metrics for grid-world scenario
 - [ ] Add graphical interface for grid-world
 - [ ] Document grid-world usage
@@ -212,6 +212,15 @@ Reflection (Iteration 1):
 Iteration 2 kickoff:
 - Confirmed the grid-world communication scenario and its stages (environment, policies, topology/participation, tests/metrics, UI, docs).
 - All Iteration 2 changes must fit the current architecture; any new components must interoperate with existing records, adapters, and scenarios.
+
+### 2026-02-10
+Iteration 2 progress:
+- Implemented grid-world environment, agents, and scenario with shared-data communication using `agent_update` records.
+- Added logical decentralisation with topology-driven visibility (centralised, federated, peer-to-peer).
+- Added multiprocessing option with a `MultiProcessInterface` bridge for persisted adapters.
+- Added grid-world policy factories (random explore, frontier explore, auction stub).
+- Implemented stochastic join/leave via energy model with participation registry updates.
+- Tests/metrics and rendering remain pending.
 
 ## References
 - None yet

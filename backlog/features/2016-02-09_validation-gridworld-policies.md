@@ -1,7 +1,7 @@
 ---
 id: "2016-02-09_validation-gridworld-policies"
 title: "Implement grid-world mapping policies"
-status: "Pending"
+status: "Completed"
 priority: "High"
 created: "2016-02-09"
 last_updated: "2016-02-09"
@@ -41,5 +41,8 @@ Keep policies deterministic with seeds; use shared-data inputs rather than envir
 
 ## Progress Updates
 
-### 2016-02-09
+### 2026-02-09
 Task created.
+
+### 2026-02-10
+Added grid-world policy factories (random, frontier, auction stub) and registry helper.
