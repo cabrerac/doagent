@@ -55,6 +55,10 @@ class PolicyRegistry:
         """Return registered policy names."""
         return sorted(self._factories.keys())
 
+    def factories(self) -> Dict[str, PolicyFactory]:
+        """Return registered factories (for multiprocessing scenarios)."""
+        return dict(self._factories)
+
 
 def build_policy_decide_fn(registry: PolicyRegistry, config: PolicyConfig) -> Policy:
     """Return a decision callable compatible with FunctionAgent."""

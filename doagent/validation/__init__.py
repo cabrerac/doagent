@@ -22,6 +22,7 @@ from .reporting import RunReporter
 from .gridworld_env import GridWorldEnv, make_grid_env
 from .gridworld_agents import GridAgentConfig, build_grid_agents
 from .gridworld_scenario import GridWorldRunSummary, run_gridworld_validation
+from .multiprocess_interface import MultiProcessInterface
 
 __all__ = [
     "AgentPolicyAssignment",
@@ -47,6 +48,7 @@ __all__ = [
     "build_grid_agents",
     "GridWorldRunSummary",
     "run_gridworld_validation",
+    "MultiProcessInterface",
     "measure_baseline",
     "output_bytes_from_path",
     "write_summary",
