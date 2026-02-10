@@ -1,7 +1,7 @@
 ---
 id: "2016-02-09_validation-gridworld-tests-metrics"
 title: "Add grid-world tests and metrics"
-status: "Pending"
+status: "Completed"
 priority: "Medium"
 created: "2016-02-09"
 last_updated: "2016-02-09"
@@ -27,9 +27,9 @@ tags:
 Add tests and metrics for the grid-world scenario (coverage, discovery time, per-agent contributions).
 
 ## Acceptance Criteria
-- [ ] Tests cover in-memory and file adapters for grid-world.
-- [ ] Metrics include coverage %, discovery time, and per-agent contributions.
-- [ ] Metrics are included in summary output for plotting/CSV.
+- [x] Tests cover in-memory and file adapters for grid-world.
+- [x] Metrics include coverage %, discovery time, and per-agent contributions.
+- [x] Metrics are included in summary output for plotting/CSV.
 
 ## Implementation Notes
 Keep metrics environment-agnostic and consistent with existing reporting helpers.
@@ -42,4 +42,4 @@ Keep metrics environment-agnostic and consistent with existing reporting helpers
 ## Progress Updates
 
 ### 2016-02-09
-Task created.
+Completed grid-world tests and metrics summary output.

@@ -1,0 +1,44 @@
+run:
+  id: "gridworld-demo-001"
+  seed: 123
+  rounds: 10
+  deterministic: true
+
+scenario:
+  name: "gridworld_mapping"
+  render: false
+  render_mode: "ansi"
+  env:
+    width: 6
+    height: 6
+    landmarks: 2
+    observation_radius: 1
+    max_cycles: 25
+  topology:
+    mode: "peer_to_peer"
+    visibility:
+      agent_0: ["agent_1"]
+      agent_1: ["agent_2"]
+  participation:
+    energy_model: true
+    energy_min: 4
+    energy_max: 10
+    energy_decay: 1
+    energy_recharge: 1
+    energy_leave_threshold: 2
+
+agents:
+  - id: "agent_0"
+    policy:
+      name: "grid_frontier"
+      params: {}
+  - id: "agent_1"
+    policy:
+      name: "grid_random"
+      params:
+        seed: 1
+  - id: "agent_2"
+    policy:
+      name: "grid_auction_frontier"
+      params:
+        seed: 2

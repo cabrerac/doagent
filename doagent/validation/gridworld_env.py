@@ -31,6 +31,7 @@ class GridWorldEnv(ValidationEnv):
         observation_radius: int = 1,
         max_cycles: int = 25,
         seed: int | None = None,
+        render_mode: str | None = None,
     ) -> None:
         self._width = width
         self._height = height
@@ -39,6 +40,9 @@ class GridWorldEnv(ValidationEnv):
         self._observation_radius = observation_radius
         self._max_cycles = max_cycles
         self._rng = random.Random(seed)
+        self._render_mode = render_mode
+        self._renderer = None
+        self._cell_size = 32
         self._positions: Dict[str, Tuple[int, int]] = {}
         self._landmark_positions: List[Tuple[int, int]] = []
         self._discovered: set[Tuple[int, int]] = set()
@@ -96,7 +100,81 @@ class GridWorldEnv(ValidationEnv):
         )
 
     def render(self) -> None:
+        if self._render_mode == "human":
+            self._render_pygame()
+            return None
+        self._render_ansi()
         return None
+
+    def _render_ansi(self) -> None:
+        lines = []
+        header = f"GridWorld step {self._step_count}"
+        lines.append(header)
+        grid = [["." for _ in range(self._width)] for _ in range(self._height)]
+        for lx, ly in self._landmark_positions:
+            grid[ly][lx] = "L"
+        for idx, agent_id in enumerate(self._agent_ids):
+            pos = self._positions.get(agent_id)
+            if not pos:
+                continue
+            ax, ay = pos
+            marker = str(idx) if idx < 10 else "A"
+            if grid[ay][ax] != ".":
+                marker = "*"
+            grid[ay][ax] = marker
+        for row in grid:
+            lines.append(" ".join(row))
+        print("\n".join(lines))
+
+    def _render_pygame(self) -> None:
+        try:
+            import pygame  # type: ignore
+        except Exception:
+            self._render_ansi()
+            return None
+        if self._renderer is None:
+            pygame.init()
+            width_px = self._width * self._cell_size
+            height_px = self._height * self._cell_size
+            self._renderer = pygame.display.set_mode((width_px, height_px))
+            pygame.display.set_caption("GridWorld")
+        surface = self._renderer
+        surface.fill((245, 245, 245))
+        for x in range(self._width):
+            for y in range(self._height):
+                rect = pygame.Rect(
+                    x * self._cell_size,
+                    y * self._cell_size,
+                    self._cell_size,
+                    self._cell_size,
+                )
+                pygame.draw.rect(surface, (220, 220, 220), rect, 1)
+        for lx, ly in self._landmark_positions:
+            rect = pygame.Rect(
+                lx * self._cell_size,
+                ly * self._cell_size,
+                self._cell_size,
+                self._cell_size,
+            )
+            pygame.draw.rect(surface, (255, 204, 0), rect)
+        colors = [
+            (66, 135, 245),
+            (245, 66, 167),
+            (66, 245, 170),
+            (245, 152, 66),
+        ]
+        for idx, agent_id in enumerate(self._agent_ids):
+            pos = self._positions.get(agent_id)
+            if not pos:
+                continue
+            ax, ay = pos
+            color = colors[idx % len(colors)]
+            center = (
+                ax * self._cell_size + self._cell_size // 2,
+                ay * self._cell_size + self._cell_size // 2,
+            )
+            pygame.draw.circle(surface, color, center, self._cell_size // 3)
+        pygame.display.flip()
 
     def _random_position(self) -> Tuple[int, int]:
         return (
@@ -147,6 +225,7 @@ def make_grid_env(
     observation_radius: int = 1,
     max_cycles: int = 25,
     seed: int | None = None,
+    render_mode: str | None = None,
 ) -> ValidationEnv:
     """Create a grid-world environment for validation."""
     return GridWorldEnv(
@@ -157,4 +236,5 @@ def make_grid_env(
         observation_radius=observation_radius,
         max_cycles=max_cycles,
         seed=seed,
+        render_mode=render_mode,
     )

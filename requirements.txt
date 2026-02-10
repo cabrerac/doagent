@@ -5,3 +5,6 @@ pygame
 
 # Visualization dependencies
 matplotlib
+
+# Configuration dependencies
+pyyaml

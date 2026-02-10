@@ -25,6 +25,10 @@ class GridWorldRunSummary:
 
     rounds: int
     outcomes: int
+    coverage: float
+    discovery_round: Optional[int]
+    contributions: Dict[str, int]
+    total_cells: Optional[int]
 
 
 def _serializable(value: Any) -> Any:
@@ -133,6 +137,7 @@ def run_gridworld_validation(
     energy_decay: int = 1,
     energy_recharge: int = 1,
     energy_leave_threshold: int = 2,
+    render: bool = False,
 ) -> GridWorldRunSummary:
     """Run the grid-world validation scenario for a fixed number of rounds."""
     agents = build_grid_agents(shared_data, registry, configs)
@@ -144,9 +149,28 @@ def run_gridworld_validation(
     rng = random.Random(seed)
     config_map = {config["id"]: config for config in configs}
     active_agents = set(agents.keys())
+    contributions = {agent_id: 0 for agent_id in agents.keys()}
+    discovered_cells: set[tuple[int, int]] = set()
+    total_cells: Optional[int] = None
+    discovery_round: Optional[int] = None
     energy_levels = {
         agent_id: rng.randint(energy_min, energy_max) for agent_id in agents.keys()
     }
+    for obs in observations.values():
+        width = obs.get("width")
+        height = obs.get("height")
+        if width and height:
+            total_cells = int(width) * int(height)
+            break
+    for obs in observations.values():
+        for cell in obs.get("cells", []):
+            x = cell.get("x")
+            y = cell.get("y")
+            if x is None or y is None:
+                continue
+            discovered_cells.add((int(x), int(y)))
+    if total_cells and len(discovered_cells) >= total_cells:
+        discovery_round = 0
     if participation_registry is not None:
         for agent_id in active_agents:
             participation_registry.register(ParticipationRecord(agent_id=agent_id))
@@ -269,6 +293,22 @@ def run_gridworld_validation(
 
         step = env.step(actions)
         observations = step.observations
+        for agent_id in active_agent_ids:
+            observation = observations.get(agent_id, {})
+            for cell in observation.get("cells", []):
+                x = cell.get("x")
+                y = cell.get("y")
+                if x is None or y is None:
+                    continue
+                coord = (int(x), int(y))
+                if coord not in discovered_cells:
+                    discovered_cells.add(coord)
+                    contributions[agent_id] += 1
+        if total_cells and discovery_round is None:
+            if len(discovered_cells) >= total_cells:
+                discovery_round = round_id
+        if render:
+            env.render()
 
         outcome_payload = {
             "round": round_id,
@@ -311,4 +351,14 @@ def run_gridworld_validation(
             )
             shared_data.write(trace)
 
-    return GridWorldRunSummary(rounds=rounds, outcomes=outcome_count)
+    coverage = (
+        float(len(discovered_cells)) / float(total_cells) if total_cells else 0.0
+    )
+    return GridWorldRunSummary(
+        rounds=rounds,
+        outcomes=outcome_count,
+        coverage=coverage,
+        discovery_round=discovery_round,
+        contributions=contributions,
+        total_cells=total_cells,
+    )

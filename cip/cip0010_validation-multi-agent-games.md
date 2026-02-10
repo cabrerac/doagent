@@ -191,7 +191,7 @@ This CIP addresses the following requirements:
 - [x] Define grid-world environment + shared-data flow
 - [x] Implement grid-world policies
 - [x] Add topology + open participation hooks
-- [ ] Add tests + metrics for grid-world scenario
+- [x] Add tests + metrics for grid-world scenario
 - [ ] Add graphical interface for grid-world
 - [ ] Document grid-world usage
 
@@ -220,7 +220,8 @@ Iteration 2 progress:
 - Added multiprocessing option with a `MultiProcessInterface` bridge for persisted adapters.
 - Added grid-world policy factories (random explore, frontier explore, auction stub).
 - Implemented stochastic join/leave via energy model with participation registry updates.
-- Tests/metrics and rendering remain pending.
+- Added grid-world tests and metrics summary output.
+- Added grid-world rendering (ANSI/pygame); documentation still pending.
 
 ## References
 - None yet

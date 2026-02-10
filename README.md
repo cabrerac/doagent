@@ -315,6 +315,71 @@ pip install matplotlib
 python -m examples.plot_validation_metrics "output/push_run_YYYYMMDD_HHMMSS/push_validation_summary.json"
 ```
 
+## Validation example (grid-world mapping)
+
+This validation runs a dependency-free grid-world mapping scenario with partial observations and agent-to-agent communication via shared data. Agents publish `agent_update` records each round, consume the shared map, and decide movement actions. Topology modes control visibility (centralised, federated, peer-to-peer), and optional energy-based participation enables stochastic join/leave.
+
+```python
+from doagent.validation import (
+    PolicyRegistry,
+    GridAgentConfig,
+    make_grid_env,
+    register_gridworld_policies,
+    run_gridworld_validation,
+)
+from doagent.core import (
+    InMemorySharedData,
+    InMemoryParticipationRegistry,
+    Topology,
+    TopologyConfig,
+)
+
+shared_data = InMemorySharedData()
+participation = InMemoryParticipationRegistry()
+registry = PolicyRegistry()
+register_gridworld_policies(registry)
+
+agent_ids = ["agent_0", "agent_1", "agent_2"]
+env = make_grid_env(
+    width=6,
+    height=6,
+    agent_ids=agent_ids,
+    landmarks=2,
+    observation_radius=1,
+    max_cycles=25,
+    seed=7,
+)
+
+configs = [
+    GridAgentConfig(id="agent_0", policy={"name": "grid_frontier", "params": {}}),
+    GridAgentConfig(id="agent_1", policy={"name": "grid_random", "params": {"seed": 1}}),
+    GridAgentConfig(
+        id="agent_2", policy={"name": "grid_auction_frontier", "params": {"seed": 2}}
+    ),
+]
+
+summary = run_gridworld_validation(
+    shared_data=shared_data,
+    env=env,
+    registry=registry,
+    configs=configs,
+    rounds=10,
+    seed=123,
+    topology=TopologyConfig(mode=Topology.PEER_TO_PEER),
+    visibility={"agent_0": ["agent_1"], "agent_1": ["agent_2"]},
+    participation_registry=participation,
+    energy_model=True,
+    energy_min=4,
+    energy_max=10,
+    energy_decay=1,
+    energy_recharge=1,
+    energy_leave_threshold=2,
+)
+print(summary.outcomes)
+```
+
+Example configuration (draft): `examples/gridworld_validation_config.yaml`.
+
 ## Topology example
 
 This section shows how to select a topology and obtain a routing decision.
