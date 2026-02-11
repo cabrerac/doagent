@@ -163,6 +163,7 @@ class GridWorldEnv(ValidationEnv):
             (66, 245, 170),
             (245, 152, 66),
         ]
+        font = pygame.font.Font(None, max(16, self._cell_size // 2))
         for idx, agent_id in enumerate(self._agent_ids):
             pos = self._positions.get(agent_id)
             if not pos:
@@ -174,6 +175,10 @@ class GridWorldEnv(ValidationEnv):
                 ay * self._cell_size + self._cell_size // 2,
             )
             pygame.draw.circle(surface, color, center, self._cell_size // 3)
+            label = agent_id.split("_")[-1] if "_" in agent_id else agent_id[:3]
+            text_surf = font.render(label, True, (0, 0, 0))
+            text_rect = text_surf.get_rect(center=center)
+            surface.blit(text_surf, text_rect)
         pygame.display.flip()
 
     def _random_position(self) -> Tuple[int, int]:

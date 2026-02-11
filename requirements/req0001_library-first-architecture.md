@@ -1,10 +1,10 @@
 ---
 id: "0001"
 title: "Library First Architecture"
-status: "Proposed"
+status: "In Progress"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-01-22"
+last_updated: "2026-02-11"
 related_tenets:
 - "library-first"
 stakeholders:
@@ -43,3 +43,6 @@ Packaging, API stability, and compatibility policies are defined in CIPs.
 
 ### 2026-01-22
 Requirement drafted.
+
+### 2026-01-28
+Status updated to In Progress. CIP-0001 (Library First Architecture) is actively being implemented; grid-world validation (CIP-0010) closed.

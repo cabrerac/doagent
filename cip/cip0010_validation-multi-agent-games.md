@@ -3,7 +3,7 @@ author: "Christian Cabrera"
 created: "2026-02-05"
 id: "0010"
 last_updated: "2026-02-11"
-status: "Implemented"
+status: "In Progress"
 compressed: false
 related_requirements:
 - "0010"
@@ -25,7 +25,7 @@ title: "Validation on Multi-Agent Games"
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
 - [x] In Progress - Actively being implemented
-- [x] Implemented - Work complete, awaiting verification
+- [ ] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
 - [ ] Deferred - Postponed (use blocked_by field to indicate blocker)
@@ -294,7 +294,11 @@ Iteration 2 progress:
 - All validation backlog tasks completed.
 - Examples reorganised: `examples/validation/` by scenario, `examples/features/` by library capability.
 
-**Implemented.** Validation examples from multi-agent games (simple push, grid-world mapping) are sufficient for now. The grid-world scenario will serve as the test case for iteration 2 work on the remaining requirements (REQ-0001 onward). An additional validation example (e.g. self-adaptive systems or scientific discovery) may be added in iteration 3.
+Reflection (Iteration 2):
+
+Validation examples from multi-agent games (simple push, grid-world mapping) are sufficient for now. The grid-world scenario will serve as the test case for iteration 2 work on the remaining requirements (REQ-0001 onward). An additional validation example (e.g. self-adaptive systems or scientific discovery) may be added in iteration 3.
+
+The bid is set but not used in the auction_frontier_policy. In a real auction, a coordinator or P2P protocol could collect bids from agents and assign frontiers using those bids. Right now it’s a stub with the bid ready for that step.
 
 ## References
 - None yet

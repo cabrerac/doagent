@@ -1,17 +1,17 @@
 ---
-id: "2016-02-09_validation-gridworld-tests-metrics"
+id: "2026-02-09_validation-gridworld-tests-metrics"
 title: "Add grid-world tests and metrics"
 status: "Completed"
 priority: "Medium"
-created: "2016-02-09"
+created: "2026-02-09"
 last_updated: "2026-02-11"
 category: "features"
 related_cips:
 - "0010"
 owner: "Christian Cabrera"
 dependencies:
-- "2016-02-09_validation-gridworld-env"
-- "2016-02-09_validation-gridworld-policies"
+- "2026-02-09_validation-gridworld-env"
+- "2026-02-09_validation-gridworld-policies"
 tags:
 - backlog
 - validation
@@ -41,7 +41,7 @@ Keep metrics environment-agnostic and consistent with existing reporting helpers
 
 ## Progress Updates
 
-### 2016-02-09
+### 2026-02-09
 Completed grid-world tests and metrics summary output.
 
 ### 2026-02-11

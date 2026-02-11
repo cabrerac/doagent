@@ -1,24 +1,27 @@
 run:
   id: "gridworld-demo-001"
-  seed: 123
-  rounds: 1000
+  seed: 150
+  rounds: 100
   deterministic: true
 
 scenario:
   name: "gridworld_mapping"
   render: true
   render_mode: "human"
+  print_every: 10
+  # render_delay: 0.3  # seconds between frames (default 0.3 when human)
   env:
     width: 20
     height: 20
     landmarks: 2
     observation_radius: 1
-    max_cycles: 25
+    max_cycles: 100
   topology:
     mode: "peer_to_peer"
     visibility:
       agent_0: ["agent_1"]
       agent_1: ["agent_2"]
+      agent_3: ["agent_0, agent_1"]
   participation:
     energy_model: true
     energy_min: 4
@@ -42,3 +45,8 @@ agents:
       name: "grid_auction_frontier"
       params:
         seed: 2
+  - id: "agent_3"
+    policy:
+      name: "grid_random"
+      params:
+        seed: 3

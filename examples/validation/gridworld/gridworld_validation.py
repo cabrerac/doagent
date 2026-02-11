@@ -62,6 +62,26 @@ def _parse_render_mode(config: Dict[str, Any]) -> str | None:
     return scenario.get("render_mode")
 
 
+def _parse_render_delay(config: Dict[str, Any], render_mode: str | None) -> float:
+    scenario = config.get("scenario", {})
+    delay = scenario.get("render_delay")
+    if delay is not None:
+        return float(delay)
+    # Default delay for human mode so agents are visible
+    return 0.3 if render_mode == "human" else 0.0
+
+
+def _parse_print_every(config: Dict[str, Any]) -> int:
+    scenario = config.get("scenario", {})
+    return int(scenario.get("print_every", 0))
+
+
+def _parse_landmarks_total(config: Dict[str, Any]) -> int | None:
+    env_cfg = config.get("scenario", {}).get("env", {})
+    val = env_cfg.get("landmarks")
+    return int(val) if val is not None else None
+
+
 def _build_agent_configs(config: Dict[str, Any]) -> list[GridAgentConfig]:
     agents = config.get("agents", [])
     configs: list[GridAgentConfig] = []
@@ -103,6 +123,9 @@ def main() -> None:
     render_mode = _parse_render_mode(config)
     if render and render_mode is None:
         render_mode = "ansi"
+    render_delay = _parse_render_delay(config, render_mode) if render else 0.0
+    print_every = _parse_print_every(config)
+    landmarks_total = _parse_landmarks_total(config)
 
     env = make_grid_env(
         width=int(env_cfg.get("width", 6)),
@@ -140,6 +163,9 @@ def main() -> None:
         energy_recharge=int(participation_cfg.get("energy_recharge", 1)),
         energy_leave_threshold=int(participation_cfg.get("energy_leave_threshold", 2)),
         render=render,
+        render_delay=render_delay,
+        print_every=print_every,
+        landmarks_total=landmarks_total,
         reporter=reporter,
     )
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -159,6 +185,9 @@ def main() -> None:
                     "discovery_round": summary.discovery_round,
                     "contributions": summary.contributions,
                     "total_cells": summary.total_cells,
+                    "termination_reason": summary.termination_reason,
+                    "landmarks_discovered": summary.landmarks_discovered,
+                    "landmarks_total": summary.landmarks_total,
                 },
             )
         },

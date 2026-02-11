@@ -1,16 +1,16 @@
 ---
-id: "2016-02-09_validation-gridworld-render-docs"
+id: "2026-02-09_validation-gridworld-render-docs"
 title: "Add grid-world rendering and documentation"
 status: "Completed"
 priority: "Medium"
-created: "2016-02-09"
+created: "2026-02-09"
 last_updated: "2026-02-11"
 category: "features"
 related_cips:
 - "0010"
 owner: "Christian Cabrera"
 dependencies:
-- "2016-02-09_validation-gridworld-env"
+- "2026-02-09_validation-gridworld-env"
 tags:
 - backlog
 - validation
@@ -40,7 +40,7 @@ Prefer a lightweight renderer (pygame optional, ASCII fallback). Keep it depende
 
 ## Progress Updates
 
-### 2016-02-09
+### 2026-02-09
 Task created.
 
 ### 2026-02-11

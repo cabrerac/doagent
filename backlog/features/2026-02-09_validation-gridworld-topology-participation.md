@@ -1,16 +1,16 @@
 ---
-id: "2016-02-09_validation-gridworld-topology-participation"
+id: "2026-02-09_validation-gridworld-topology-participation"
 title: "Add topology modes and open participation to grid-world"
 status: "Completed"
 priority: "High"
-created: "2016-02-09"
-last_updated: "2016-02-09"
+created: "2026-02-09"
+last_updated: "2026-02-09"
 category: "features"
 related_cips:
 - "0010"
 owner: "Christian Cabrera"
 dependencies:
-- "2016-02-09_validation-gridworld-env"
+- "2026-02-09_validation-gridworld-env"
 tags:
 - backlog
 - validation
@@ -41,5 +41,5 @@ Prefer opt-in flags for topology modes to keep current architecture intact and b
 
 ## Progress Updates
 
-### 2016-02-09
+### 2026-02-09
 Completed topology-driven visibility and stochastic join/leave via energy model.

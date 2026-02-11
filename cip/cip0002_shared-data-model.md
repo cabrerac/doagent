@@ -107,6 +107,8 @@ Iteration 2 discussion items:
 - Provenance has a defined type but accountability does not; assess whether to formalize an accountability type (reduce ambiguity) or keep it loose (reduce redundancy).
 - Decide on acceptable redundancy in the record envelope (read-vs-write tradeoff) and document a standard.
 - Clarify whether shared data is primarily a world log, a medium for agent-to-agent exchange, or both. In the current validation flow agents and the environment writes outcomes but agents do not read from shared data; decide if this is intentional or should change in later iterations.
+- Formalising the model (record schema, kind semantics, indexing/query patterns) gives a spec that adapters must implement. That keeps InMemorySharedData and FileSharedData as “flat” implementations, while Mongo/SQL adapters map to richer structures, without changing the public API. A single, explicit data model for all adapters makes sense; the difference is how each adapter maps that model to its storage (flat vs collections vs tables).
+- The environment writes in the shared data model as it was an agent. Does it make sense?
 
 ## References
 - None yet

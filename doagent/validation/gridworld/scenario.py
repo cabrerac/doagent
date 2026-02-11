@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from multiprocessing import get_context
 import random
+import time
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
@@ -30,6 +31,9 @@ class GridWorldRunSummary:
     discovery_round: Optional[int]
     contributions: Dict[str, int]
     total_cells: Optional[int]
+    termination_reason: str = "rounds_complete"
+    landmarks_discovered: int = 0
+    landmarks_total: Optional[int] = None
 
 
 def _serializable(value: Any) -> Any:
@@ -139,6 +143,9 @@ def run_gridworld_validation(
     energy_recharge: int = 1,
     energy_leave_threshold: int = 2,
     render: bool = False,
+    render_delay: float = 0.0,
+    print_every: int = 0,
+    landmarks_total: Optional[int] = None,
     reporter: RunReporter | None = None,
 ) -> GridWorldRunSummary:
     """Run the grid-world validation scenario for a fixed number of rounds."""
@@ -153,8 +160,11 @@ def run_gridworld_validation(
     active_agents = set(agents.keys())
     contributions = {agent_id: 0 for agent_id in agents.keys()}
     discovered_cells: set[tuple[int, int]] = set()
+    landmarks_discovered: set[tuple[int, int]] = set()
+    total_rewards: Dict[str, float] = {}
     total_cells: Optional[int] = None
     discovery_round: Optional[int] = None
+    termination_reason = "rounds_complete"
     energy_levels = {
         agent_id: rng.randint(energy_min, energy_max) for agent_id in agents.keys()
     }
@@ -166,11 +176,13 @@ def run_gridworld_validation(
             break
     for obs in observations.values():
         for cell in obs.get("cells", []):
-            x = cell.get("x")
-            y = cell.get("y")
+            x, y = cell.get("x"), cell.get("y")
             if x is None or y is None:
                 continue
-            discovered_cells.add((int(x), int(y)))
+            coord = (int(x), int(y))
+            discovered_cells.add(coord)
+            if cell.get("value") == "landmark":
+                landmarks_discovered.add(coord)
     if total_cells and len(discovered_cells) >= total_cells:
         discovery_round = 0
     if participation_registry is not None:
@@ -297,6 +309,8 @@ def run_gridworld_validation(
         observations = step.observations
         if reporter is not None:
             reporter.on_outcome(round_id, actions, step.rewards)
+        for agent_id, r in step.rewards.items():
+            total_rewards[agent_id] = total_rewards.get(agent_id, 0.0) + r
         for agent_id in active_agent_ids:
             observation = observations.get(agent_id, {})
             for cell in observation.get("cells", []):
@@ -308,11 +322,15 @@ def run_gridworld_validation(
                 if coord not in discovered_cells:
                     discovered_cells.add(coord)
                     contributions[agent_id] += 1
+                    if cell.get("value") == "landmark":
+                        landmarks_discovered.add(coord)
         if total_cells and discovery_round is None:
             if len(discovered_cells) >= total_cells:
                 discovery_round = round_id
         if render:
             env.render()
+            if render_delay > 0:
+                time.sleep(render_delay)
 
         outcome_payload = {
             "round": round_id,
@@ -355,14 +373,59 @@ def run_gridworld_validation(
             )
             shared_data.write(trace)
 
+        # Terminate early if env signals done, full coverage, or all landmarks found
+        if all(step.terminations.values()):
+            termination_reason = "max_cycles"
+            break
+        if total_cells and len(discovered_cells) >= total_cells:
+            termination_reason = "full_coverage"
+            break
+        if landmarks_total is not None and len(landmarks_discovered) >= landmarks_total:
+            termination_reason = "all_landmarks_discovered"
+            break
+
+        if print_every > 0 and round_id % print_every == 0:
+            cov_pct = (
+                100.0 * len(discovered_cells) / total_cells
+                if total_cells else 0.0
+            )
+            lm_msg = f"{len(landmarks_discovered)}"
+            if landmarks_total is not None:
+                lm_msg += f"/{landmarks_total}"
+            rewards_str = ", ".join(
+                f"{a}={total_rewards.get(a, 0):.0f}"
+                for a in sorted(total_rewards.keys())
+            )
+            print(
+                f"[gridworld] round={round_id} "
+                f"coverage={cov_pct:.1f}% landmarks={lm_msg} "
+                f"active={len(active_agent_ids)} rewards={{{rewards_str}}}"
+            )
+
     coverage = (
         float(len(discovered_cells)) / float(total_cells) if total_cells else 0.0
     )
-    return GridWorldRunSummary(
+    summary = GridWorldRunSummary(
         rounds=rounds,
         outcomes=outcome_count,
         coverage=coverage,
         discovery_round=discovery_round,
         contributions=contributions,
         total_cells=total_cells,
+        termination_reason=termination_reason,
+        landmarks_discovered=len(landmarks_discovered),
+        landmarks_total=landmarks_total,
     )
+    # Final summary print
+    lm_msg = f"{len(landmarks_discovered)}"
+    if landmarks_total is not None:
+        lm_msg += f"/{landmarks_total}"
+    rewards_str = ", ".join(
+        f"{a}={total_rewards.get(a, 0):.0f}" for a in sorted(total_rewards.keys())
+    )
+    print(
+        f"[gridworld] FINAL: termination={termination_reason} "
+        f"rounds={outcome_count} coverage={coverage*100:.1f}% "
+        f"landmarks={lm_msg} rewards={{{rewards_str}}}"
+    )
+    return summary

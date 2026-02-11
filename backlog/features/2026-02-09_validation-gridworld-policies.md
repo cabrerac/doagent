@@ -1,16 +1,16 @@
 ---
-id: "2016-02-09_validation-gridworld-policies"
+id: "2026-02-09_validation-gridworld-policies"
 title: "Implement grid-world mapping policies"
 status: "Completed"
 priority: "High"
-created: "2016-02-09"
-last_updated: "2016-02-09"
+created: "2026-02-09"
+last_updated: "2026-02-09"
 category: "features"
 related_cips:
 - "0010"
 owner: "Christian Cabrera"
 dependencies:
-- "2016-02-09_validation-gridworld-env"
+- "2026-02-09_validation-gridworld-env"
 tags:
 - backlog
 - validation
