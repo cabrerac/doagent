@@ -296,6 +296,8 @@ Iteration 2 progress:
 
 Reflection (Iteration 2):
 
+The scenario does not compare different shared data adapters. We could do that in iteration 3.
+
 Validation examples from multi-agent games (simple push, grid-world mapping) are sufficient for now. The grid-world scenario will serve as the test case for iteration 2 work on the remaining requirements (REQ-0001 onward). An additional validation example (e.g. self-adaptive systems or scientific discovery) may be added in iteration 3.
 
 The bid is set but not used in the auction_frontier_policy. In a real auction, a coordinator or P2P protocol could collect bids from agents and assign frontiers using those bids. Right now it’s a stub with the bid ready for that step.

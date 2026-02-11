@@ -17,6 +17,7 @@ from doagent.core import (
 )
 from doagent.validation import (
     GridAgentConfig,
+    measure_baseline,
     PolicyRegistry,
     RunReporter,
     make_grid_env,
@@ -140,33 +141,47 @@ def main() -> None:
 
     reporter = RunReporter(
         label="gridworld",
-        print_every=0,
+        print_every=print_every,
         record_series=True,
         series_every=1,
         record_entropy=True,
         action_space=5,
     )
-    summary = run_gridworld_validation(
-        shared_data=shared_data,
-        env=env,
-        registry=registry,
-        configs=_build_agent_configs(config),
+    summary = None
+
+    def gridworld_run() -> None:
+        nonlocal summary
+        summary = run_gridworld_validation(
+            shared_data=shared_data,
+            env=env,
+            registry=registry,
+            configs=_build_agent_configs(config),
+            rounds=int(run_cfg.get("rounds", 10)),
+            seed=int(run_cfg.get("seed", 0)),
+            topology=topology_cfg,
+            visibility=visibility,
+            participation_registry=participation if energy_model else None,
+            energy_model=energy_model,
+            energy_min=int(participation_cfg.get("energy_min", 6)),
+            energy_max=int(participation_cfg.get("energy_max", 12)),
+            energy_decay=int(participation_cfg.get("energy_decay", 1)),
+            energy_recharge=int(participation_cfg.get("energy_recharge", 1)),
+            energy_leave_threshold=int(participation_cfg.get("energy_leave_threshold", 2)),
+            render=render,
+            render_delay=render_delay,
+            print_every=print_every,
+            landmarks_total=landmarks_total,
+            reporter=reporter,
+        )
+
+    metrics = measure_baseline(gridworld_run)
+    reporter.finalize(
         rounds=int(run_cfg.get("rounds", 10)),
         seed=int(run_cfg.get("seed", 0)),
-        topology=topology_cfg,
-        visibility=visibility,
-        participation_registry=participation if energy_model else None,
-        energy_model=energy_model,
-        energy_min=int(participation_cfg.get("energy_min", 6)),
-        energy_max=int(participation_cfg.get("energy_max", 12)),
-        energy_decay=int(participation_cfg.get("energy_decay", 1)),
-        energy_recharge=int(participation_cfg.get("energy_recharge", 1)),
-        energy_leave_threshold=int(participation_cfg.get("energy_leave_threshold", 2)),
+        outcomes=summary.outcomes if summary else 0,
+        elapsed_seconds=metrics.elapsed_seconds,
+        output_bytes=metrics.output_bytes,
         render=render,
-        render_delay=render_delay,
-        print_every=print_every,
-        landmarks_total=landmarks_total,
-        reporter=reporter,
     )
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path("output") / f"gridworld_run_{timestamp}"
@@ -179,7 +194,7 @@ def main() -> None:
         },
         "runs": {
             "gridworld": reporter.metrics(
-                outcomes=summary.outcomes,
+                outcomes=summary.outcomes if summary else 0,
                 extra={
                     "coverage": summary.coverage,
                     "discovery_round": summary.discovery_round,
@@ -196,6 +211,10 @@ def main() -> None:
     write_summary(summary_path, summary_payload)
     print(f"Outcomes recorded: {summary.outcomes}")
     print(f"Summary written to {summary_path}")
+    print(
+        "Plot metrics with: "
+        f"python -m examples.validation.plot_validation_metrics \"{summary_path}\""
+    )
 
 
 if __name__ == "__main__":
