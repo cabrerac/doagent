@@ -3,7 +3,7 @@ author: "Christian Cabrera"
 created: "2026-02-05"
 id: "0010"
 last_updated: "2026-02-11"
-status: "In Progress"
+status: "Implemented"
 compressed: false
 related_requirements:
 - "0010"
@@ -25,7 +25,7 @@ title: "Validation on Multi-Agent Games"
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
 - [x] In Progress - Actively being implemented
-- [ ] Implemented - Work complete, awaiting verification
+- [x] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
 - [ ] Deferred - Postponed (use blocked_by field to indicate blocker)
@@ -292,6 +292,9 @@ Iteration 2 progress:
 - Restructured validation module: scenario-specific code in `push/` and `gridworld/` subpackages; shared components (baseline, environment, policy, reporting, multiprocess_interface) at top level.
 - Standardised output layout: summary in run root; plots in `plots/`; metrics CSV in `metrics/`.
 - All validation backlog tasks completed.
+- Examples reorganised: `examples/validation/` by scenario, `examples/features/` by library capability.
+
+**Implemented.** Validation examples from multi-agent games (simple push, grid-world mapping) are sufficient for now. The grid-world scenario will serve as the test case for iteration 2 work on the remaining requirements (REQ-0001 onward). An additional validation example (e.g. self-adaptive systems or scientific discovery) may be added in iteration 3.
 
 ## References
 - None yet
