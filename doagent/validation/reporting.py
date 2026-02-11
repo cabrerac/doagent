@@ -24,6 +24,7 @@ class RunReporter:
     action_counts: Dict[str, Dict[str, int]] = field(default_factory=dict)
     last_actions: Optional[Dict[str, Any]] = None
     last_rewards: Optional[Dict[str, float]] = None
+    extra_metrics: Dict[str, object] = field(default_factory=dict)
 
     def on_outcome(
         self,
@@ -97,7 +98,12 @@ class RunReporter:
         normalized = entropy / max_entropy if max_entropy > 0 else 0.0
         return entropy, normalized
 
-    def metrics(self, *, outcomes: int) -> Dict[str, object]:
+    def metrics(
+        self,
+        *,
+        outcomes: int,
+        extra: Optional[Dict[str, object]] = None,
+    ) -> Dict[str, object]:
         avg_rewards = {
             agent: (total / outcomes if outcomes else 0.0)
             for agent, total in self.total_rewards.items()
@@ -127,4 +133,9 @@ class RunReporter:
                 "actions": self.last_actions,
                 "rewards": self.last_rewards,
             }
+        merged_extra = dict(self.extra_metrics)
+        if extra:
+            merged_extra.update(extra)
+        if merged_extra:
+            payload["extra_metrics"] = merged_extra
         return payload

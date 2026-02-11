@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 import sys
 from typing import Dict, List
-import csv
 
 
 def _load_summary(path: Path) -> Dict[str, object]:
@@ -135,6 +135,30 @@ def _plot_entropy(
     plt.close()
 
 
+def _plot_contributions(
+    contributions: Dict[str, int],
+    output_pdf: Path,
+    output_png: Path,
+) -> None:
+    import matplotlib.pyplot as plt
+
+    if not contributions:
+        print("No grid-world contributions to plot.")
+        return
+    agents = sorted(contributions.keys())
+    values = [contributions[agent] for agent in agents]
+    xs = list(range(len(agents)))
+    plt.bar(xs, values)
+    plt.xticks(xs, agents)
+    plt.xlabel("Agent")
+    plt.ylabel("New Cells Discovered")
+    plt.title("Grid-World Contributions")
+    plt.tight_layout()
+    plt.savefig(output_pdf, format="pdf")
+    plt.savefig(output_png, format="png", dpi=150)
+    plt.close()
+
+
 def _write_entropy_csv(
     path: Path,
     entropies: Dict[str, Dict[str, float]],
@@ -154,6 +178,24 @@ def _write_entropy_csv(
             )
 
 
+def _write_gridworld_metrics_csv(
+    path: Path,
+    metrics: Dict[str, object],
+) -> None:
+    if not metrics:
+        return
+    contributions = metrics.get("contributions", {})
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["metric", "value"])
+        for key in ("coverage", "discovery_round", "total_cells"):
+            if key in metrics:
+                writer.writerow([key, metrics.get(key)])
+        if isinstance(contributions, dict):
+            for agent in sorted(contributions.keys()):
+                writer.writerow([f"contribution_{agent}", contributions.get(agent, 0)])
+
+
 def main() -> None:
     if len(sys.argv) > 1:
         summary_path = Path(sys.argv[1])
@@ -166,43 +208,66 @@ def main() -> None:
         return
     summary = _load_summary(summary_path)
     runs = summary.get("runs", {})
-    if "in_memory" not in runs:
+    if not runs:
         print("No run metrics found in summary.")
         return
-    run = runs["in_memory"]
+    if "in_memory" in runs:
+        run = runs["in_memory"]
+    elif len(runs) == 1:
+        run = next(iter(runs.values()))
+    else:
+        run = runs[sorted(runs.keys())[0]]
     reward_series = run.get("reward_series", [])
     action_counts = run.get("action_counts", {})
     entropies = run.get("action_entropy", {})
+    extra_metrics = run.get("extra_metrics", {})
     output_dir = summary_path.parent
+    plots_dir = output_dir / "plots"
+    metrics_dir = output_dir / "metrics"
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    metrics_dir.mkdir(parents=True, exist_ok=True)
     _plot_reward_series(
         reward_series,
-        output_dir / "reward_series.pdf",
-        output_dir / "reward_series.png",
+        plots_dir / "reward_series.pdf",
+        plots_dir / "reward_series.png",
     )
     _plot_action_counts(
         action_counts,
-        output_dir / "action_counts.pdf",
-        output_dir / "action_counts.png",
+        plots_dir / "action_counts.pdf",
+        plots_dir / "action_counts.png",
     )
     _plot_entropy(
         entropies,
-        output_dir / "action_entropy.pdf",
-        output_dir / "action_entropy.png",
+        plots_dir / "action_entropy.pdf",
+        plots_dir / "action_entropy.png",
     )
     _write_reward_series_csv(
-        output_dir / "reward_series.csv",
+        metrics_dir / "reward_series.csv",
         reward_series,
         int(run.get("series_every", 1)),
     )
     _write_action_counts_csv(
-        output_dir / "action_counts.csv",
+        metrics_dir / "action_counts.csv",
         action_counts,
     )
     _write_entropy_csv(
-        output_dir / "action_entropy.csv",
+        metrics_dir / "action_entropy.csv",
         entropies,
     )
-    print(f"Wrote CSV files to {output_dir}")
+    if isinstance(extra_metrics, dict) and extra_metrics:
+        contributions = extra_metrics.get("contributions", {})
+        if isinstance(contributions, dict):
+            _plot_contributions(
+                contributions,
+                plots_dir / "gridworld_contributions.pdf",
+                plots_dir / "gridworld_contributions.png",
+            )
+        _write_gridworld_metrics_csv(
+            metrics_dir / "gridworld_metrics.csv",
+            extra_metrics,
+        )
+    print(f"Plots written to {plots_dir}")
+    print(f"Metrics CSV written to {metrics_dir}")
 
 
 if __name__ == "__main__":

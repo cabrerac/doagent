@@ -4,7 +4,7 @@ title: "Add grid-world tests and metrics"
 status: "Completed"
 priority: "Medium"
 created: "2016-02-09"
-last_updated: "2016-02-09"
+last_updated: "2026-02-11"
 category: "features"
 related_cips:
 - "0010"
@@ -43,3 +43,6 @@ Keep metrics environment-agnostic and consistent with existing reporting helpers
 
 ### 2016-02-09
 Completed grid-world tests and metrics summary output.
+
+### 2026-02-11
+Added plotting and CSV export for grid-world metrics. Output layout standardised: plots in `plots/` and metrics CSV in `metrics/` subfolders.

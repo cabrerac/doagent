@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-02-05"
 id: "0010"
-last_updated: "2026-02-10"
+last_updated: "2026-02-11"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -192,8 +192,70 @@ This CIP addresses the following requirements:
 - [x] Implement grid-world policies
 - [x] Add topology + open participation hooks
 - [x] Add tests + metrics for grid-world scenario
-- [ ] Add graphical interface for grid-world
-- [ ] Document grid-world usage
+- [x] Add graphical interface for grid-world (ANSI + pygame)
+- [x] Document grid-world usage
+
+## Project Layout
+
+### Validation module structure
+Scenario-specific code is grouped by scenario; shared helpers remain at the top level:
+
+```
+doagent/validation/
+├── baseline.py
+├── environment.py
+├── policy.py
+├── reporting.py
+├── multiprocess_interface.py
+├── push/
+│   ├── envs.py
+│   ├── agents.py
+│   └── scenario.py
+└── gridworld/
+    ├── env.py
+    ├── agents.py
+    ├── policies.py
+    └── scenario.py
+```
+
+### Examples layout
+Examples are grouped by scenario and library feature:
+
+```
+examples/
+├── validation/
+│   ├── push/
+│   │   └── push_validation.py
+│   ├── gridworld/
+│   │   ├── gridworld_validation.py
+│   │   └── gridworld_validation_config.yaml
+│   └── plot_validation_metrics.py
+└── features/
+    ├── minimal_usage.py
+    ├── model_agnostic_agent.py
+    ├── interpretability_usage.py
+    ├── traceability_usage.py
+    ├── provenance_usage.py
+    └── accountability_usage.py
+```
+
+### Output layout
+Run outputs use a consistent layout for both push and grid-world:
+
+```
+output/<scenario>_run_YYYYMMDD_HHMMSS/
+├── <scenario>_validation_summary.json   # in run folder root
+├── plots/                               # PDF and PNG
+│   ├── reward_series.pdf, .png
+│   ├── action_counts.pdf, .png
+│   ├── action_entropy.pdf, .png
+│   └── gridworld_contributions.pdf, .png  (grid-world only)
+└── metrics/                             # CSV files
+    ├── reward_series.csv
+    ├── action_counts.csv
+    ├── action_entropy.csv
+    └── gridworld_metrics.csv            (grid-world only)
+```
 
 ## Progress Updates
 
@@ -222,6 +284,14 @@ Iteration 2 progress:
 - Implemented stochastic join/leave via energy model with participation registry updates.
 - Added grid-world tests and metrics summary output.
 - Added grid-world rendering (ANSI/pygame); documentation still pending.
+
+### 2026-02-11
+Iteration 2 progress:
+- Extended RunReporter to attach extra metrics.
+- Added grid-world run metrics to summary and plotting/CSV support.
+- Restructured validation module: scenario-specific code in `push/` and `gridworld/` subpackages; shared components (baseline, environment, policy, reporting, multiprocess_interface) at top level.
+- Standardised output layout: summary in run root; plots in `plots/`; metrics CSV in `metrics/`.
+- All validation backlog tasks completed.
 
 ## References
 - None yet

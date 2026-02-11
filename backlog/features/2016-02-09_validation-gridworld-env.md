@@ -1,10 +1,10 @@
 ---
 id: "2016-02-09_validation-gridworld-env"
 title: "Implement grid-world mapping environment and shared-data flow"
-status: "In Progress"
+status: "Completed"
 priority: "High"
 created: "2016-02-09"
-last_updated: "2016-02-09"
+last_updated: "2026-02-11"
 category: "features"
 related_cips:
 - "0010"
@@ -25,10 +25,10 @@ tags:
 Create a lightweight grid-world mapping scenario that uses shared data as the communication medium between agents (not just a world log).
 
 ## Acceptance Criteria
-- [ ] Environment supports partial observations per agent.
-- [ ] Agents publish map updates to shared data each round.
-- [ ] Shared data can be consumed to update each agent's view.
-- [ ] Environment is scenario-agnostic and fits current architecture.
+- [x] Environment supports partial observations per agent.
+- [x] Agents publish map updates to shared data each round.
+- [x] Shared data can be consumed to update each agent's view.
+- [x] Environment is scenario-agnostic and fits current architecture.
 
 ## Implementation Notes
 Keep the environment dependency-free and deterministic with a seed. Use small or medium grid sizes for tests.
@@ -42,3 +42,6 @@ Keep the environment dependency-free and deterministic with a seed. Use small or
 
 ### 2016-02-09
 Task created.
+
+### 2026-02-11
+Completed. Grid-world env, agents, and scenario now under `validation/gridworld/` subpackage.

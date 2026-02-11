@@ -1,10 +1,10 @@
 ---
 id: "2016-02-09_validation-gridworld-render-docs"
 title: "Add grid-world rendering and documentation"
-status: "Pending"
+status: "Completed"
 priority: "Medium"
 created: "2016-02-09"
-last_updated: "2016-02-09"
+last_updated: "2026-02-11"
 category: "features"
 related_cips:
 - "0010"
@@ -26,9 +26,9 @@ tags:
 Provide a simple graphical renderer for the grid-world scenario and document how to run it.
 
 ## Acceptance Criteria
-- [ ] Grid-world can be rendered to a simple window or console view.
-- [ ] Rendering is optional and does not affect headless runs.
-- [ ] README includes usage and plotting instructions for the grid-world scenario.
+- [x] Grid-world can be rendered to a simple window or console view.
+- [x] Rendering is optional and does not affect headless runs.
+- [x] README includes usage and plotting instructions for the grid-world scenario.
 
 ## Implementation Notes
 Prefer a lightweight renderer (pygame optional, ASCII fallback). Keep it dependency-free by default.
@@ -42,3 +42,6 @@ Prefer a lightweight renderer (pygame optional, ASCII fallback). Keep it depende
 
 ### 2016-02-09
 Task created.
+
+### 2026-02-11
+Completed: ANSI and pygame render modes; optional render flag; README grid-world section with usage and config; plot_validation_metrics supports grid-world summaries. Output organised into plots/ and metrics/ subfolders.

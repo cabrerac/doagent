@@ -8,15 +8,16 @@ import random
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
-from ..core.participation import ParticipationRecord, ParticipationRegistry
-from ..core.shared_data import new_explanation_record, new_record, new_trace_record
-from ..core.topology import Topology, TopologyConfig
-from ..interface.shared_data import SharedDataAdapter
-from ..records import DecisionRequest, DecisionResponse, new_provenance
-from .environment import ValidationEnv
-from .gridworld_agents import GridAgentConfig, build_grid_agents
-from .multiprocess_interface import MultiProcessInterface
-from .policy import PolicyRegistry
+from ...core.participation import ParticipationRecord, ParticipationRegistry
+from ...core.shared_data import new_explanation_record, new_record, new_trace_record
+from ...core.topology import Topology, TopologyConfig
+from ...interface.shared_data import SharedDataAdapter
+from ...records import DecisionRequest, DecisionResponse, new_provenance
+from ..environment import ValidationEnv
+from ..multiprocess_interface import MultiProcessInterface
+from ..policy import PolicyRegistry
+from ..reporting import RunReporter
+from .agents import GridAgentConfig, build_grid_agents
 
 
 @dataclass(frozen=True)
@@ -138,6 +139,7 @@ def run_gridworld_validation(
     energy_recharge: int = 1,
     energy_leave_threshold: int = 2,
     render: bool = False,
+    reporter: RunReporter | None = None,
 ) -> GridWorldRunSummary:
     """Run the grid-world validation scenario for a fixed number of rounds."""
     agents = build_grid_agents(shared_data, registry, configs)
@@ -293,6 +295,8 @@ def run_gridworld_validation(
 
         step = env.step(actions)
         observations = step.observations
+        if reporter is not None:
+            reporter.on_outcome(round_id, actions, step.rewards)
         for agent_id in active_agent_ids:
             observation = observations.get(agent_id, {})
             for cell in observation.get("cells", []):

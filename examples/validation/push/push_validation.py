@@ -2,7 +2,6 @@
 
 from datetime import datetime
 import random
-from time import perf_counter
 from pathlib import Path
 
 from doagent.core import FileSharedData, InMemorySharedData
@@ -280,7 +279,7 @@ def main() -> None:
     print(f"Summary written to {summary_path}")
     print(
         "Plot metrics with: "
-        f"python -m examples.plot_validation_metrics \"{summary_path}\""
+        f"python -m examples.validation.plot_validation_metrics \"{summary_path}\""
     )
 
 

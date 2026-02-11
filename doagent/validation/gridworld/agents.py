@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional, TypedDict
 
-from ..core.function_agent import FunctionAgent
-from ..interface.shared_data import SharedDataAdapter
-from ..records import DecisionRequest, DecisionResponse
-from .policy import Policy, PolicyConfig, PolicyRegistry
+from ...core.function_agent import FunctionAgent
+from ...interface.shared_data import SharedDataAdapter
+from ...records import DecisionRequest, DecisionResponse
+from ..policy import Policy, PolicyConfig, PolicyRegistry
 
 
 class AgentMetadata(TypedDict, total=False):

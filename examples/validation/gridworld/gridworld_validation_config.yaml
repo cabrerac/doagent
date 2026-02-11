@@ -1,16 +1,16 @@
 run:
   id: "gridworld-demo-001"
   seed: 123
-  rounds: 10
+  rounds: 1000
   deterministic: true
 
 scenario:
   name: "gridworld_mapping"
-  render: false
-  render_mode: "ansi"
+  render: true
+  render_mode: "human"
   env:
-    width: 6
-    height: 6
+    width: 20
+    height: 20
     landmarks: 2
     observation_radius: 1
     max_cycles: 25

@@ -26,10 +26,10 @@ tags:
 Add baseline and heuristic policies for grid-world mapping (frontier exploration, random exploration, optional auction allocator).
 
 ## Acceptance Criteria
-- [ ] Frontier exploration policy available via PolicyRegistry.
-- [ ] Random-walk baseline with exploration bias.
-- [ ] Optional auction/assignment policy (can be stubbed if deferred).
-- [ ] Policies operate on shared-data updates and partial observations.
+- [x] Frontier exploration policy available via PolicyRegistry.
+- [x] Random-walk baseline with exploration bias.
+- [x] Optional auction/assignment policy (can be stubbed if deferred).
+- [x] Policies operate on shared-data updates and partial observations.
 
 ## Implementation Notes
 Keep policies deterministic with seeds; use shared-data inputs rather than environment-only state.

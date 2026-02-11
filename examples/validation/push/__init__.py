@@ -1,0 +1,1 @@
+"""Simple push validation example."""

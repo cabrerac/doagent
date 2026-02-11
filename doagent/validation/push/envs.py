@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from .environment import ParallelEnvWrapper, ValidationEnv
+from ..environment import ParallelEnvWrapper, ValidationEnv
 
 
 def _make_pettingzoo_mpe_env(env_name: str, params: Dict[str, Any]) -> ValidationEnv:

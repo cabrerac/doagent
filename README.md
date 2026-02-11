@@ -18,7 +18,7 @@ Use these commands to run the example and the tests.
 
 ```bash
 pip install -r requirements.txt
-python -m examples.minimal_usage
+python -m examples.features.minimal_usage
 python -m unittest -v
 ```
 
@@ -27,7 +27,7 @@ python -m unittest -v
 DOAgent is powered by [VibeSafe](https://github.com/lawrennd/vibesafe). The project structure is as follows:
 
 - `doagent/` — library implementation (core, records, interfaces)
-- `examples/` — runnable examples
+- `examples/` — runnable examples (`validation/` by scenario, `features/` by library capability)
 - `tests/` — test suite
 - `cip/`, `requirements/`, `backlog/`, `tenets/` — project documentation and planning powered by [VibeSafe](https://github.com/lawrennd/vibesafe)
 
@@ -76,10 +76,10 @@ for record in shared_data.listen("note"):
     print(record.id, record.kind, record.payload)
 ```
 
-See `examples/minimal_usage.py` for a runnable example, or run it with:
+See `examples/features/minimal_usage.py` for a runnable example, or run it with:
 
 ```bash
-python -m examples.minimal_usage
+python -m examples.features.minimal_usage
 ```
 
 ## Model-agnostic agent example
@@ -105,7 +105,7 @@ assert record.payload["response"]["id"] == response["id"]
 Run the example with:
 
 ```bash
-python -m examples.model_agnostic_agent
+python -m examples.features.model_agnostic_agent
 ```
 
 ## Interpretability example
@@ -140,7 +140,7 @@ assert record.payload["decision_id"] == decision.id
 Run the example with:
 
 ```bash
-python -m examples.interpretability_usage
+python -m examples.features.interpretability_usage
 ```
 
 ## Traceability example
@@ -181,7 +181,7 @@ assert record.payload["from_id"] == upstream.id
 Run the example with:
 
 ```bash
-python -m examples.traceability_usage
+python -m examples.features.traceability_usage
 ```
 
 ## Provenance example
@@ -216,7 +216,7 @@ assert fetched.provenance["contributions"][0]["sources"] == ["r1", "r2"]
 Run the example with:
 
 ```bash
-python -m examples.provenance_usage
+python -m examples.features.provenance_usage
 ```
 
 ## Accountability example
@@ -250,7 +250,7 @@ assert fetched.accountability["policy_id"] == "policy-001"
 Run the example with:
 
 ```bash
-python -m examples.accountability_usage
+python -m examples.features.accountability_usage
 ```
 
 ## Validation example (simple push)
@@ -305,15 +305,17 @@ Run the example with:
 
 ```bash
 pip install -r requirements.txt
-python -m examples.push_validation
+python -m examples.validation.push.push_validation
 ```
 
 Plots and CSVs (requires matplotlib):
 
 ```bash
 pip install matplotlib
-python -m examples.plot_validation_metrics "output/push_run_YYYYMMDD_HHMMSS/push_validation_summary.json"
+python -m examples.validation.plot_validation_metrics "output/push_run_YYYYMMDD_HHMMSS/push_validation_summary.json"
 ```
+
+Output layout: summary in run folder root; plots in `plots/`; metrics CSV in `metrics/`.
 
 ## Validation example (grid-world mapping)
 
@@ -378,7 +380,7 @@ summary = run_gridworld_validation(
 print(summary.outcomes)
 ```
 
-Example configuration (draft): `examples/gridworld_validation_config.yaml`.
+Run from YAML config: `python -m examples.validation.gridworld.gridworld_validation` (uses `examples/validation/gridworld/gridworld_validation_config.yaml` by default).
 
 ## Topology example
 

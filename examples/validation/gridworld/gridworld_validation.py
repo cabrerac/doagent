@@ -18,6 +18,7 @@ from doagent.core import (
 from doagent.validation import (
     GridAgentConfig,
     PolicyRegistry,
+    RunReporter,
     make_grid_env,
     register_gridworld_policies,
     run_gridworld_validation,
@@ -76,10 +77,12 @@ def _build_agent_configs(config: Dict[str, Any]) -> list[GridAgentConfig]:
 
 
 def main() -> None:
+    _script_dir = Path(__file__).resolve().parent
+    default_config = _script_dir / "gridworld_validation_config.yaml"
     config_path = (
         Path(sys.argv[1])
         if len(sys.argv) > 1
-        else Path("examples/gridworld_validation_config.yaml")
+        else default_config
     )
     config = load_gridworld_config(config_path)
 
@@ -112,6 +115,14 @@ def main() -> None:
         render_mode=render_mode,
     )
 
+    reporter = RunReporter(
+        label="gridworld",
+        print_every=0,
+        record_series=True,
+        series_every=1,
+        record_entropy=True,
+        action_space=5,
+    )
     summary = run_gridworld_validation(
         shared_data=shared_data,
         env=env,
@@ -129,6 +140,7 @@ def main() -> None:
         energy_recharge=int(participation_cfg.get("energy_recharge", 1)),
         energy_leave_threshold=int(participation_cfg.get("energy_leave_threshold", 2)),
         render=render,
+        reporter=reporter,
     )
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path("output") / f"gridworld_run_{timestamp}"
@@ -139,12 +151,16 @@ def main() -> None:
             "seed": run_cfg.get("seed"),
             "rounds": run_cfg.get("rounds", 10),
         },
-        "metrics": {
-            "outcomes": summary.outcomes,
-            "coverage": summary.coverage,
-            "discovery_round": summary.discovery_round,
-            "contributions": summary.contributions,
-            "total_cells": summary.total_cells,
+        "runs": {
+            "gridworld": reporter.metrics(
+                outcomes=summary.outcomes,
+                extra={
+                    "coverage": summary.coverage,
+                    "discovery_round": summary.discovery_round,
+                    "contributions": summary.contributions,
+                    "total_cells": summary.total_cells,
+                },
+            )
         },
     }
     summary_path = output_dir / "gridworld_validation_summary.json"

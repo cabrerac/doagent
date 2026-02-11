@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import random
 from typing import Any, Dict, Iterable, List, Tuple
 
-from .environment import StepResult, ValidationEnv
+from ..environment import StepResult, ValidationEnv
 
 
 @dataclass(frozen=True)
