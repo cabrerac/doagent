@@ -260,7 +260,7 @@ output/<scenario>_run_YYYYMMDD_HHMMSS/
 ## Progress Updates
 
 ### 2026-02-05
-Task accepted; implementation not started yet. Proceed via the five-step internal workflow.
+Task accepted; implementation not started yet.
 
 ### 2026-02-06
 Reflection (Iteration 1):
