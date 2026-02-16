@@ -1,29 +1,25 @@
 """Interpretability records example."""
 
-from doagent.core import InMemorySharedData, new_explanation_record, new_record
+from doagent.core import InMemorySharedData, new_agent_update_record
 
 
 def main() -> None:
     shared_data = InMemorySharedData()
 
-    decision = new_record(
+    agent_update = new_agent_update_record(
         actor="agent-1",
-        kind="decision",
-        payload={"decision": {"action": "approve"}},
+        local_knowledge={"observation": {}},
+        decision={
+            "request": {},
+            "response": {"decision": {"action": "approve"}},
+            "explanation": "Approved due to policy compliance.",
+        },
     )
-    shared_data.write(decision)
+    shared_data.write(agent_update)
 
-    explanation = new_explanation_record(
-        actor="agent-1",
-        decision_id=decision.id,
-        summary="Approved due to policy compliance.",
-        details="The request met all mandatory checks.",
-        evidence=["policy-1"],
-    )
-    shared_data.write(explanation)
-
-    record = list(shared_data.listen("explanation"))[0]
-    assert record.payload["decision_id"] == decision.id
+    record = list(shared_data.listen("agent_update"))[0]
+    decision = record.payload["decision"]
+    assert decision["explanation"] == "Approved due to policy compliance."
 
 
 if __name__ == "__main__":

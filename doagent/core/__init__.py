@@ -10,6 +10,7 @@ from .participation import (
 )
 from .shared_data import (
     InMemorySharedData,
+    new_agent_update_record,
     new_explanation_record,
     new_record,
     new_trace_record,
@@ -21,6 +22,7 @@ __all__ = [
     "FunctionAgent",
     "InMemorySharedData",
     "FileSharedData",
+    "new_agent_update_record",
     "new_record",
     "new_explanation_record",
     "new_trace_record",

@@ -104,19 +104,24 @@ def new_trace_record(
     actor: str,
     from_id: str,
     to_id: str,
-    relation: str,
+    enabled_by_id: str,
+    relation: str = "enables",
+    round_: Optional[int] = None,
     trace_actor: Optional[str] = None,
     trace_timestamp: Optional[str] = None,
     notes: Optional[str] = None,
     provenance: Optional[Dict[str, Any]] = None,
     record_id: Optional[str] = None,
 ) -> SimpleRecord:
-    """Create a trace record linking two records."""
+    """Create a trace record linking environment outcomes via agent_update."""
     payload: Dict[str, Any] = {
         "from_id": from_id,
         "to_id": to_id,
+        "enabled_by_id": enabled_by_id,
         "relation": relation,
     }
+    if round_ is not None:
+        payload["round"] = round_
     if trace_actor is not None:
         payload["actor"] = trace_actor
     if trace_timestamp is not None:
@@ -128,5 +133,36 @@ def new_trace_record(
         kind="trace",
         payload=payload,
         provenance=provenance,
+        record_id=record_id,
+    )
+
+
+def new_agent_update_record(
+    *,
+    actor: str,
+    local_knowledge: Dict[str, Any],
+    decision: Dict[str, Any],
+    payload_type: Optional[str] = None,
+    provenance: Optional[Dict[str, Any]] = None,
+    accountability: Optional[Dict[str, Any]] = None,
+    record_id: Optional[str] = None,
+) -> SimpleRecord:
+    """Create an agent_update record with local_knowledge and decision.
+
+    decision should contain request, response, and optionally explanation.
+    Do not duplicate provenance/accountability inside decision.response.
+    """
+    payload: Dict[str, Any] = {
+        "local_knowledge": local_knowledge,
+        "decision": decision,
+    }
+    if payload_type is not None:
+        payload["type"] = payload_type
+    return new_record(
+        actor=actor,
+        kind="agent_update",
+        payload=payload,
+        provenance=provenance,
+        accountability=accountability,
         record_id=record_id,
     )

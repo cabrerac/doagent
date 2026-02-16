@@ -6,9 +6,14 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional
 from uuid import uuid4
 
-from ...core.shared_data import new_explanation_record, new_record, new_trace_record
+from ...core.shared_data import new_agent_update_record, new_record, new_trace_record
 from ...interface.shared_data import SharedDataAdapter
-from ...records import DecisionRequest, DecisionResponse, new_provenance
+from ...records import (
+    DecisionRequest,
+    DecisionResponse,
+    INITIAL_STATE_ID,
+    new_provenance,
+)
 from ..environment import ValidationEnv
 from ..policy import PolicyRegistry
 from .agents import PushAgentConfig, build_push_agents
@@ -30,18 +35,6 @@ def _serializable(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_serializable(item) for item in value]
     return value
-
-
-def _find_decision_record_id(
-    shared_data: SharedDataAdapter,
-    response_id: str,
-) -> Optional[str]:
-    for record in shared_data.listen("decision"):
-        payload = record.payload
-        response = payload.get("response", {})
-        if response.get("id") == response_id:
-            return record.id
-    return None
 
 
 def _build_request(
@@ -77,10 +70,11 @@ def run_push_validation(
         env.render()
 
     outcome_count = 0
+    prev_outcome_id: str = INITIAL_STATE_ID
     for round_id in range(1, rounds + 1):
         actions: Dict[str, Any] = {}
         responses: Dict[str, DecisionResponse] = {}
-        decision_record_ids: Dict[str, Optional[str]] = {}
+        agent_update_ids: Dict[str, str] = {}
 
         for agent_id, agent in agents.items():
             observation = observations.get(agent_id, {})
@@ -89,12 +83,24 @@ def run_push_validation(
                 observation=observation,
                 round_id=round_id,
             )
-            response = agent.decide(request)
+            response = agent.decide(request, persist=False)
             responses[agent_id] = response
-            decision_record_ids[agent_id] = _find_decision_record_id(
-                shared_data, response["id"]
-            )
             actions[agent_id] = response.get("decision", {}).get("action", 0)
+
+            decision = {
+                "request": dict(request),
+                "response": {k: v for k, v in response.items() if k not in ("provenance", "accountability")},
+            }
+            if "explanation" in response:
+                decision["explanation"] = response["explanation"]
+            agent_update = new_agent_update_record(
+                actor=agent_id,
+                local_knowledge={"observation": _serializable(observation)},
+                decision=decision,
+                provenance=new_provenance(agent=agent_id, sources=[]),
+            )
+            shared_data.write(agent_update)
+            agent_update_ids[agent_id] = agent_update.id
 
         step = env.step(actions)
         if on_outcome is not None:
@@ -111,7 +117,7 @@ def run_push_validation(
         }
         provenance = new_provenance(
             agent="push_env",
-            sources=[rid for rid in decision_record_ids.values() if rid],
+            sources=list(agent_update_ids.values()),
             tools=["push_env"],
         )
         outcome_record = new_record(
@@ -123,25 +129,18 @@ def run_push_validation(
         shared_data.write(outcome_record)
         outcome_count += 1
 
-        for agent_id, response in responses.items():
-            decision_id = decision_record_ids.get(agent_id)
-            if decision_id is None:
-                continue
-            summary = response.get("explanation", "Decision recorded.")
-            explanation = new_explanation_record(
-                actor=agent_id,
-                decision_id=response["id"],
-                summary=summary,
-            )
-            shared_data.write(explanation)
-
+        for agent_id in responses:
             trace = new_trace_record(
                 actor=agent_id,
-                from_id=decision_id,
+                from_id=prev_outcome_id,
                 to_id=outcome_record.id,
-                relation="controls",
+                enabled_by_id=agent_update_ids[agent_id],
+                relation="enables",
+                round_=round_id,
                 notes=f"Round {round_id} decision influenced outcome.",
             )
             shared_data.write(trace)
+
+        prev_outcome_id = outcome_record.id
 
     return PushRunSummary(rounds=rounds, outcomes=outcome_count)

@@ -2,45 +2,55 @@
 
 import unittest
 
-from doagent.core import InMemorySharedData, new_record, new_trace_record
+from doagent.core import (
+    InMemorySharedData,
+    new_agent_update_record,
+    new_record,
+    new_trace_record,
+)
 
 
 class TestTraceabilityRecords(unittest.TestCase):
     def setUp(self) -> None:
         self.shared_data = InMemorySharedData()
 
-    def test_trace_links_records(self) -> None:
-        """Ensure trace records link upstream and downstream records."""
-        upstream = new_record(
+    def test_trace_links_outcomes_via_agent_update(self) -> None:
+        """Ensure trace records link outcomes with enabled_by agent_update."""
+        from_outcome = new_record(
+            actor="env",
+            kind="outcome",
+            payload={"round": 0},
+        )
+        agent_update = new_agent_update_record(
             actor="agent-1",
-            kind="note",
-            payload={"text": "source"},
+            local_knowledge={},
+            decision={"request": {}, "response": {"decision": {}}},
         )
-        downstream = new_record(
-            actor="agent-2",
-            kind="decision",
-            payload={"decision": {"action": "use"}},
+        to_outcome = new_record(
+            actor="env",
+            kind="outcome",
+            payload={"round": 1},
         )
-        self.shared_data.write(upstream)
-        self.shared_data.write(downstream)
+        self.shared_data.write(from_outcome)
+        self.shared_data.write(agent_update)
+        self.shared_data.write(to_outcome)
 
         trace = new_trace_record(
-            actor="agent-2",
-            from_id=upstream.id,
-            to_id=downstream.id,
-            relation="used",
-            notes="Decision used upstream note.",
+            actor="agent-1",
+            from_id=from_outcome.id,
+            to_id=to_outcome.id,
+            enabled_by_id=agent_update.id,
+            relation="enables",
+            round_=1,
+            notes="Transition enabled by agent.",
         )
         self.shared_data.write(trace)
 
         traces = list(self.shared_data.listen("trace"))
         self.assertEqual(len(traces), 1)
         payload = traces[0].payload
-        self.assertEqual(payload["from_id"], upstream.id)
-        self.assertEqual(payload["to_id"], downstream.id)
-        self.assertEqual(payload["relation"], "used")
-        self.assertEqual(payload["notes"], "Decision used upstream note.")
-
-
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
+        self.assertEqual(payload["from_id"], from_outcome.id)
+        self.assertEqual(payload["to_id"], to_outcome.id)
+        self.assertEqual(payload["enabled_by_id"], agent_update.id)
+        self.assertEqual(payload["relation"], "enables")
+        self.assertEqual(payload["notes"], "Transition enabled by agent.")

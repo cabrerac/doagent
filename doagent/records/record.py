@@ -39,6 +39,10 @@ class Provenance(TypedDict, total=False):
     contributions: List[Contribution]
 
 
+INITIAL_STATE_ID = "initial_state"
+"""Fixed ID for the first environment outcome (state before any agent acts)."""
+
+
 class Accountability(TypedDict, total=False):
     """Accountability metadata for a record.
 
@@ -119,11 +123,13 @@ class ExplanationPayload(TypedDict, total=False):
 
 
 class TracePayload(TypedDict, total=False):
-    """Trace payload linking records for lineage reconstruction."""
+    """Trace payload linking environment outcomes via agent_update transitions."""
 
     from_id: str
     to_id: str
+    enabled_by_id: str
     relation: str
+    round: Optional[int]
     actor: Optional[str]
     timestamp: Optional[str]
     notes: Optional[str]

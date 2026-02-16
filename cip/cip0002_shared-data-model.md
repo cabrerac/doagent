@@ -111,4 +111,4 @@ Iteration 2 discussion items:
 - The environment writes in the shared data model as it was an agent. Does it make sense?
 
 ## References
-- None yet
+- [Data Model Specification](../docs/data-model-spec.md) — Record kinds, roles, relationships, provenance/accountability, trace schema, logging levels.

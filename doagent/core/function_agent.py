@@ -28,8 +28,13 @@ class FunctionAgent(DecisionAgent):
         self._decide_fn = decide_fn
         self._decision_kind = decision_kind
 
-    def decide(self, request: DecisionRequest) -> DecisionResponse:
-        """Produce a decision response and persist it to shared data."""
+    def decide(
+        self,
+        request: DecisionRequest,
+        *,
+        persist: bool = True,
+    ) -> DecisionResponse:
+        """Produce a decision response. Optionally persist as decision record."""
         response = dict(self._decide_fn(request))
         request_id = request.get("id")
         response_id = response.get("id") or str(uuid4())
@@ -43,18 +48,20 @@ class FunctionAgent(DecisionAgent):
             }
         )
 
-        payload: Dict[str, Any] = {
-            "request": dict(request),
-            "response": dict(response),
-        }
-        record_provenance = response.get("provenance") or request.get("provenance")
-        record_accountability = response.get("accountability") or request.get("accountability")
-        record = new_record(
-            actor=response_actor,
-            kind=self._decision_kind,
-            payload=payload,
-            provenance=record_provenance,
-            accountability=record_accountability,
-        )
-        self._shared_data.write(record)
+        if persist:
+            response_clean = {k: v for k, v in response.items() if k not in ("provenance", "accountability")}
+            payload: Dict[str, Any] = {
+                "request": dict(request),
+                "response": response_clean,
+            }
+            record_provenance = response.get("provenance") or request.get("provenance")
+            record_accountability = response.get("accountability") or request.get("accountability")
+            record = new_record(
+                actor=response_actor,
+                kind=self._decision_kind,
+                payload=payload,
+                provenance=record_provenance,
+                accountability=record_accountability,
+            )
+            self._shared_data.write(record)
         return response

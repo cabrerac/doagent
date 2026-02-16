@@ -87,20 +87,19 @@ class TestPushValidation(unittest.TestCase):
             seed=123,
         )
 
-        decisions = list(shared_data.listen("decision"))
-        explanations = list(shared_data.listen("explanation"))
+        agent_updates = list(shared_data.listen("agent_update"))
         traces = list(shared_data.listen("trace"))
         outcomes = list(shared_data.listen("outcome"))
 
         self.assertEqual(summary.rounds, 3)
         self.assertEqual(summary.outcomes, 3)
-        self.assertEqual(len(decisions), 6)
-        self.assertEqual(len(explanations), 6)
+        self.assertEqual(len(agent_updates), 6)
         self.assertEqual(len(traces), 6)
         self.assertEqual(len(outcomes), 3)
 
-        for record in decisions:
-            self.assertTrue(record.accountability)
+        for record in agent_updates:
+            self.assertIn("decision", record.payload)
+            self.assertIn("local_knowledge", record.payload)
 
         for record in outcomes:
             self.assertIn("contributions", record.provenance)
@@ -122,10 +121,10 @@ class TestPushValidation(unittest.TestCase):
                 seed=321,
             )
 
-            decisions = list(shared_data.listen("decision"))
+            agent_updates = list(shared_data.listen("agent_update"))
             outcomes = list(shared_data.listen("outcome"))
 
-            self.assertEqual(len(decisions), 4)
+            self.assertEqual(len(agent_updates), 4)
             self.assertEqual(len(outcomes), 2)
             self.assertGreater(output_bytes_from_path(path), 0)
 

@@ -1,36 +1,50 @@
 """Traceability records example."""
 
-from doagent.core import InMemorySharedData, new_record, new_trace_record
-
-
+from doagent.core import (
+    InMemorySharedData,
+    new_agent_update_record,
+    new_record,
+    new_trace_record,
+)
 def main() -> None:
     shared_data = InMemorySharedData()
 
-    upstream = new_record(
+    from_outcome = new_record(
+        actor="env",
+        kind="outcome",
+        payload={"round": 0, "observations": {}},
+    )
+    shared_data.write(from_outcome)
+
+    agent_update = new_agent_update_record(
         actor="agent-1",
-        kind="note",
-        payload={"text": "source"},
+        local_knowledge={"observation": {}},
+        decision={"request": {}, "response": {"decision": {"action": "move"}}},
     )
-    downstream = new_record(
-        actor="agent-2",
-        kind="decision",
-        payload={"decision": {"action": "use"}},
+    shared_data.write(agent_update)
+
+    to_outcome = new_record(
+        actor="env",
+        kind="outcome",
+        payload={"round": 1, "observations": {}, "rewards": {}},
     )
-    shared_data.write(upstream)
-    shared_data.write(downstream)
+    shared_data.write(to_outcome)
 
     trace = new_trace_record(
-        actor="agent-2",
-        from_id=upstream.id,
-        to_id=downstream.id,
-        relation="used",
-        notes="Decision used upstream note.",
+        actor="agent-1",
+        from_id=from_outcome.id,
+        to_id=to_outcome.id,
+        enabled_by_id=agent_update.id,
+        relation="enables",
+        round_=1,
+        notes="Agent decision enabled transition.",
     )
     shared_data.write(trace)
 
     record = list(shared_data.listen("trace"))[0]
-    assert record.payload["from_id"] == upstream.id
-    assert record.payload["to_id"] == downstream.id
+    assert record.payload["from_id"] == from_outcome.id
+    assert record.payload["to_id"] == to_outcome.id
+    assert record.payload["enabled_by_id"] == agent_update.id
 
 
 if __name__ == "__main__":
