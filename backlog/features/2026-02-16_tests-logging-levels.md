@@ -1,10 +1,10 @@
 ---
 id: "2026-02-16_tests-logging-levels"
 title: "Add tests for logging levels"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-02-16"
-last_updated: "2026-02-16"
+last_updated: "2026-02-19"
 category: "features"
 related_cips:
 - "0001"
@@ -24,14 +24,14 @@ tags:
 
 ## Description
 
-Add unit and/or integration tests that verify logging level behaviour. At level 0: agent_update (no decision.explanation), environment_outcome, trace. At level 1: decision.explanation populated. At level 2: provenance and accountability on envelope.
+Add unit and/or integration tests that verify logging level behaviour. At level 0: agent_update (no decision.explanation), environment_outcome; no trace. At level 1: trace + decision.explanation. At level 2: provenance and accountability on envelope.
 
 ## Acceptance Criteria
 
-- [ ] Test: Level 0 run produces agent_update without decision.explanation.
-- [ ] Test: Level 1 run produces agent_update with decision.explanation populated.
-- [ ] Test: Level 2 run has provenance and accountability on all record envelopes.
-- [ ] Tests are deterministic and run via pytest or unittest.
+- [x] Test: Level 0 run produces agent_update and environment_outcome; no trace; no decision.explanation.
+- [x] Test: Level 1 run produces trace and agent_update with decision.explanation populated.
+- [x] Test: Level 2 run has provenance and accountability on all record envelopes.
+- [x] Tests are deterministic and run via pytest or unittest.
 
 ## Implementation Notes
 
@@ -42,9 +42,12 @@ Add unit and/or integration tests that verify logging level behaviour. At level 
 
 - CIP: 0001
 - PRs: N/A
-- Documentation: Logging levels definition
+- Documentation: 2026-02-16_logging-levels-definition, docs/library-boundaries.md §10
 
 ## Progress Updates
 
 ### 2026-02-16
 Task created. Part of REQ-0001 iteration 2 backlog.
+
+### 2026-02-19
+tests/test_logging_levels.py: 5 tests covering level 0/1/2, default, invalid config. All pass. Marked complete.

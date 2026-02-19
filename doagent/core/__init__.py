@@ -15,6 +15,14 @@ from .shared_data import (
     new_record,
     new_trace_record,
 )
+from .record_writer import RecordWriter
+from .run_config import (
+    DEFAULT_LOGGING_LEVEL,
+    RunConfig,
+    should_include_explanation,
+    should_include_provenance_accountability,
+    should_write_trace,
+)
 from .topology import RoutingDecision, Topology, TopologyConfig, select_routing
 
 __all__ = [
@@ -33,4 +41,10 @@ __all__ = [
     "ParticipationRecord",
     "ParticipationRegistry",
     "InMemoryParticipationRegistry",
+    "RecordWriter",
+    "RunConfig",
+    "DEFAULT_LOGGING_LEVEL",
+    "should_include_explanation",
+    "should_include_provenance_accountability",
+    "should_write_trace",
 ]

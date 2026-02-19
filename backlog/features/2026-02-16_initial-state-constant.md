@@ -1,10 +1,10 @@
 ---
 id: "2026-02-16_initial-state-constant"
 title: "Add initial_state constant for first environment outcome"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-02-16"
-last_updated: "2026-02-16"
+last_updated: "2026-02-19"
 category: "features"
 related_cips:
 - "0002"
@@ -27,10 +27,10 @@ Define a fixed ID `"initial_state"` for the first environment outcome (state bef
 
 ## Acceptance Criteria
 
-- [ ] Constant or literal `"initial_state"` is defined and exported.
-- [ ] Initial environment outcome uses this ID when written.
-- [ ] Documentation or spec references the initial state convention.
-- [ ] First trace correctly references `from_id: "initial_state"` when applicable.
+- [x] Constant or literal `"initial_state"` is defined and exported.
+- [x] Initial environment outcome uses this ID when written.
+- [x] Documentation or spec references the initial state convention.
+- [x] First trace correctly references `from_id: "initial_state"` when applicable.
 
 ## Implementation Notes
 
@@ -47,3 +47,6 @@ Define a fixed ID `"initial_state"` for the first environment outcome (state bef
 
 ### 2026-02-16
 Task created.
+
+### 2026-02-19
+INITIAL_STATE_ID in records/record.py, exported via records/__init__.py. Used by scenarios and RecordWriter. Documented in data-model-spec.md §7. Marked complete.

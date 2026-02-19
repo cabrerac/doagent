@@ -1,10 +1,10 @@
 ---
 id: "2026-02-16_remove-payload-redundancy"
 title: "Remove provenance/accountability from payloads (record level only)"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-02-16"
-last_updated: "2026-02-16"
+last_updated: "2026-02-19"
 category: "features"
 related_cips:
 - "0002"
@@ -49,3 +49,6 @@ Eliminate redundancy by keeping provenance and accountability only at the record
 
 ### 2026-02-16
 Task created.
+
+### 2026-02-19
+Scenarios strip provenance/accountability from decision.response before writing. RecordWriter applies them at envelope level only. Documented in data-model-spec.md §5. Marked complete.

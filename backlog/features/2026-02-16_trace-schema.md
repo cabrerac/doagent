@@ -1,10 +1,10 @@
 ---
 id: "2026-02-16_trace-schema"
 title: "Formalise trace schema (from_id, to_id, enabled_by_id, metadata)"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-02-16"
-last_updated: "2026-02-16"
+last_updated: "2026-02-19"
 category: "features"
 related_cips:
 - "0002"
@@ -32,10 +32,10 @@ Update the trace record schema to support the state-transition graph model. Trac
 
 ## Acceptance Criteria
 
-- [ ] Trace record schema includes `from_id`, `to_id`, `enabled_by_id`.
-- [ ] Trace carries `round` and `timestamp` (or equivalent) for temporal context.
-- [ ] Schema is documented (typed or in spec).
-- [ ] Existing trace creation is updated to use new schema where applicable.
+- [x] Trace record schema includes `from_id`, `to_id`, `enabled_by_id`.
+- [x] Trace carries `round` and `timestamp` (or equivalent) for temporal context.
+- [x] Schema is documented (typed or in spec).
+- [x] Existing trace creation is updated to use new schema where applicable.
 
 ## Implementation Notes
 
@@ -52,3 +52,6 @@ Update the trace record schema to support the state-transition graph model. Trac
 
 ### 2026-02-16
 Task created.
+
+### 2026-02-19
+TracePayload typed in records/record.py; new_trace_record in shared_data.py with from_id, to_id, enabled_by_id, round_, accountability. RecordWriter writes traces via on_outcome_and_traces. Marked complete.

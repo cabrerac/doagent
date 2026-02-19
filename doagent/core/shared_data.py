@@ -111,6 +111,7 @@ def new_trace_record(
     trace_timestamp: Optional[str] = None,
     notes: Optional[str] = None,
     provenance: Optional[Dict[str, Any]] = None,
+    accountability: Optional[Dict[str, Any]] = None,
     record_id: Optional[str] = None,
 ) -> SimpleRecord:
     """Create a trace record linking environment outcomes via agent_update."""
@@ -133,6 +134,7 @@ def new_trace_record(
         kind="trace",
         payload=payload,
         provenance=provenance,
+        accountability=accountability,
         record_id=record_id,
     )
 

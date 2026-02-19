@@ -1,10 +1,10 @@
 ---
 id: "2026-02-16_validation-gridworld-new-model"
 title: "Update gridworld validation for new data model"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-02-16"
-last_updated: "2026-02-16"
+last_updated: "2026-02-19"
 category: "features"
 related_cips:
 - "0001"
@@ -32,11 +32,11 @@ Update the gridworld validation scenario and example to conform to the new data 
 
 ## Acceptance Criteria
 
-- [ ] Gridworld scenario produces agent_update with local_knowledge and decision in payload.
-- [ ] Traces use new schema (from_id, to_id, enabled_by_id, round/timestamp).
-- [ ] Initial environment outcome uses id "initial_state".
-- [ ] Validation run respects logging level config.
-- [ ] Example output aligns with data model spec.
+- [x] Gridworld scenario produces agent_update with local_knowledge and decision in payload.
+- [x] Traces use new schema (from_id, to_id, enabled_by_id, round/timestamp).
+- [x] Initial environment outcome uses id "initial_state".
+- [x] Validation run respects logging level config.
+- [x] Example output aligns with data model spec.
 
 ## Implementation Notes
 
@@ -53,3 +53,6 @@ Update the gridworld validation scenario and example to conform to the new data 
 
 ### 2026-02-16
 Task created. Part of REQ-0001/CIP-0002 iteration 2 backlog.
+
+### 2026-02-19
+Gridworld uses RecordWriter, new data model, logging levels. All tests pass. Marked complete. Note: scenario will be further refactored to use Session API (new task).

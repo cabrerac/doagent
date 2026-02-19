@@ -34,6 +34,7 @@ from .gridworld import (
     run_gridworld_validation,
     register_gridworld_policies,
 )
+from ..core.run_config import RunConfig
 
 __all__ = [
     "AgentPolicyAssignment",
@@ -64,4 +65,5 @@ __all__ = [
     "measure_baseline",
     "output_bytes_from_path",
     "write_summary",
+    "RunConfig",
 ]

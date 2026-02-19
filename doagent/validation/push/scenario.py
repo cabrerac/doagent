@@ -6,14 +6,10 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional
 from uuid import uuid4
 
-from ...core.shared_data import new_agent_update_record, new_record, new_trace_record
+from ...core.record_writer import RecordWriter
+from ...core.run_config import RunConfig
 from ...interface.shared_data import SharedDataAdapter
-from ...records import (
-    DecisionRequest,
-    DecisionResponse,
-    INITIAL_STATE_ID,
-    new_provenance,
-)
+from ...records import DecisionRequest, DecisionResponse, INITIAL_STATE_ID
 from ..environment import ValidationEnv
 from ..policy import PolicyRegistry
 from .agents import PushAgentConfig, build_push_agents
@@ -60,10 +56,13 @@ def run_push_validation(
     configs: list[PushAgentConfig],
     rounds: int,
     seed: int,
+    run_config: RunConfig | None = None,
     render: bool = False,
     on_outcome: Callable[[int, Dict[str, Any], Dict[str, float]], None] | None = None,
 ) -> PushRunSummary:
     """Run the simple push validation scenario for a fixed number of rounds."""
+    config = run_config or RunConfig()
+    record_writer = RecordWriter(shared_data, config)
     agents = build_push_agents(shared_data, registry, configs)
     observations = env.reset(seed=seed)
     if render:
@@ -91,16 +90,13 @@ def run_push_validation(
                 "request": dict(request),
                 "response": {k: v for k, v in response.items() if k not in ("provenance", "accountability")},
             }
-            if "explanation" in response:
-                decision["explanation"] = response["explanation"]
-            agent_update = new_agent_update_record(
-                actor=agent_id,
+            record_id = record_writer.on_agent_decide(
+                agent_id=agent_id,
                 local_knowledge={"observation": _serializable(observation)},
                 decision=decision,
-                provenance=new_provenance(agent=agent_id, sources=[]),
+                response=response,
             )
-            shared_data.write(agent_update)
-            agent_update_ids[agent_id] = agent_update.id
+            agent_update_ids[agent_id] = record_id
 
         step = env.step(actions)
         if on_outcome is not None:
@@ -109,38 +105,16 @@ def run_push_validation(
             env.render()
         observations = step.observations
 
-        outcome_payload = {
-            "round": round_id,
-            "actions": _serializable(actions),
-            "rewards": _serializable(step.rewards),
-            "observations": _serializable(step.observations),
-        }
-        provenance = new_provenance(
-            agent="push_env",
-            sources=list(agent_update_ids.values()),
-            tools=["push_env"],
+        prev_outcome_id = record_writer.on_outcome_and_traces(
+            round_id=round_id,
+            actions=actions,
+            rewards=step.rewards,
+            observations=step.observations,
+            agent_update_ids=agent_update_ids,
+            prev_outcome_id=prev_outcome_id,
+            env_actor="push_env",
+            agent_ids=list(responses.keys()),
         )
-        outcome_record = new_record(
-            actor="push_env",
-            kind="outcome",
-            payload=outcome_payload,
-            provenance=provenance,
-        )
-        shared_data.write(outcome_record)
         outcome_count += 1
-
-        for agent_id in responses:
-            trace = new_trace_record(
-                actor=agent_id,
-                from_id=prev_outcome_id,
-                to_id=outcome_record.id,
-                enabled_by_id=agent_update_ids[agent_id],
-                relation="enables",
-                round_=round_id,
-                notes=f"Round {round_id} decision influenced outcome.",
-            )
-            shared_data.write(trace)
-
-        prev_outcome_id = outcome_record.id
 
     return PushRunSummary(rounds=rounds, outcomes=outcome_count)

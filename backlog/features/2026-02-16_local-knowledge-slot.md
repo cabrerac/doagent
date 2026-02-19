@@ -1,10 +1,10 @@
 ---
 id: "2026-02-16_local-knowledge-slot"
 title: "Add local_knowledge as required slot in agent_update payload"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-02-16"
-last_updated: "2026-02-16"
+last_updated: "2026-02-19"
 category: "features"
 related_cips:
 - "0002"
@@ -28,10 +28,10 @@ Make `local_knowledge` a required slot in the agent_update payload. local_knowle
 
 ## Acceptance Criteria
 
-- [ ] agent_update payload includes `local_knowledge` slot.
-- [ ] Gridworld map_update / map_summary record their content under `local_knowledge` (or equivalent).
-- [ ] Schema or types reflect local_knowledge as part of agent_update.
-- [ ] Documentation describes local_knowledge as scenario-defined content with temporal semantics (snapshot at update time).
+- [x] agent_update payload includes `local_knowledge` slot.
+- [x] Gridworld map_update / map_summary record their content under `local_knowledge` (or equivalent).
+- [x] Schema or types reflect local_knowledge as part of agent_update.
+- [x] Documentation describes local_knowledge as scenario-defined content with temporal semantics (snapshot at update time).
 
 ## Implementation Notes
 
@@ -49,3 +49,6 @@ Make `local_knowledge` a required slot in the agent_update payload. local_knowle
 
 ### 2026-02-16
 Task created.
+
+### 2026-02-19
+new_agent_update_record requires local_knowledge. Gridworld and push scenarios populate it. RecordWriter.on_agent_decide takes local_knowledge. Documented in data-model-spec.md §3. Marked complete.
