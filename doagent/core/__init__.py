@@ -23,6 +23,7 @@ from .run_config import (
     should_include_provenance_accountability,
     should_write_trace,
 )
+from .session import Session, SessionAgent, WrappedEnv
 from .topology import RoutingDecision, Topology, TopologyConfig, select_routing
 
 __all__ = [
@@ -47,4 +48,7 @@ __all__ = [
     "should_include_explanation",
     "should_include_provenance_accountability",
     "should_write_trace",
+    "Session",
+    "SessionAgent",
+    "WrappedEnv",
 ]

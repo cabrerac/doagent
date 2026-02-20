@@ -1,6 +1,6 @@
 run:
   id: "gridworld-demo-001"
-  seed: 150
+  seed: 999
   rounds: 100
   deterministic: true
 
@@ -24,7 +24,7 @@ scenario:
       agent_3: ["agent_0, agent_1"]
   participation:
     energy_model: true
-    energy_min: 4
+    energy_min: 8
     energy_max: 10
     energy_decay: 1
     energy_recharge: 1

@@ -10,16 +10,16 @@ from typing import Any, Dict, Optional
 from uuid import uuid4
 
 from ...core.participation import ParticipationRecord, ParticipationRegistry
-from ...core.record_writer import RecordWriter
 from ...core.run_config import RunConfig
+from ...core.session import Session
 from ...core.topology import Topology, TopologyConfig
 from ...interface.shared_data import SharedDataAdapter
-from ...records import DecisionRequest, DecisionResponse, INITIAL_STATE_ID
+from ...records import DecisionRequest, DecisionResponse
 from ..environment import ValidationEnv
 from ..multiprocess_interface import MultiProcessInterface
 from ..policy import PolicyRegistry
 from ..reporting import RunReporter
-from .agents import GridAgentConfig, build_grid_agents
+from .agents import GridAgentConfig
 
 
 @dataclass(frozen=True)
@@ -61,7 +61,7 @@ def _collect_shared_map(
         if record_type not in {"map_update", "map_summary"}:
             continue
         local_knowledge = payload.get("local_knowledge", {})
-        cells_source = local_knowledge.get("cells", []) or payload.get("cells", [])
+        observation = local_knowledge.get("observation", {})
         actor = record.actor
         if topology == Topology.PEER_TO_PEER:
             allowed = {agent_id}
@@ -71,7 +71,11 @@ def _collect_shared_map(
                 continue
         if topology == Topology.FEDERATED and record_type != "map_summary":
             continue
-        cells_source = payload.get("local_knowledge", {}).get("cells", []) or payload.get("cells", [])
+        cells_source = (
+            observation.get("cells", [])
+            or local_knowledge.get("cells", [])
+            or payload.get("cells", [])
+        )
         for cell in cells_source:
             coord = (cell.get("x"), cell.get("y"))
             if coord[0] is None or coord[1] is None:
@@ -142,30 +146,35 @@ def run_gridworld_validation(
     reporter: RunReporter | None = None,
 ) -> GridWorldRunSummary:
     """Run the grid-world validation scenario for a fixed number of rounds."""
-    config = run_config or RunConfig()
     agent_write_fn = None
     if use_multiprocessing and mp_interface is not None:
         agent_write_fn = mp_interface.write_record
-    record_writer = RecordWriter(shared_data, config, agent_write_fn=agent_write_fn)
-    agents = build_grid_agents(shared_data, registry, configs)
-    observations = env.reset(seed=seed)
+    session = Session(shared_data, run_config, agent_write_fn=agent_write_fn)
+    wrapped_env = session.wrap_env(env, env_actor="gridworld_env")
+    agents = session.create_agents(
+        configs, registry, goal="map_discovery", payload_type="map_update",
+    )
+
+    observations = wrapped_env.reset(seed=seed)
     topo_mode = topology.mode if topology else Topology.CENTRALISED
 
     outcome_count = 0
     active_shared = mp_interface if use_multiprocessing else shared_data
     rng = random.Random(seed)
-    config_map = {config["id"]: config for config in configs}
-    active_agents = set(agents.keys())
-    contributions = {agent_id: 0 for agent_id in agents.keys()}
+    config_map = {cfg["id"]: cfg for cfg in configs}
+    agent_ids_all = list(agents.keys())
+    active_agents = set(agent_ids_all)
+    contributions = {aid: 0 for aid in agent_ids_all}
     discovered_cells: set[tuple[int, int]] = set()
-    landmarks_discovered: set[tuple[int, int]] = set()
+    landmarks_discovered_set: set[tuple[int, int]] = set()
     total_rewards: Dict[str, float] = {}
     total_cells: Optional[int] = None
     discovery_round: Optional[int] = None
     termination_reason = "rounds_complete"
     energy_levels = {
-        agent_id: rng.randint(energy_min, energy_max) for agent_id in agents.keys()
+        aid: rng.randint(energy_min, energy_max) for aid in agent_ids_all
     }
+
     for obs in observations.values():
         width = obs.get("width")
         height = obs.get("height")
@@ -180,106 +189,91 @@ def run_gridworld_validation(
             coord = (int(x), int(y))
             discovered_cells.add(coord)
             if cell.get("value") == "landmark":
-                landmarks_discovered.add(coord)
+                landmarks_discovered_set.add(coord)
     if total_cells and len(discovered_cells) >= total_cells:
         discovery_round = 0
     if participation_registry is not None:
-        for agent_id in active_agents:
-            participation_registry.register(ParticipationRecord(agent_id=agent_id))
+        for aid in active_agents:
+            participation_registry.register(ParticipationRecord(agent_id=aid))
 
-    prev_outcome_id: str = INITIAL_STATE_ID
     for round_id in range(1, rounds + 1):
         actions: Dict[str, Any] = {}
         responses: Dict[str, DecisionResponse] = {}
-        agent_update_ids: Dict[str, str] = {}
 
         if energy_model:
-            for agent_id in list(active_agents):
-                energy_levels[agent_id] -= energy_decay
-                if energy_levels[agent_id] <= 0:
-                    active_agents.remove(agent_id)
+            for aid in list(active_agents):
+                energy_levels[aid] -= energy_decay
+                if energy_levels[aid] <= 0:
+                    active_agents.remove(aid)
                     if participation_registry is not None:
-                        participation_registry.deregister(agent_id)
-            for agent_id in agents.keys():
-                if agent_id in active_agents:
+                        participation_registry.deregister(aid)
+            for aid in agent_ids_all:
+                if aid in active_agents:
                     continue
-                energy_levels[agent_id] = min(
-                    energy_levels[agent_id] + energy_recharge, energy_max
+                energy_levels[aid] = min(
+                    energy_levels[aid] + energy_recharge, energy_max
                 )
-                if energy_levels[agent_id] > energy_leave_threshold:
-                    active_agents.add(agent_id)
+                if energy_levels[aid] > energy_leave_threshold:
+                    active_agents.add(aid)
                     if participation_registry is not None:
                         participation_registry.register(
-                            ParticipationRecord(agent_id=agent_id)
+                            ParticipationRecord(agent_id=aid)
                         )
 
         active_agent_ids = sorted(active_agents)
 
         shared_maps: Dict[str, Dict[str, Any]] = {}
-        requests: Dict[str, DecisionRequest] = {}
-        for agent_id in active_agent_ids:
-            observation = observations.get(agent_id, {})
-            shared_map = _collect_shared_map(
+        for aid in active_agent_ids:
+            shared_maps[aid] = _collect_shared_map(
                 active_shared,
-                agent_id=agent_id,
+                agent_id=aid,
                 topology=topo_mode,
                 visibility=visibility,
             )
-            shared_maps[agent_id] = shared_map
-            requests[agent_id] = _build_request(
-                agent_id=agent_id,
-                observation=observation,
-                shared_map=shared_map,
-                round_id=round_id,
-            )
 
         if use_multiprocessing and active_agent_ids:
+            requests: Dict[str, DecisionRequest] = {}
+            for aid in active_agent_ids:
+                requests[aid] = _build_request(
+                    agent_id=aid,
+                    observation=observations.get(aid, {}),
+                    shared_map=shared_maps[aid],
+                    round_id=round_id,
+                )
             factories = registry.factories()
             ctx = get_context(mp_context)
             with ctx.Pool(processes=len(active_agent_ids)) as pool:
                 tasks = []
-                for agent_id in active_agent_ids:
-                    policy = config_map[agent_id]["policy"]
-                    tasks.append(
-                        (
-                            policy["name"],
-                            policy.get("params", {}),
-                            factories,
-                            requests[agent_id],
-                        )
-                    )
+                for aid in active_agent_ids:
+                    policy = config_map[aid]["policy"]
+                    tasks.append((
+                        policy["name"],
+                        policy.get("params", {}),
+                        factories,
+                        requests[aid],
+                    ))
                 results = pool.starmap(_decide_worker, tasks)
-                for agent_id, response in zip(active_agent_ids, results):
-                    responses[agent_id] = response
-                    actions[agent_id] = response.get("decision", {}).get("action", 0)
-        elif not use_multiprocessing:
-            for agent_id in active_agent_ids:
-                agent = agents[agent_id]
-                request = requests[agent_id]
-                response = agent.decide(request, persist=False)
-                responses[agent_id] = response
-                actions[agent_id] = response.get("decision", {}).get("action", 0)
-
-        for agent_id in active_agent_ids:
-            observation = observations.get(agent_id, {})
-            response = responses[agent_id]
-            local_knowledge = {
-                "cells": observation.get("cells", []),
-                "round": round_id,
-                "agent_id": agent_id,
-            }
-            decision = {
-                "request": dict(requests[agent_id]),
-                "response": {k: v for k, v in response.items() if k not in ("provenance", "accountability")},
-            }
-            record_id = record_writer.on_agent_decide(
-                agent_id=agent_id,
-                local_knowledge=local_knowledge,
-                decision=decision,
-                response=response,
-                payload_type="map_update",
-            )
-            agent_update_ids[agent_id] = record_id
+                for aid, response in zip(active_agent_ids, results):
+                    responses[aid] = response
+                    actions[aid] = response.get("decision", {}).get("action", 0)
+                    obs_for_record = {
+                        "cells": observations.get(aid, {}).get("cells", []),
+                        "shared_map": shared_maps[aid],
+                        "round": round_id,
+                    }
+                    session.record_decision(
+                        aid, obs_for_record, response, round_id,
+                        goal="map_discovery", payload_type="map_update",
+                    )
+        else:
+            for aid in active_agent_ids:
+                observation = observations.get(aid, {})
+                result = agents[aid].decide(observation, round_id, inputs={
+                    "observation": observation,
+                    "shared_map": shared_maps[aid],
+                })
+                responses[aid] = result["response"]
+                actions[aid] = result["action"]
 
         if topo_mode == Topology.FEDERATED:
             summary = _collect_shared_map(
@@ -288,22 +282,17 @@ def run_gridworld_validation(
                 topology=Topology.CENTRALISED,
                 visibility=visibility,
             )
-            record_writer.on_agent_decide(
-                agent_id=hub_id,
-                local_knowledge=summary,
-                decision={},
-                response={},
-                payload_type="map_summary",
-            )
+            session.record_update(hub_id, summary, payload_type="map_summary")
 
-        step = env.step(actions)
-        observations = step.observations
+        step = wrapped_env.step(actions)
+        observations = step["observations"]
+
         if reporter is not None:
-            reporter.on_outcome(round_id, actions, step.rewards)
-        for agent_id, r in step.rewards.items():
-            total_rewards[agent_id] = total_rewards.get(agent_id, 0.0) + r
-        for agent_id in active_agent_ids:
-            observation = observations.get(agent_id, {})
+            reporter.on_outcome(round_id, actions, step["rewards"])
+        for aid, r in step["rewards"].items():
+            total_rewards[aid] = total_rewards.get(aid, 0.0) + r
+        for aid in active_agent_ids:
+            observation = observations.get(aid, {})
             for cell in observation.get("cells", []):
                 x = cell.get("x")
                 y = cell.get("y")
@@ -312,37 +301,27 @@ def run_gridworld_validation(
                 coord = (int(x), int(y))
                 if coord not in discovered_cells:
                     discovered_cells.add(coord)
-                    contributions[agent_id] += 1
+                    contributions[aid] += 1
                     if cell.get("value") == "landmark":
-                        landmarks_discovered.add(coord)
+                        landmarks_discovered_set.add(coord)
         if total_cells and discovery_round is None:
             if len(discovered_cells) >= total_cells:
                 discovery_round = round_id
         if render:
-            env.render()
+            wrapped_env.render()
             if render_delay > 0:
                 time.sleep(render_delay)
 
-        prev_outcome_id = record_writer.on_outcome_and_traces(
-            round_id=round_id,
-            actions=actions,
-            rewards=step.rewards,
-            observations=step.observations,
-            agent_update_ids=agent_update_ids,
-            prev_outcome_id=prev_outcome_id,
-            env_actor="gridworld_env",
-            agent_ids=list(responses.keys()),
-        )
         outcome_count += 1
 
-        # Terminate early if env signals done, full coverage, or all landmarks found
-        if all(step.terminations.values()):
+        done = step.get("done", {})
+        if isinstance(done, dict) and done and all(done.values()):
             termination_reason = "max_cycles"
             break
         if total_cells and len(discovered_cells) >= total_cells:
             termination_reason = "full_coverage"
             break
-        if landmarks_total is not None and len(landmarks_discovered) >= landmarks_total:
+        if landmarks_total is not None and len(landmarks_discovered_set) >= landmarks_total:
             termination_reason = "all_landmarks_discovered"
             break
 
@@ -351,7 +330,7 @@ def run_gridworld_validation(
                 100.0 * len(discovered_cells) / total_cells
                 if total_cells else 0.0
             )
-            lm_msg = f"{len(landmarks_discovered)}"
+            lm_msg = f"{len(landmarks_discovered_set)}"
             if landmarks_total is not None:
                 lm_msg += f"/{landmarks_total}"
             rewards_str = ", ".join(
@@ -367,7 +346,7 @@ def run_gridworld_validation(
     coverage = (
         float(len(discovered_cells)) / float(total_cells) if total_cells else 0.0
     )
-    summary = GridWorldRunSummary(
+    result_summary = GridWorldRunSummary(
         rounds=rounds,
         outcomes=outcome_count,
         coverage=coverage,
@@ -375,11 +354,10 @@ def run_gridworld_validation(
         contributions=contributions,
         total_cells=total_cells,
         termination_reason=termination_reason,
-        landmarks_discovered=len(landmarks_discovered),
+        landmarks_discovered=len(landmarks_discovered_set),
         landmarks_total=landmarks_total,
     )
-    # Final summary print
-    lm_msg = f"{len(landmarks_discovered)}"
+    lm_msg = f"{len(landmarks_discovered_set)}"
     if landmarks_total is not None:
         lm_msg += f"/{landmarks_total}"
     rewards_str = ", ".join(
@@ -390,4 +368,4 @@ def run_gridworld_validation(
         f"rounds={outcome_count} coverage={coverage*100:.1f}% "
         f"landmarks={lm_msg} rewards={{{rewards_str}}}"
     )
-    return summary
+    return result_summary

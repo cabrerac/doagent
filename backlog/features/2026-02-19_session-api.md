@@ -1,10 +1,10 @@
 ---
 id: "2026-02-19_session-api"
 title: "Transparent user API via Session (env wrapping, agent recording)"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-02-19"
-last_updated: "2026-02-19"
+last_updated: "2026-02-20"
 category: "features"
 related_cips:
 - "0001"
@@ -59,15 +59,16 @@ for round_id in range(1, rounds + 1):
 
 ## Acceptance Criteria
 
-- [ ] `Session` class exists, accepts `shared_data` and `run_config`.
-- [ ] `session.wrap_env(env)` returns a wrapped env whose `step()` records outcome and traces internally.
-- [ ] `session.wrap_env(env, adapter=...)` supports custom env return shapes (hybrid adapter).
-- [ ] Auto-detection of common env conventions (dict, tuple, attribute-based) with clear error on unknown.
-- [ ] `session.create_agents(configs)` returns agent objects whose `decide()` records agent_update internally.
-- [ ] `agent.decide(observation, round_id)` is the user-facing signature—no DecisionRequest construction needed.
-- [ ] Validation scenarios (gridworld, push) refactored to use Session, demonstrating transparent API.
-- [ ] No imports of RecordWriter, INITIAL_STATE_ID, new_record, new_provenance in scenario code.
-- [ ] All existing tests pass; new tests verify Session-based usage.
+- [x] `Session` class exists, accepts `shared_data` and `run_config`.
+- [x] `session.wrap_env(env)` returns a wrapped env whose `step()` records outcome and traces internally.
+- [x] `session.wrap_env(env, adapter=...)` supports custom env return shapes (hybrid adapter).
+- [x] Auto-detection of common env conventions (dict, tuple, attribute-based) with clear error on unknown.
+- [x] `session.create_agents(configs)` returns agent objects whose `decide()` records agent_update internally.
+- [x] `agent.decide(observation, round_id)` is the user-facing signature—no DecisionRequest construction needed.
+- [x] Validation scenarios (gridworld, push) refactored to use Session, demonstrating transparent API.
+- [x] No imports of RecordWriter, INITIAL_STATE_ID, new_record, new_provenance in scenario code.
+- [x] All existing tests pass; new tests verify Session-based usage.
+- [x] Integration tests verify full-stack wiring (real env + real policies + Session).
 
 ## Implementation Notes
 
@@ -89,3 +90,39 @@ for round_id in range(1, rounds + 1):
 
 ### 2026-02-19
 Task created. Based on brainstorming: scenarios are usage examples and should demonstrate transparency. Session API selected over step recorder and standalone functions.
+
+### 2026-01-28 (initial)
+Implementation of core Session API:
+- Created `doagent/core/session.py` with `Session`, `WrappedEnv`, `SessionAgent` classes.
+- `WrappedEnv` auto-detects common step result formats (dict, tuple, attribute-based) with user-overridable adapter.
+- `SessionAgent.decide(observation, round_id)` builds DecisionRequest internally, calls policy, records agent_update via RecordWriter.
+- Added `session.record_decision()` for externally-computed decisions (multiprocessing).
+- Added `session.record_update()` for non-decision updates (hub summaries).
+- Refactored push and gridworld scenarios to use Session internally.
+- Exported `Session` from `doagent` top-level package.
+
+### 2026-01-28 (decentralisation + examples rewrite)
+Session moved from library internals to user-facing code. All three DOA principles now supported:
+- **Shared-data model**: `session.wrap_env()`, `session.create_agents()` record transparently.
+- **Decentralisation**: Added `session.visible_records(agent_id, kind)` with topology-aware filtering (CENTRALISED, PEER_TO_PEER, FEDERATED). Session accepts `topology`, `visibility`, `hub_id` parameters.
+- **Openness**: Records accessible via `shared_data.listen()`, extensible agents/policies via PolicyRegistry.
+- Rewrote `examples/validation/gridworld/gridworld_validation.py` to use Session directly with user-owned run loop, demonstrating all three principles.
+- Rewrote `examples/validation/push/push_validation.py` to use Session directly.
+- 10 Session tests (3 new for topology filtering) + full suite: 42 passed, 3 skipped.
+
+### 2026-01-28 (integration tests + bug fixes)
+Two wiring bugs discovered while running the gridworld example:
+1. `build_shared_map` couldn't extract cells from records — `local_knowledge` structure changed to `{"observation": {...}, "shared_map": {...}}` but extraction still looked for `local_knowledge.cells`.
+2. `_move_towards` returned action 1 (left) when src == dest, causing frontier agents to drift left and get stuck.
+
+Both bugs were invisible to unit tests because stubs don't exercise real observation structures. Added 7 integration tests in `tests/test_session_integration.py`:
+- `test_policies_receive_correct_observation_structure`: verifies position, width, height, cells present.
+- `test_agents_actually_move`: asserts agent positions change after 10 rounds.
+- `test_shared_map_accumulates_cells`: shared map grows from records.
+- `test_action_is_valid_integer`: actions are valid ints in {0,1,2,3,4}.
+- `test_records_have_correct_structure`: `local_knowledge.observation.cells` exists.
+- `test_peer_to_peer_topology_filters_records`: topology filtering works end-to-end.
+- `test_coverage_increases_over_rounds`: exploration discovers new cells over time.
+
+Also added `inputs` kwarg to `SessionAgent.decide()` for structured request inputs.
+Full suite: 49 passed, 3 skipped.

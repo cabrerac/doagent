@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-01-23"
 id: "0001"
-last_updated: "2026-02-05"
+last_updated: "2026-01-28"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -69,10 +69,17 @@ A minimal library package that exposes:
 No backward compatibility impact since this is the initial architecture definition.
 
 ## Testing Strategy
-For the PoC iteration:
-- **Unit tests** for core API boundaries and adapters.
-- **Integration test**: stub agent writes to and reads from the shared data model.
-- **Documentation test**: minimal example runs without optional system layers.
+
+### Unit tests
+Core API boundaries and adapters. Use stubs/mocks to verify individual components (Session, RecordWriter, RunConfig, topology filtering) in isolation. Fast, deterministic, catch logic errors.
+
+### Integration tests
+Full-stack wiring: real env + real policies + Session + shared data. These verify that observation structures flow correctly through Session into policies and produce valid actions, that shared maps accumulate from records, and that topology filtering works end-to-end. **Critical for catching bugs at component seams** — e.g. mismatched payload structures, incorrect field nesting, broken wiring between record creation and record consumption.
+
+Integration tests should assert on **behaviour** (agents move, coverage increases, actions are valid integers, shared maps grow) not just record counts.
+
+### Documentation test
+Minimal example runs without optional system layers. Examples in `examples/` serve as living documentation and should be runnable.
 
 ## Related Requirements
 This CIP addresses the following requirements:
@@ -94,6 +101,9 @@ Iteration 1 complete. Minimal library scaffold, in-memory shared data, stub agen
 
 ### 2026-02-02
 Next iteration may extend the library definition (more methods, more record types). If this introduces an architectural shift, open a new CIP. Next iteration can also redefine what we expose and what is transparent for users.
+
+### 2026-01-28
+Session API implemented (backlog: 2026-02-19_session-api). Testing strategy updated to include integration tests that verify full-stack wiring (real env + real policies + Session). Two wiring bugs caught during Session rollout (shared_map cell extraction, _move_towards at origin) demonstrated that unit tests with stubs are insufficient — integration tests at component seams are essential.
 
 ## References
 - None yet

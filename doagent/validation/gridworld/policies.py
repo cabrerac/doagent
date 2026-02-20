@@ -9,6 +9,8 @@ from typing import Any, Dict, Iterable, Tuple
 def _move_towards(src: Tuple[int, int], dst: Tuple[int, int]) -> int:
     dx = dst[0] - src[0]
     dy = dst[1] - src[1]
+    if dx == 0 and dy == 0:
+        return 0
     if abs(dx) >= abs(dy):
         return 2 if dx > 0 else 1
     return 3 if dy > 0 else 4
