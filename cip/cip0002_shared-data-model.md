@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-02-02"
 id: "0002"
-last_updated: "2026-02-05"
+last_updated: "2026-02-21"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -99,7 +99,8 @@ This CIP addresses the following requirements:
 - [x] Collection-per-kind storage refactor (all adapters)
 - [x] Dedup on-by-default (`default_state_hash`)
 - [x] MongoDB adapter (`MongoSharedData`)
-- [ ] Stream adapter (Kafka, Redis — future iteration)
+- [ ] Database adapter (Postgres, SQL  — deferred, no immediate use case)
+- [ ] Stream adapter (Kafka, Redis — deferred, no immediate use case)
 
 ## Progress Updates
 
@@ -116,6 +117,19 @@ Iteration 2 discussion items:
 - Clarify whether shared data is primarily a world log, a medium for agent-to-agent exchange, or both. In the current validation flow agents and the environment writes outcomes but agents do not read from shared data; decide if this is intentional or should change in later iterations.
 - Formalising the model (record schema, kind semantics, indexing/query patterns) gives a spec that adapters must implement. That keeps InMemorySharedData and FileSharedData as “flat” implementations, while Mongo/SQL adapters map to richer structures, without changing the public API. A single, explicit data model for all adapters makes sense; the difference is how each adapter maps that model to its storage (flat vs collections vs tables).
 - The environment writes in the shared data model as it was an agent. Does it make sense?
+
+### 2026-02-21 — Discussion items resolved
+All four iteration 2 discussion items are now resolved:
+
+1. **Envelope redundancy**: Already handled. The data model spec (§1) states provenance/accountability live on the envelope only — no duplication inside payloads. The Session API strips these from policy responses before building the decision payload. Empty `{}` at Levels 0-1 is acceptable (§2: "may be omitted or minimal"); a predictable schema is preferable to optional keys.
+
+2. **Accountability type**: Resolved. `Accountability` is a formal `TypedDict` (§6: `owner`, `policy_id`, `responsibility_scope`). `SimpleRecord.accountability` now typed as `Accountability` instead of `Dict[str, Any]`, matching how `provenance` uses the `Provenance` type.
+
+3. **Shared data role**: Resolved. Added §10 to the data model spec: shared data is **both** a world log (environment writes outcomes) and an agent exchange medium (agents write `agent_update`, read via `visible_records`). Single store enables cross-cutting queries.
+
+4. **Environment as actor**: Resolved. The data model spec (§2) defines `actor` as "Entity that produced the record (agent id, env id)". The env is a data producer, not a decision-maker. The `kind` field (`outcome` vs `agent_update`) distinguishes roles. This is consistent with the DOA principle that all state changes are observable. For next iteration, we should discuss about scenarios where environments offer partial or not outcomes.
+
+Additionally: **Stream adapter deferred.** Kafka/Redis adapter requires external infrastructure with no immediate use case in validation scenarios. Marked as future iteration. The same for **SQL adapter**.
 
 ### 2026-02-21
 Iteration 2 implementation — state deduplication, outcome formalisation, adapter contract:

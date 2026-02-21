@@ -29,20 +29,35 @@ The user controls **when** things happen. The library handles **how** records ar
 
 ---
 
-## 3. Records Are Internal
+## 3. Records Are Internal — Session Is the API
 
 **Users never call low-level record APIs directly.**
 
-Functions such as `new_record()`, `new_agent_update_record()`, `new_trace_record()`, and `new_explanation_record()` are library-internal. They are used by validation scenarios, reporters, and orchestration layers—not by user code.
+Functions such as `new_record()`, `new_agent_update_record()`, `new_trace_record()`, and `new_explanation_record()` are library-internal. They are used by `RecordWriter`, `SessionAgent`, and `WrappedEnv`—not by user code.
 
-**User-facing API:**
-- Agent objects (e.g. `FunctionAgent`) that the user calls in their run loop
-- Env interface for stepping and observations
-- Shared-data adapter selection (`InMemorySharedData`, `FileSharedData`)
-- Configuration (logging level, run parameters)
-- Optional convenience run APIs (e.g. `run_push_validation`) for canned scenarios
+**User-facing API (the Session layer):**
 
-**Rationale:** Record shape, provenance, accountability, and trace linkage are implementation details. Exposing them would couple users to internal changes. The library applies them consistently and transparently.
+| What | User does | Library does internally |
+|------|-----------|----------------------|
+| `Session(shared_data, run_config, ...)` | Create once with adapter, config, topology | Wire `RecordWriter`, dedup, topology filtering |
+| `session.wrap_env(env)` → `WrappedEnv` | Call `env.reset()` and `env.step(actions)` | Record `environment_outcome` + traces on each step |
+| `session.create_agents(configs, registry)` → `SessionAgent` | Call `agent.decide(obs, round)` | Record `agent_update` on each decide |
+| `session.visible_records(agent_id)` | Query shared data filtered by topology | Apply topology rules (centralised/P2P/federated) |
+| `session.record_decision(...)` | Record external decisions (e.g. multiprocessing) | Write `agent_update` via `RecordWriter` |
+| `session.record_update(...)` | Record non-decision updates (e.g. hub summaries) | Write `agent_update` via `RecordWriter` |
+
+**Adapter selection:**
+- `InMemorySharedData` — single-run, in-process
+- `FileSharedData(directory)` — persistent, one JSONL file per record kind
+- `MongoSharedData(db)` — MongoDB, one collection per record kind
+- Custom adapters — implement the `SharedDataAdapter` protocol
+
+**Configuration:**
+- `RunConfig(logging_level=N)` — controls what gets recorded (§7)
+- `TopologyConfig(mode=...)` — decentralisation mode (centralised/P2P/federated)
+- `state_hash_fn` — controls state deduplication (on by default)
+
+**Rationale:** Record shape, provenance, accountability, and trace linkage are implementation details. Exposing them would couple users to internal changes. The library applies them consistently and transparently via the Session layer.
 
 ---
 
@@ -77,29 +92,32 @@ Functions such as `new_record()`, `new_agent_update_record()`, `new_trace_record
 
 ### Core (in scope)
 
-- Shared data interface and adapters (in-memory, file-based)
-- Record envelope and data model (see [data-model-spec.md](data-model-spec.md))
-- Agent adapters (FunctionAgent, StubAgent)
-- Validation scenarios (push, gridworld)
-- Coordination hooks (topology, participation)
-- Logging levels and configurable record writing
+- **Session API** — central entry point for transparent recording, topology, dedup
+- **Shared data interface and adapters** — `InMemorySharedData`, `FileSharedData`, `MongoSharedData`; `SharedDataAdapter` protocol for custom adapters
+- **Record envelope and data model** — see [data-model-spec.md](data-model-spec.md)
+- **State deduplication** — on by default (`default_state_hash` hashes state-category fields); scenario-overridable
+- **Agent adapters** — `SessionAgent` (via Session), `FunctionAgent`, `StubAgent`
+- **Validation scenarios** — push, gridworld (serve as canonical usage examples)
+- **Coordination** — topology (centralised/P2P/federated), participation registry, `visible_records()`
+- **Logging levels** — configurable record writing gated by level (0, 1, 2)
+- **Adapter contract** — documented interface with collection-per-kind storage model; see [adapter-contract.md](adapter-contract.md)
 
 ### Explicitly out of scope (for now)
 
 - Distributed orchestration
 - Network transport
-- Storage backends beyond in-memory and file
 - Agent discovery services
 - Governance policy engines
 - Deployment tooling
 
-### Optional layers (post–core)
+### Deferred (future iterations)
 
-- Additional adapters (e.g. Mongo, SQL) provided by the library
-- Orchestration and federation
+- SQL/Postgres adapter
+- Stream adapter (Kafka, Redis)
+- Orchestration and federation layers
 - Admission and control plane
 - Resource management
-- Additional validation suites
+- Additional validation suites (self-adaptive systems, scientific discovery)
 
 ---
 
@@ -167,25 +185,42 @@ The library does not implement distributed locking or coordination. Parallel sup
 
 ## 12. Extensibility
 
-- **Adapters:** Not extensible. The library provides a fixed set of adapters (e.g. `InMemorySharedData`, `FileSharedData`). Users select one; they cannot implement or add adapters.
-- **Agents and policies:** Extensible. Users provide agent logic (callables, policies) and can define custom agents. The user invokes agents in their run loop; when called, agent objects return decisions and the library handles record writing internally.
+- **Adapters:** Extensible via Protocol. The library ships three adapters (`InMemorySharedData`, `FileSharedData`, `MongoSharedData`), but users can implement their own by satisfying the `SharedDataAdapter` protocol (see [adapter-contract.md](adapter-contract.md)). The optional dedup extension methods (`lookup_outcome_by_hash`, `index_outcome`) have no-op defaults, so a minimal adapter need only implement `write`, `read`, `list`, and `listen`.
+- **Agents and policies:** Extensible. Users provide agent logic (callables, policies via `PolicyRegistry`) and can define custom agents. The user invokes agents in their run loop; when called, agent objects return decisions and the library handles record writing internally.
+- **State deduplication:** Extensible. Users can replace the default hash function by passing a custom `state_hash_fn` to `Session`, or disable dedup entirely by passing `state_hash_fn=None`.
+- **Topology:** Extensible via `TopologyConfig`. Users configure decentralisation mode at `Session` creation; the library enforces visibility rules through `session.visible_records()`.
 
 ---
 
 ## 13. Implications for Implementation
 
-1. **Config object:** Run APIs and agent/scenario setup accept a config (e.g. `RunConfig`) that includes `logging_level`, agent IDs, and adapter. Record-writing code reads from it.
-2. **Record writing via hooks:** The library uses hooks (e.g. on_agent_decide, on_env_step, after_outcome) to write records when the user invokes agents or steps the environment. A built-in hook gates writes by logging level. Transparent for users.
-3. **No user imports of record helpers:** `new_record`, `new_agent_update_record`, etc. may remain in public `doagent.core` for internal and unit-test use; user documentation and examples should not show direct use.
-4. **Examples:** Feature examples may use low-level helpers for pedagogical purposes; validation and E2E examples use only high-level run APIs with config.
-5. **Adapter contract:** User chooses adapter; library assumes the adapter implements the shared data interface. Adapter handles concurrency in multi-process setups.
-6. **Config validation:** Library validates config at run start; invalid config raises before any writes.
+1. **Session is the wiring layer:** `Session` receives adapter, `RunConfig`, `TopologyConfig`, and `state_hash_fn`. It constructs `RecordWriter` internally and exposes `wrap_env()`, `create_agents()`, and `visible_records()` to the user.
+2. **RecordWriter orchestrates writes:** `RecordWriter` gates writes by logging level, applies dedup (if hash fn is set), and delegates to the adapter. Users never interact with it directly.
+3. **No user imports of record helpers:** `new_record`, `new_agent_update_record`, etc. remain in `doagent.core` for internal and unit-test use; user documentation and examples use only the Session layer.
+4. **Adapters implement the Protocol:** Any object satisfying `SharedDataAdapter` works. The library ships three (`InMemorySharedData`, `FileSharedData`, `MongoSharedData`); users can add their own. The adapter contract is documented in [adapter-contract.md](adapter-contract.md).
+5. **Collection-per-kind storage:** All adapters store records in separate logical collections by `kind` (e.g. `environment_outcome`, `agent_update`, `trace`). This enables efficient per-kind queries and aligns in-memory, file, and database backends.
+6. **State deduplication is transparent:** `Session` defaults to `default_state_hash` (hashes `observations` + `done` fields). The user can override or disable. Dedup reuses existing outcome IDs and records pointer traces instead of duplicate outcomes.
+7. **Topology is enforced by Session:** `visible_records()` applies topology rules, so agents only see records permitted by the configured mode.
+8. **Config validation:** Library validates config at Session creation; invalid config raises before any writes.
+9. **Examples:** Validation examples (push, gridworld) use only the Session API; feature examples may use low-level helpers for pedagogical purposes.
+
+---
+
+## 14. Design Alternatives Considered
+
+| Decision | Chosen | Alternative rejected | Reason |
+|----------|--------|---------------------|--------|
+| Adapters extensible | Protocol-based extensibility | Fixed set, no custom adapters | Users need domain-specific backends; Protocol makes this zero-cost |
+| Session as entry point | Single `Session(...)` object | Users wire RecordWriter/agents manually | Wiring is error-prone (integration bugs found in practice) |
+| Dedup on by default | `default_state_hash` active | Opt-in dedup | Trace graph is core to the data model; off-by-default would mean most users get flat logs |
+| Collection-per-kind | Separate stores per `kind` | Single flat store | Per-kind enables efficient queries, matches MongoDB/file semantics, simplifies `listen` |
 
 ---
 
 ## References
 
 - [Data Model Specification](data-model-spec.md)
+- [Adapter Contract](adapter-contract.md)
 - CIP-0001: Library First Architecture
 - CIP-0002: Shared Data Model as Agent Interface
 - Backlog: 2026-01-23_library-boundaries

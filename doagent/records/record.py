@@ -145,7 +145,7 @@ class SimpleRecord:
     kind: str
     payload: Dict[str, Any]
     provenance: Provenance = field(default_factory=dict)
-    accountability: Dict[str, Any] = field(default_factory=dict)
+    accountability: Accountability = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

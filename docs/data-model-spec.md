@@ -192,6 +192,21 @@ Deduplication is **enabled by default** using `default_state_hash` (SHA-256 of t
 
 ---
 
+## 10. Shared Data Role
+
+The shared data model serves **two complementary roles**:
+
+| Role | Producer | Consumer | Record kinds |
+|------|----------|----------|-------------|
+| **World log** | Environment | Analysts, dashboards, post-hoc tooling | `environment_outcome`, `trace` |
+| **Agent exchange medium** | Agents | Other agents (via `visible_records`) | `agent_update` |
+
+Both roles use the same record envelope, adapters, and logging levels. The `kind` field distinguishes what the record represents; the `actor` field identifies who produced it. The environment is a data producer (not a decision-maker) that writes outcome records using the same envelope as agents.
+
+**Design alternative considered:** Separate stores for world log vs agent exchange. Rejected because a single shared model is simpler, enables cross-cutting queries (e.g. "which agent_update enabled this outcome?"), and aligns with the DOA principle that all state changes are observable through one medium.
+
+---
+
 ## References
 
 - CIP-0002: Shared Data Model as Agent Interface

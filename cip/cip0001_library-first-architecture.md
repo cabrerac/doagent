@@ -92,7 +92,7 @@ This CIP addresses the following requirements:
 - [x] Implement in-memory shared data adapter
 - [x] Implement stub agent adapter
 - [x] Add minimal documentation and examples
-- [ ] Extend library definition (additional methods, records, and modules)
+- [x] Extend library definition (additional methods, records, and modules)
 
 ## Progress Updates
 
@@ -105,5 +105,16 @@ Next iteration may extend the library definition (more methods, more record type
 ### 2026-02-21
 Session API implemented (backlog: 2026-02-19_session-api). Testing strategy updated to include integration tests that verify full-stack wiring (real env + real policies + Session). Two wiring bugs caught during Session rollout (shared_map cell extraction, _move_towards at origin) demonstrated that unit tests with stubs are insufficient — integration tests at component seams are essential.
 
+### 2026-02-21
+Library boundaries document (`library-boundaries.md`) updated to reflect the current API surface:
+- §3 rewritten around Session as the user-facing API (table of Session methods and what the library does internally)
+- §6 scope updated: Session, MongoSharedData, dedup, topology, adapter contract all in core; SQL/stream adapters deferred
+- §12 extensibility corrected: adapters are now extensible via `SharedDataAdapter` Protocol; dedup hash and topology are also extensible
+- §13 implications rewritten: Session as wiring layer, RecordWriter orchestrates writes, collection-per-kind storage, dedup transparent
+- §14 added: Design Alternatives Considered (adapter extensibility, Session entry point, dedup default, collection-per-kind)
+- "Extend library definition" checklist item marked complete
+
 ## References
-- None yet
+- [Library Boundaries](../docs/library-boundaries.md)
+- [Data Model Specification](../docs/data-model-spec.md)
+- [Adapter Contract](../docs/adapter-contract.md)
