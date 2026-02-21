@@ -148,6 +148,9 @@ Collection-per-kind storage refactor, dedup-on-by-default, MongoDB adapter:
 - **Design alternatives documented** in `docs/adapter-contract.md` §6: flat-store vs collection-per-kind, opt-in vs default dedup, adapter vs writer-owned index, hash computation location, MongoDB `_id` strategy.
 - **Tests**: 11 new MongoDB adapter tests via `mongomock`. Total: 72 passed, 3 skipped.
 
+### 2026-02-21
+Provenance flattened from `contributions: List[Contribution]` to flat attribution (`created_by`, `derived_from`, `used_tools`, `notes`). The list-of-contributions structure implied collaborative multi-agent authorship of a single record, which does not match the actual write model (one agent_update per agent per step). Updated: `Provenance` TypedDict, `new_provenance()` helper, data-model-spec §6, CIP-0008, README, all tests and examples.
+
 ## References
 - [Data Model Specification](../docs/data-model-spec.md) — Record kinds, roles, relationships, provenance/accountability, trace schema, logging levels.
 - [Adapter Contract](../docs/adapter-contract.md) — SharedDataAdapter implementation guide, collection-per-kind model, dedup extension.

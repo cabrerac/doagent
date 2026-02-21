@@ -40,7 +40,7 @@ Accountability (ownership, responsibility, governance context) ensures decisions
 Iteration 1 focuses on the accountability structure and record envelope extension.
 
 Options considered:
-- **Option A1**: Extend Contribution with accountability fields (mixes lineage with responsibility).
+- **Option A1**: Extend Provenance with accountability fields (mixes lineage with responsibility).
 - **Option A2**: Add optional `accountability` field on the record envelope (owner, policy_id, responsibility_scope).
 - **Option B**: Separate accountability record (e.g. kind="accountability") referencing the record.
 

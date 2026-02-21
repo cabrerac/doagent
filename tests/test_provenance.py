@@ -10,21 +10,25 @@ class TestProvenanceHelper(unittest.TestCase):
     def setUp(self) -> None:
         self.shared_data = InMemorySharedData()
 
-    def test_new_provenance_builds_one_contribution(self) -> None:
-        """Ensure new_provenance returns a structure with one contribution."""
+    def test_new_provenance_builds_flat_attribution(self) -> None:
+        """Ensure new_provenance returns a flat attribution dict."""
         p = new_provenance(
             agent="agent-1",
             sources=["r1", "r2"],
             tools=["search"],
             notes="Initial creation",
         )
-        self.assertIn("contributions", p)
-        self.assertEqual(len(p["contributions"]), 1)
-        c = p["contributions"][0]
-        self.assertEqual(c["agent"], "agent-1")
-        self.assertEqual(c["sources"], ["r1", "r2"])
-        self.assertEqual(c["tools"], ["search"])
-        self.assertEqual(c["notes"], "Initial creation")
+        self.assertEqual(p["created_by"], "agent-1")
+        self.assertEqual(p["derived_from"], ["r1", "r2"])
+        self.assertEqual(p["used_tools"], ["search"])
+        self.assertEqual(p["notes"], "Initial creation")
+
+    def test_new_provenance_minimal(self) -> None:
+        """Ensure minimal provenance only contains created_by."""
+        p = new_provenance(agent="agent-1")
+        self.assertEqual(p, {"created_by": "agent-1"})
+        self.assertNotIn("derived_from", p)
+        self.assertNotIn("used_tools", p)
 
     def test_record_round_trip_with_provenance_from_helper(self) -> None:
         """Ensure record created with provenance via helper round-trips."""
@@ -44,9 +48,8 @@ class TestProvenanceHelper(unittest.TestCase):
         fetched = self.shared_data.read(record.id)
         self.assertIsInstance(fetched, SimpleRecord)
         self.assertEqual(fetched, record)
-        self.assertEqual(len(fetched.provenance.get("contributions", [])), 1)
-        self.assertEqual(fetched.provenance["contributions"][0]["agent"], "agent-1")
-        self.assertEqual(fetched.provenance["contributions"][0]["sources"], ["r1"])
+        self.assertEqual(fetched.provenance["created_by"], "agent-1")
+        self.assertEqual(fetched.provenance["derived_from"], ["r1"])
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from multiprocessing import get_context
 import random
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from ...core.participation import ParticipationRecord, ParticipationRegistry
@@ -14,7 +14,7 @@ from ...core.run_config import RunConfig
 from ...core.session import Session
 from ...core.topology import Topology, TopologyConfig
 from ...interface.shared_data import SharedDataAdapter
-from ...records import DecisionRequest, DecisionResponse
+from ...records import DecisionRequest, DecisionResponse, SimpleRecord
 from ..environment import ValidationEnv
 from ..multiprocess_interface import MultiProcessInterface
 from ..policy import PolicyRegistry
@@ -47,30 +47,16 @@ def _serializable(value: Any) -> Any:
     return value
 
 
-def _collect_shared_map(
-    shared_data: SharedDataAdapter,
-    *,
-    agent_id: str,
-    topology: Topology,
-    visibility: Optional[Dict[str, list[str]]] = None,
-) -> Dict[str, Any]:
+def _build_map_from_records(records: List[SimpleRecord]) -> Dict[str, Any]:
+    """Extract merged cell map from agent_update records."""
     cells: Dict[tuple[int, int], str] = {}
-    for record in shared_data.listen("agent_update"):
+    for record in records:
         payload = record.payload
         record_type = payload.get("type")
         if record_type not in {"map_update", "map_summary"}:
             continue
         local_knowledge = payload.get("local_knowledge", {})
         observation = local_knowledge.get("observation", {})
-        actor = record.actor
-        if topology == Topology.PEER_TO_PEER:
-            allowed = {agent_id}
-            if visibility and agent_id in visibility:
-                allowed.update(visibility[agent_id])
-            if actor not in allowed:
-                continue
-        if topology == Topology.FEDERATED and record_type != "map_summary":
-            continue
         cells_source = (
             observation.get("cells", [])
             or local_knowledge.get("cells", [])
@@ -149,17 +135,23 @@ def run_gridworld_validation(
     agent_write_fn = None
     if use_multiprocessing and mp_interface is not None:
         agent_write_fn = mp_interface.write_record
-    session = Session(shared_data, run_config, agent_write_fn=agent_write_fn)
+    session = Session(
+        shared_data,
+        run_config,
+        agent_write_fn=agent_write_fn,
+        topology=topology,
+        visibility=visibility,
+        hub_id=hub_id,
+    )
     wrapped_env = session.wrap_env(env, env_actor="gridworld_env")
     agents = session.create_agents(
         configs, registry, goal="map_discovery", payload_type="map_update",
     )
 
     observations = wrapped_env.reset(seed=seed)
-    topo_mode = topology.mode if topology else Topology.CENTRALISED
+    topo_mode = session.topology.mode
 
     outcome_count = 0
-    active_shared = mp_interface if use_multiprocessing else shared_data
     rng = random.Random(seed)
     config_map = {cfg["id"]: cfg for cfg in configs}
     agent_ids_all = list(agents.keys())
@@ -224,12 +216,8 @@ def run_gridworld_validation(
 
         shared_maps: Dict[str, Dict[str, Any]] = {}
         for aid in active_agent_ids:
-            shared_maps[aid] = _collect_shared_map(
-                active_shared,
-                agent_id=aid,
-                topology=topo_mode,
-                visibility=visibility,
-            )
+            records = session.visible_records(aid, kind="agent_update")
+            shared_maps[aid] = _build_map_from_records(records)
 
         if use_multiprocessing and active_agent_ids:
             requests: Dict[str, DecisionRequest] = {}
@@ -276,13 +264,9 @@ def run_gridworld_validation(
                 actions[aid] = result["action"]
 
         if topo_mode == Topology.FEDERATED:
-            summary = _collect_shared_map(
-                active_shared,
-                agent_id=hub_id,
-                topology=Topology.CENTRALISED,
-                visibility=visibility,
-            )
-            session.record_update(hub_id, summary, payload_type="map_summary")
+            hub_records = session.visible_records(hub_id, kind="agent_update")
+            hub_summary = _build_map_from_records(hub_records)
+            session.record_update(hub_id, hub_summary, payload_type="map_summary")
 
         step = wrapped_env.step(actions)
         observations = step["observations"]

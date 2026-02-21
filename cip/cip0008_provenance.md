@@ -47,21 +47,21 @@ Options considered:
 We select **Option A**. Provenance remains the source of truth for creation-time attribution; synchronisation of trace records from contribution.sources will be implemented in a later iteration (with transparent trace/explanation handling).
 
 Key points:
-- Provenance is creation-time attribution: who created this record and what they used (sources = input record ids, tools, notes).
-- One contribution per agent per record; contributions list can have multiple entries if multiple agents contributed to creating the record.
-- Relation to traces: one trace edge per source (from_id=source, to_id=record.id) will be derived from provenance in a later iteration; provenance is the source of truth.
+- Provenance is creation-time attribution: who created this record and what they used (derived_from = input record ids, used_tools, notes).
+- One flat attribution per record — matches the design choice of one agent_update per agent per step.
+- Relation to traces: one trace edge per derived_from source (from_id=source, to_id=record.id) will be derived from provenance in a later iteration; provenance is the source of truth.
 
 ## Iteration Deliverable (PoC)
 - Documented provenance semantics.
-- Helper to build Contribution/Provenance from (agent, sources, tools, notes).
+- Helper to build flat Provenance from (agent, sources, tools, notes).
 - Example and tests for records created with provenance via the helper.
 - README note on provenance and planned trace sync.
 
 ## Implementation Plan
 1. **Document provenance semantics**
-   - In CIP and docstrings: creation-time, one contribution per agent, relation to traces (deferred).
+   - In CIP and docstrings: creation-time, flat attribution, relation to traces (deferred).
 2. **Add provenance helper**
-   - Helper to build a single Contribution or full Provenance for use with new_record.
+   - Helper (`new_provenance`) to build a flat Provenance dict for use with new_record.
 3. **Update examples and tests**
    - Example and unit tests for record creation with provenance via helper.
 4. **Document usage**
@@ -89,10 +89,10 @@ This CIP addresses the following requirements:
 ### 2026-02-04
 Iteration 1 complete. Provenance semantics documented, helper added, tests and example added. Tests passed. Iteration 2 planned. Trace sync from provenance (one trace per source) deferred to a later iteration.
 
-Provenance is now explicit as creation-time attribution with one contribution per agent; the helper makes it easy to attach provenance when creating records. Outputs can be traced to inputs and tools via contribution.sources and contribution.tools. Trace edges derived from provenance will be added in a later iteration so graph traversal stays in sync with record-level attribution.
+Provenance is now explicit as creation-time attribution with one flat attribution per record; the helper makes it easy to attach provenance when creating records. Outputs can be traced to inputs and tools via `derived_from` and `used_tools`. Trace edges derived from provenance will be added in a later iteration so graph traversal stays in sync with record-level attribution.
 
 Gaps and follow-on needs:
-- Implement automatic trace record creation from contribution.sources when a record is written (provenance as source of truth).
+- Implement automatic trace record creation from `derived_from` sources when a record is written (provenance as source of truth).
 - Consider making provenance attachment transparent at the write path (e.g. adapter or agent layer) with optional user controls, consistent with CIP-0007 reflection.
 
 ### 2026-02-06

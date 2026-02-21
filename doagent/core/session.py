@@ -405,14 +405,18 @@ def _wrap_policy_with_metadata(
     policy: Callable[..., Dict[str, Any]],
     metadata: Dict[str, Any],
 ) -> Callable[..., Dict[str, Any]]:
-    """Inject metadata (explanation, provenance, accountability) into policy responses."""
+    """Inject explanation metadata into policy responses.
+
+    Provenance and accountability are handled by RecordWriter at the
+    appropriate logging level — not injected via metadata.
+    """
+    explanation = metadata.get("explanation")
+    if explanation is None:
+        return policy
+
     def wrapped(request: Any) -> Dict[str, Any]:
         response = dict(policy(request))
-        if "explanation" not in response and "explanation" in metadata:
-            response["explanation"] = metadata["explanation"]
-        if "provenance" not in response and "provenance" in metadata:
-            response["provenance"] = metadata["provenance"]
-        if "accountability" not in response and "accountability" in metadata:
-            response["accountability"] = metadata["accountability"]
+        if "explanation" not in response:
+            response["explanation"] = explanation
         return response
     return wrapped

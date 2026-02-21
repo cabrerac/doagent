@@ -11,32 +11,20 @@ except ImportError:  # pragma: no cover
     from typing_extensions import TypedDict
 
 
-class Contribution(TypedDict, total=False):
-    """Contribution entry for a single agent and its sources/tools.
-
-    Represents creation-time attribution: one contribution per agent that
-    produced or contributed to this record. sources are input record ids;
-    tools are identifiers of tools used. The library supports one
-    contribution per agent per record.
-    """
-
-    id: str
-    agent: str
-    sources: List[str]
-    tools: List[str]
-    notes: Optional[str]
-
-
 class Provenance(TypedDict, total=False):
-    """Provenance metadata for a record.
+    """Flat provenance attribution for a record.
 
-    Creation-time attribution: who created this record and what they used
-    (sources, tools). Records are immutable; provenance is set at write time.
-    In a later iteration, one trace edge per contribution source will be
-    derived from provenance for graph traversal.
+    Answers "who created this record, from what inputs, using what tools?"
+    One attribution per record (matches the design choice of one agent_update
+    per agent per step). Records are immutable; provenance is set at write
+    time. In a later iteration, one trace edge per ``derived_from`` source
+    will be derived from provenance for graph traversal.
     """
 
-    contributions: List[Contribution]
+    created_by: str
+    derived_from: List[str]
+    used_tools: List[str]
+    notes: str
 
 
 INITIAL_STATE_ID = "initial_state"
@@ -60,20 +48,19 @@ class Accountability(TypedDict, total=False):
 def new_provenance(
     *,
     agent: str,
-    sources: List[str],
+    sources: Optional[List[str]] = None,
     tools: Optional[List[str]] = None,
     notes: Optional[str] = None,
-    contribution_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Build provenance with one contribution for use with new_record."""
-    contribution: Dict[str, Any] = {"agent": agent, "sources": sources}
-    if tools is not None:
-        contribution["tools"] = tools
+    """Build flat provenance attribution for use with new_record."""
+    prov: Dict[str, Any] = {"created_by": agent}
+    if sources:
+        prov["derived_from"] = sources
+    if tools:
+        prov["used_tools"] = tools
     if notes is not None:
-        contribution["notes"] = notes
-    if contribution_id is not None:
-        contribution["id"] = contribution_id
-    return {"contributions": [contribution]}
+        prov["notes"] = notes
+    return prov
 
 
 def new_accountability(

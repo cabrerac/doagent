@@ -10,7 +10,7 @@ This document specifies the shared data model used for agent communication, coor
 |--------|----------|-----------|
 | **Structure** | Flat event log | Records are written one-by-one as events occur; grouping is a read/query concern. Supports streaming and adapter flexibility. |
 | **Provenance & accountability** | Record envelope only | Single source of truth per record; no duplication inside payloads. |
-| **Agent activity** | One agent_update per agent per step | Default design; provenance typically has one contributor per record. |
+| **Agent activity** | One agent_update per agent per step | Default design; provenance is a flat attribution (one creator per record). |
 | **Initial state** | Fixed ID `"initial_state"` | First environment outcome before any agent acts; no UUID generation; stable reference. |
 
 ---
@@ -111,10 +111,21 @@ environment_outcome  contains  reward, env_status
 
 | Concept | Meaning |
 |--------|---------|
-| **Provenance** | Authorship. *Who produced this record?* Which agent's code ran and wrote this output. |
+| **Provenance** | Attribution. *Who created this record, from what inputs, using what tools?* |
 | **Accountability** | Responsibility. *Who answers for this record?* Can differ from authorship (delegation, team ownership, policy). |
 
-**Provenance schema:** `contributions`: list of `{agent, sources, tools, notes}`.
+**Provenance schema (flat attribution):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `created_by` | `str` | Agent id that produced this record |
+| `derived_from` | `List[str]` | Input record ids used to produce this record |
+| `used_tools` | `List[str]` | Tool identifiers used during production |
+| `notes` | `str` | Free-text annotation |
+
+All fields are optional. Minimal provenance contains only `created_by`.
+
+One attribution per record — matches the design choice of one `agent_update` per agent per step (§1). The previous `contributions: List[Contribution]` structure was removed because it implied collaborative multi-agent authorship of a single record, which does not match the actual write model.
 
 **Accountability schema:** `owner`, `policy_id`, `responsibility_scope` (all optional).
 

@@ -23,8 +23,8 @@ def main() -> None:
 
     fetched = shared_data.read(record.id)
     assert fetched is not None
-    assert len(fetched.provenance.get("contributions", [])) == 1
-    assert fetched.provenance["contributions"][0]["sources"] == ["r1", "r2"]
+    assert fetched.provenance["created_by"] == "agent-1"
+    assert fetched.provenance["derived_from"] == ["r1", "r2"]
 
 
 if __name__ == "__main__":

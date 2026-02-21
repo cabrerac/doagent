@@ -34,29 +34,26 @@ DOAgent is powered by [VibeSafe](https://github.com/lawrennd/vibesafe). The proj
 > **Status**: This project is in active development.
 > To see the current status, run `./whats-next` (VibeSafe).
 
-## Minimal API surface
+## API surface
 
-The current public API used by the PoC includes:
+**Primary API (Session layer — all user code should use these):**
 
-- `doagent.core.InMemorySharedData` — in-memory shared data adapter
-- `doagent.core.FileSharedData` — file-backed shared data adapter
-- `doagent.core.StubAgent` — minimal agent adapter
-- `doagent.core.FunctionAgent` — function-backed decision agent
-- `doagent.core.new_record` — helper to create records
-- `doagent.core.new_explanation_record` — helper to create explanation records
-- `doagent.core.new_trace_record` — helper to create trace records
-- `doagent.core.Topology` — coordination topology modes
-- `doagent.core.TopologyConfig` — topology configuration
-- `doagent.core.select_routing` — coordination hook stub
-- `doagent.core.ParticipationRecord` — participation record
-- `doagent.core.InMemoryParticipationRegistry` — in-memory participation registry
+- `doagent.Session` — central entry point: wrap env, create agents, run transparently
+- `doagent.RunConfig` — logging level configuration
+- `doagent.InMemorySharedData` — in-memory shared data adapter
+- `doagent.core.FileSharedData` — file-backed shared data adapter (directory, one JSONL per kind)
+- `doagent.core.MongoSharedData` — MongoDB adapter (optional, requires `pymongo`)
+- `doagent.core.TopologyConfig` / `doagent.core.Topology` — decentralisation topology
+- `doagent.validation.PolicyRegistry` — policy registration and creation
 - `doagent.records.SimpleRecord` — record envelope type
-- `doagent.records.DecisionRequest` — decision request payload
-- `doagent.records.DecisionResponse` — decision response payload
-- `doagent.records.ExplanationPayload` — interpretability payload
-- `doagent.records.ExplanationRecord` — explanation record envelope
-- `doagent.records.TracePayload` — trace payload
-- `doagent.records.new_provenance` — helper to build provenance for records
+
+**Internal helpers (for unit tests and feature examples, not typical user code):**
+
+- `doagent.core.new_record`, `new_trace_record`, `new_explanation_record` — low-level record creation
+- `doagent.core.StubAgent` — minimal agent adapter
+- `doagent.core.FunctionAgent` — function-backed decision agent (pre-Session)
+- `doagent.records.new_provenance` — build provenance attribution
+- `doagent.records.new_accountability` — build accountability metadata
 - `doagent.records.Accountability` — accountability envelope type (owner, policy_id, responsibility_scope)
 - `doagent.records.new_accountability` — helper to build accountability for records
 
@@ -209,8 +206,8 @@ record = new_record(
 shared_data.write(record)
 
 fetched = shared_data.read(record.id)
-assert len(fetched.provenance["contributions"]) == 1
-assert fetched.provenance["contributions"][0]["sources"] == ["r1", "r2"]
+assert fetched.provenance["created_by"] == "agent-1"
+assert fetched.provenance["derived_from"] == ["r1", "r2"]
 ```
 
 Run the example with:

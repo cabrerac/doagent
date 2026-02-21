@@ -20,14 +20,12 @@ from .multiprocess_interface import MultiProcessInterface
 from .push import (
     AgentMetadata,
     PushAgentConfig,
-    build_push_agents,
     make_push_env,
     PushRunSummary,
     run_push_validation,
 )
 from .gridworld import (
     GridAgentConfig,
-    build_grid_agents,
     GridWorldEnv,
     make_grid_env,
     GridWorldRunSummary,
@@ -49,7 +47,6 @@ __all__ = [
     "PolicyConfig",
     "PolicyRegistry",
     "build_policy_decide_fn",
-    "build_push_agents",
     "make_push_env",
     "PushRunSummary",
     "run_push_validation",
@@ -57,7 +54,6 @@ __all__ = [
     "GridWorldEnv",
     "make_grid_env",
     "GridAgentConfig",
-    "build_grid_agents",
     "GridWorldRunSummary",
     "run_gridworld_validation",
     "MultiProcessInterface",

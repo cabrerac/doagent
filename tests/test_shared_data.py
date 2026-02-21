@@ -19,14 +19,9 @@ class TestSharedData(unittest.TestCase):
             kind="note",
             payload={"text": "hello"},
             provenance={
-                "contributions": [
-                    {
-                        "id": "c-1",
-                        "agent": "agent-1",
-                        "sources": ["r1"],
-                        "tools": ["t1"],
-                    }
-                ]
+                "created_by": "agent-1",
+                "derived_from": ["r1"],
+                "used_tools": ["t1"],
             },
         )
         self.shared_data.write(record)
@@ -75,14 +70,9 @@ class TestSharedData(unittest.TestCase):
                 kind="note",
                 payload={"n": 1},
                 provenance={
-                    "contributions": [
-                        {
-                            "id": "c-1",
-                            "agent": "agent-1",
-                            "sources": ["r1"],
-                            "tools": ["t1"],
-                        }
-                    ]
+                    "created_by": "agent-1",
+                    "derived_from": ["r1"],
+                    "used_tools": ["t1"],
                 },
             )
             second = new_record(actor="agent-2", kind="note", payload={"n": 2})

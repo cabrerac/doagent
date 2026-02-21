@@ -114,6 +114,18 @@ Library boundaries document (`library-boundaries.md`) updated to reflect the cur
 - §14 added: Design Alternatives Considered (adapter extensibility, Session entry point, dedup default, collection-per-kind)
 - "Extend library definition" checklist item marked complete
 
+### 2026-02-21
+Session-first refactoring of validation examples and library internals:
+- **Validation examples** cleaned: removed "user responsibility" comments; added `# doagent:` annotations at Session/agent/env integration points; removed dead `provenance`/`accountability` from agent config metadata (Session handles these via RecordWriter at the appropriate logging level, so user-provided metadata was being injected then immediately stripped).
+- **Pre-Session dead code removed**: `build_push_agents()`, `build_grid_agents()`, `_wrap_policy_with_metadata()` in validation agent modules — these created `FunctionAgent` instances bypassing Session. Also removed `FunctionAgent`, `SharedDataAdapter`, `DecisionRequest/Response` imports from agent modules.
+- **`AgentMetadata` simplified**: only `explanation` field remains (provenance and accountability are RecordWriter concerns, not user config).
+- **Session's `_wrap_policy_with_metadata`** cleaned: only injects `explanation`; provenance/accountability injection removed.
+- **`run_gridworld_validation`** updated: now passes topology/visibility/hub_id to Session and uses `session.visible_records()` for topology-filtered record access instead of manual `_collect_shared_map` filtering.
+- **Top-level `doagent.__init__`** simplified to Session-era exports: `Session`, `RunConfig`, `InMemorySharedData`, `SimpleRecord`. Pre-Session items (`StubAgent`, `new_record`) remain in `doagent.core` for internal/test use.
+- **Feature examples** (`minimal_usage.py`, `model_agnostic_agent.py`) rewritten to use Session API.
+- **README** module listing restructured: primary API (Session layer) vs internal helpers.
+- All 74 tests pass; gridworld validation example runs correctly (66 rounds, 63.5% coverage, 168 agent_updates, 66 outcomes, 168 traces).
+
 ## References
 - [Library Boundaries](../docs/library-boundaries.md)
 - [Data Model Specification](../docs/data-model-spec.md)

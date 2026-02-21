@@ -123,9 +123,9 @@ class TestSession(unittest.TestCase):
         outcomes = list(shared_data.listen("outcome"))
 
         self.assertEqual(len(agent_updates), 1)
-        self.assertIn("contributions", agent_updates[0].provenance)
+        self.assertIn("created_by", agent_updates[0].provenance)
         self.assertIn("owner", agent_updates[0].accountability)
-        self.assertIn("contributions", outcomes[0].provenance)
+        self.assertIn("created_by", outcomes[0].provenance)
 
     def test_record_decision_for_external_policy(self):
         shared_data = InMemorySharedData()

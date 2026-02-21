@@ -5,7 +5,6 @@ import unittest
 from pathlib import Path
 
 from doagent.core import FileSharedData, InMemorySharedData
-from doagent.records import new_provenance
 from doagent.validation import (
     NoOpSharedData,
     PolicyRegistry,
@@ -36,12 +35,6 @@ def _agent_configs():
             policy={"name": "fixed", "params": {"action": 0}},
             metadata={
                 "explanation": "Hold position (noop) in push task.",
-                "provenance": new_provenance(agent="adversary_0", sources=[]),
-                "accountability": {
-                    "owner": "team-a",
-                    "policy_id": "policy-001",
-                    "responsibility_scope": "simple-push",
-                },
             },
         ),
         PushAgentConfig(
@@ -49,12 +42,6 @@ def _agent_configs():
             policy={"name": "fixed", "params": {"action": 1}},
             metadata={
                 "explanation": "Move right in push task.",
-                "provenance": new_provenance(agent="agent_0", sources=[]),
-                "accountability": {
-                    "owner": "team-b",
-                    "policy_id": "policy-001",
-                    "responsibility_scope": "simple-push",
-                },
             },
         ),
     ]
@@ -102,7 +89,7 @@ class TestPushValidation(unittest.TestCase):
             self.assertIn("local_knowledge", record.payload)
 
         for record in outcomes:
-            self.assertIn("contributions", record.provenance)
+            self.assertIn("created_by", record.provenance)
 
     def test_validation_with_file_adapter(self):
         with tempfile.TemporaryDirectory() as temp_dir:

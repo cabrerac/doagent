@@ -1,11 +1,6 @@
 """Push validation example using the DOAgent Session API.
 
-Demonstrates library usage with a PettingZoo environment:
-- User creates env, registers policies, defines agent configs.
-- Session handles all recording transparently.
-- User owns the run loop.
-
-This file IS user code — it shows how any scenario integrates with DOAgent.
+Demonstrates library usage with a PettingZoo environment.
 """
 
 from __future__ import annotations
@@ -17,7 +12,6 @@ from typing import Any, Dict
 
 from doagent import Session, RunConfig
 from doagent.core import FileSharedData, InMemorySharedData
-from doagent.records import new_provenance
 from doagent.validation import (
     NoOpSharedData,
     PolicyRegistry,
@@ -29,7 +23,7 @@ from doagent.validation.push import PushAgentConfig, make_push_env
 
 
 # ---------------------------------------------------------------------------
-# User-defined policies (user responsibility)
+# Policies
 # ---------------------------------------------------------------------------
 
 def register_policies(registry: PolicyRegistry) -> None:
@@ -73,7 +67,7 @@ def register_policies(registry: PolicyRegistry) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Agent configs (user responsibility)
+# Agent configs
 # ---------------------------------------------------------------------------
 
 def make_agent_configs() -> list[PushAgentConfig]:
@@ -83,12 +77,6 @@ def make_agent_configs() -> list[PushAgentConfig]:
             policy={"name": "heuristic_push_block", "params": {"epsilon": 0.2, "seed": 1}},
             metadata={
                 "explanation": "Heuristic push/block with epsilon-greedy exploration.",
-                "provenance": new_provenance(agent="adversary_0", sources=[]),
-                "accountability": {
-                    "owner": "team-a",
-                    "policy_id": "policy-001",
-                    "responsibility_scope": "simple-push",
-                },
             },
         ),
         PushAgentConfig(
@@ -96,19 +84,13 @@ def make_agent_configs() -> list[PushAgentConfig]:
             policy={"name": "heuristic_goal_seek", "params": {"epsilon": 0.2, "seed": 2}},
             metadata={
                 "explanation": "Heuristic goal-seek with epsilon-greedy exploration.",
-                "provenance": new_provenance(agent="agent_0", sources=[]),
-                "accountability": {
-                    "owner": "team-b",
-                    "policy_id": "policy-001",
-                    "responsibility_scope": "simple-push",
-                },
             },
         ),
     ]
 
 
 # ---------------------------------------------------------------------------
-# Session-based run (the pattern any user follows)
+# Session-based run
 # ---------------------------------------------------------------------------
 
 def run_with_session(
@@ -123,6 +105,7 @@ def run_with_session(
     reporter: RunReporter | None = None,
 ) -> int:
     """Run push scenario using the DOAgent Session API. Returns outcome count."""
+    # doagent: create session, wrap env, create agents
     session = Session(shared_data, RunConfig(logging_level=2))
     wrapped_env = session.wrap_env(env, env_actor="push_env")
     agents = session.create_agents(
@@ -137,9 +120,11 @@ def run_with_session(
     for round_id in range(1, rounds + 1):
         actions: Dict[str, Any] = {}
         for agent_id, agent in agents.items():
+            # doagent: agent.decide() records agent_update transparently
             result = agent.decide(observations.get(agent_id, {}), round_id)
             actions[agent_id] = result["action"]
 
+        # doagent: wrapped_env.step() records outcome + traces transparently
         step = wrapped_env.step(actions)
         if reporter is not None:
             reporter.on_outcome(round_id, actions, step["rewards"])
@@ -195,7 +180,7 @@ def main() -> None:
     metrics = measure_baseline(in_memory_run)
     outcomes = in_memory_run()
 
-    # OPENNESS: records are accessible for inspection
+    # doagent: records are accessible for inspection via shared_data
     agent_updates = list(shared_data.listen("agent_update"))
     traces = list(shared_data.listen("trace"))
     outcome_records = list(shared_data.listen("outcome"))

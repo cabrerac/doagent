@@ -4,8 +4,6 @@ Demonstrates all three DOA principles through the library:
 - Shared-data model: agents share knowledge via shared data, library records transparently.
 - Decentralisation: topology-filtered record access (centralised, peer-to-peer, federated).
 - Openness: user provides environment, policies, and run loop; library provides interfaces.
-
-This file IS user code — it shows how any scenario integrates with DOAgent.
 """
 
 from __future__ import annotations
@@ -21,6 +19,7 @@ import yaml
 
 from doagent import Session, RunConfig
 from doagent.core import (
+    FileSharedData,
     InMemoryParticipationRegistry,
     InMemorySharedData,
     Topology,
@@ -28,9 +27,11 @@ from doagent.core import (
 )
 from doagent.records import SimpleRecord
 from doagent.validation import (
+    NoOpSharedData,
     PolicyRegistry,
     RunReporter,
     measure_baseline,
+    output_bytes_from_path,
     write_summary,
 )
 from doagent.validation.gridworld import (
@@ -41,7 +42,7 @@ from doagent.validation.gridworld import (
 
 
 # ---------------------------------------------------------------------------
-# Config loading (user responsibility)
+# Config loading
 # ---------------------------------------------------------------------------
 
 def load_config(path: str | Path) -> Dict[str, Any]:
@@ -70,15 +71,11 @@ def parse_agent_configs(config: Dict[str, Any]) -> List[GridAgentConfig]:
 
 
 # ---------------------------------------------------------------------------
-# Scenario-specific helpers (user responsibility)
+# Scenario-specific helpers
 # ---------------------------------------------------------------------------
 
 def build_shared_map(records: List[SimpleRecord]) -> Dict[str, Any]:
-    """Interpret agent_update records into a merged map of discovered cells.
-
-    This is scenario-specific logic — the library provides the records,
-    the user decides how to interpret them.
-    """
+    """Interpret agent_update records into a merged map of discovered cells."""
     cells: Dict[Tuple[int, int], str] = {}
     for record in records:
         local_knowledge = record.payload.get("local_knowledge", {})
@@ -98,59 +95,37 @@ def build_shared_map(records: List[SimpleRecord]) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Main: user-owned run loop
+# Session-based run
 # ---------------------------------------------------------------------------
 
-def main() -> None:
-    script_dir = Path(__file__).resolve().parent
-    default_config = script_dir / "gridworld_validation_config.yaml"
-    config_path = Path(sys.argv[1]) if len(sys.argv) > 1 else default_config
-    config = load_config(config_path)
+def run_with_session(
+    shared_data,
+    env,
+    registry: PolicyRegistry,
+    configs: list[GridAgentConfig],
+    rounds: int,
+    seed: int,
+    *,
+    topology_cfg: TopologyConfig | None = None,
+    visibility: Dict[str, List[str]] | None = None,
+    hub_id: str = "hub",
+    energy_model: bool = False,
+    energy_min: int = 6,
+    energy_max: int = 12,
+    energy_decay: int = 1,
+    energy_recharge: int = 1,
+    energy_leave_threshold: int = 2,
+    landmarks_total: int | None = None,
+    render: bool = False,
+    render_delay: float = 0.0,
+    print_every: int = 0,
+    reporter: RunReporter | None = None,
+) -> Dict[str, Any]:
+    """Run gridworld scenario using the DOAgent Session API. Returns summary dict."""
+    topology_cfg = topology_cfg or TopologyConfig()
+    agent_ids = [c["id"] for c in configs]
 
-    run_cfg = config.get("run", {})
-    scenario = config.get("scenario", {})
-    env_cfg = scenario.get("env", {})
-    participation_cfg = scenario.get("participation", {}) or {}
-
-    rounds = int(run_cfg.get("rounds", 10))
-    seed = int(run_cfg.get("seed", 0))
-    render = bool(scenario.get("render", False))
-    render_mode = scenario.get("render_mode")
-    if render and render_mode is None:
-        render_mode = "ansi"
-    render_delay = float(scenario.get("render_delay", 0.3 if render_mode == "human" else 0.0))
-    print_every = int(scenario.get("print_every", 0))
-    landmarks_total = int(env_cfg["landmarks"]) if "landmarks" in env_cfg else None
-
-    energy_model = bool(participation_cfg.get("energy_model", False))
-    energy_min = int(participation_cfg.get("energy_min", 6))
-    energy_max = int(participation_cfg.get("energy_max", 12))
-    energy_decay = int(participation_cfg.get("energy_decay", 1))
-    energy_recharge = int(participation_cfg.get("energy_recharge", 1))
-    energy_leave_threshold = int(participation_cfg.get("energy_leave_threshold", 2))
-
-    agent_configs = parse_agent_configs(config)
-    agent_ids = [c["id"] for c in agent_configs]
-    topology_cfg, visibility = parse_topology(config)
-    hub_id = "hub"
-
-    # -- Environment (user provides) --
-    env = make_grid_env(
-        width=int(env_cfg.get("width", 6)),
-        height=int(env_cfg.get("height", 6)),
-        agent_ids=agent_ids,
-        landmarks=int(env_cfg.get("landmarks", 2)),
-        observation_radius=int(env_cfg.get("observation_radius", 1)),
-        max_cycles=int(env_cfg.get("max_cycles", 25)),
-        seed=run_cfg.get("seed"),
-        render_mode=render_mode,
-    )
-
-    # -- DOAgent Session (library API) --
-    shared_data = InMemorySharedData()
-    registry = PolicyRegistry()
-    register_gridworld_policies(registry)
-
+    # doagent: create Session with topology and wrap env/agents
     session = Session(
         shared_data,
         RunConfig(logging_level=2),
@@ -160,20 +135,10 @@ def main() -> None:
     )
     wrapped_env = session.wrap_env(env, env_actor="gridworld_env")
     agents = session.create_agents(
-        agent_configs, registry, goal="map_discovery", payload_type="map_update",
+        configs, registry, goal="map_discovery", payload_type="map_update",
     )
 
-    # -- Scenario state (user tracks) --
     participation_registry = InMemoryParticipationRegistry() if energy_model else None
-    reporter = RunReporter(
-        label="gridworld",
-        print_every=print_every,
-        record_series=True,
-        series_every=1,
-        record_entropy=True,
-        action_space=5,
-    )
-
     observations = wrapped_env.reset(seed=seed)
     rng = random.Random(seed)
 
@@ -209,9 +174,7 @@ def main() -> None:
 
     outcome_count = 0
 
-    # -- User-owned run loop --
     for round_id in range(1, rounds + 1):
-        # Energy model (scenario-specific, user logic)
         if energy_model:
             from doagent.core import ParticipationRecord
             for aid in list(active_agents):
@@ -235,25 +198,24 @@ def main() -> None:
         for aid in active_ids:
             observation = observations.get(aid, {})
 
-            # DECENTRALISATION: library provides topology-filtered records
+            # doagent: topology-filtered record access
             shared_records = session.visible_records(aid, kind="agent_update")
             shared_map = build_shared_map(shared_records)
 
-            # SHARED-DATA MODEL: agent.decide() records transparently
-            # Pass structured inputs so policies see observation + shared_map separately
+            # doagent: agent.decide() records agent_update transparently
             result = agents[aid].decide(observation, round_id, inputs={
                 "observation": observation,
                 "shared_map": shared_map,
             })
             actions[aid] = result["action"]
 
-        # DECENTRALISATION: federated hub aggregation
+        # doagent: federated hub aggregation via record_update()
         if topology_cfg.mode == Topology.FEDERATED:
             hub_records = session.visible_records(hub_id, kind="agent_update")
             hub_summary = build_shared_map(hub_records)
             session.record_update(hub_id, hub_summary, payload_type="map_summary")
 
-        # SHARED-DATA MODEL: env.step() records outcome + traces transparently
+        # doagent: wrapped_env.step() records outcome + traces transparently
         step = wrapped_env.step(actions)
         observations = step["observations"]
 
@@ -301,7 +263,6 @@ def main() -> None:
             rw = ", ".join(f"{a}={total_rewards.get(a, 0):.0f}" for a in sorted(total_rewards))
             print(f"[gridworld] round={round_id} coverage={cov:.1f}% landmarks={lm} active={len(active_ids)} rewards={{{rw}}}")
 
-    # -- Summary --
     coverage = float(len(discovered_cells)) / float(total_cells) if total_cells else 0.0
     lm = f"{len(landmarks_discovered)}"
     if landmarks_total is not None:
@@ -309,43 +270,167 @@ def main() -> None:
     rw = ", ".join(f"{a}={total_rewards.get(a, 0):.0f}" for a in sorted(total_rewards))
     print(f"[gridworld] FINAL: termination={termination_reason} rounds={outcome_count} coverage={coverage*100:.1f}% landmarks={lm} rewards={{{rw}}}")
 
-    # OPENNESS: records are accessible for inspection
-    agent_updates = list(shared_data.listen("agent_update"))
-    traces = list(shared_data.listen("trace"))
-    outcomes = list(shared_data.listen("outcome"))
-    print(f"Records: {len(agent_updates)} agent_updates, {len(outcomes)} outcomes, {len(traces)} traces")
+    return {
+        "outcomes": outcome_count,
+        "coverage": coverage,
+        "discovery_round": discovery_round,
+        "contributions": contributions,
+        "total_cells": total_cells,
+        "termination_reason": termination_reason,
+        "landmarks_discovered": len(landmarks_discovered),
+        "landmarks_total": landmarks_total,
+    }
 
-    reporter.finalize(
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    script_dir = Path(__file__).resolve().parent
+    default_config = script_dir / "gridworld_validation_config.yaml"
+    config_path = Path(sys.argv[1]) if len(sys.argv) > 1 else default_config
+    config = load_config(config_path)
+
+    run_cfg = config.get("run", {})
+    scenario = config.get("scenario", {})
+    env_cfg = scenario.get("env", {})
+    participation_cfg = scenario.get("participation", {}) or {}
+
+    rounds = int(run_cfg.get("rounds", 10))
+    seed = int(run_cfg.get("seed", 0))
+    render = bool(scenario.get("render", False))
+    render_mode = scenario.get("render_mode")
+    if render and render_mode is None:
+        render_mode = "ansi"
+    render_delay = float(scenario.get("render_delay", 0.3 if render_mode == "human" else 0.0))
+    print_every = int(scenario.get("print_every", 0))
+    landmarks_total = int(env_cfg["landmarks"]) if "landmarks" in env_cfg else None
+
+    energy_model = bool(participation_cfg.get("energy_model", False))
+    energy_min = int(participation_cfg.get("energy_min", 6))
+    energy_max = int(participation_cfg.get("energy_max", 12))
+    energy_decay = int(participation_cfg.get("energy_decay", 1))
+    energy_recharge = int(participation_cfg.get("energy_recharge", 1))
+    energy_leave_threshold = int(participation_cfg.get("energy_leave_threshold", 2))
+
+    agent_configs = parse_agent_configs(config)
+    agent_ids = [c["id"] for c in agent_configs]
+    topology_cfg, visibility = parse_topology(config)
+    hub_id = "hub"
+
+    env = make_grid_env(
+        width=int(env_cfg.get("width", 6)),
+        height=int(env_cfg.get("height", 6)),
+        agent_ids=agent_ids,
+        landmarks=int(env_cfg.get("landmarks", 2)),
+        observation_radius=int(env_cfg.get("observation_radius", 1)),
+        max_cycles=int(env_cfg.get("max_cycles", 25)),
+        seed=run_cfg.get("seed"),
+        render_mode=render_mode,
+    )
+
+    registry = PolicyRegistry()
+    register_gridworld_policies(registry)
+
+    run_kwargs: Dict[str, Any] = dict(
+        env=env,
+        registry=registry,
+        configs=agent_configs,
         rounds=rounds,
         seed=seed,
-        outcomes=outcome_count,
-        elapsed_seconds=0.0,
-        output_bytes=0,
+        topology_cfg=topology_cfg,
+        visibility=visibility,
+        hub_id=hub_id,
+        energy_model=energy_model,
+        energy_min=energy_min,
+        energy_max=energy_max,
+        energy_decay=energy_decay,
+        energy_recharge=energy_recharge,
+        energy_leave_threshold=energy_leave_threshold,
+        landmarks_total=landmarks_total,
         render=render,
+        render_delay=render_delay,
+        print_every=print_every,
     )
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path("output") / f"gridworld_run_{timestamp}"
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # -- Baseline run (NoOp adapter — no recording overhead) --
+    print("\n=== Baseline run ===")
+    baseline_reporter = RunReporter(
+        "baseline", print_every=print_every,
+        record_series=True, series_every=1, record_entropy=True, action_space=5,
+    )
+    baseline_metrics = measure_baseline(
+        lambda: run_with_session(
+            NoOpSharedData(), **run_kwargs, reporter=baseline_reporter,
+        )
+    )
+    baseline_summary = run_with_session(
+        NoOpSharedData(), **run_kwargs, reporter=baseline_reporter,
+    )
+
+    # -- In-memory run --
+    print("\n=== In-memory run ===")
+    mem_shared = InMemorySharedData()
+    mem_reporter = RunReporter(
+        "in_memory", print_every=print_every,
+        record_series=True, series_every=1, record_entropy=True, action_space=5,
+    )
+    mem_summary = run_with_session(
+        mem_shared, **run_kwargs, reporter=mem_reporter,
+    )
+
+    # doagent: records are accessible for inspection via shared_data
+    agent_updates = list(mem_shared.listen("agent_update"))
+    traces = list(mem_shared.listen("trace"))
+    outcomes = list(mem_shared.listen("outcome"))
+    print(f"Records: {len(agent_updates)} agent_updates, {len(outcomes)} outcomes, {len(traces)} traces")
+
+    mem_reporter.finalize(
+        rounds=rounds, seed=seed, outcomes=mem_summary["outcomes"],
+        elapsed_seconds=0.0, output_bytes=0, render=render,
+    )
+
+    # -- File run --
+    print("\n=== File run ===")
+    records_dir = output_dir / "records"
+    file_shared = FileSharedData(records_dir)
+    file_reporter = RunReporter(
+        "file", print_every=print_every,
+        record_series=True, series_every=1, record_entropy=True, action_space=5,
+    )
+    file_summary = run_with_session(
+        file_shared, **run_kwargs, reporter=file_reporter,
+    )
+
+    file_metrics = measure_baseline(lambda: None, output_path=records_dir)
+    file_reporter.finalize(
+        rounds=rounds, seed=seed, outcomes=file_summary["outcomes"],
+        elapsed_seconds=file_metrics.elapsed_seconds,
+        output_bytes=output_bytes_from_path(records_dir),
+        render=render, path=str(records_dir),
+    )
+
+    # -- Combined summary --
+    def _run_metrics(label: str, reporter: RunReporter, summary: Dict[str, Any]) -> Dict[str, Any]:
+        return reporter.metrics(outcomes=summary["outcomes"], extra=summary)
+
     summary_payload = {
         "run": {"id": run_cfg.get("id", "gridworld-run"), "seed": seed, "rounds": rounds},
         "runs": {
-            "gridworld": reporter.metrics(
-                outcomes=outcome_count,
-                extra={
-                    "coverage": coverage,
-                    "discovery_round": discovery_round,
-                    "contributions": contributions,
-                    "total_cells": total_cells,
-                    "termination_reason": termination_reason,
-                    "landmarks_discovered": len(landmarks_discovered),
-                    "landmarks_total": landmarks_total,
-                },
-            ),
+            "baseline": _run_metrics("baseline", baseline_reporter, baseline_summary),
+            "in_memory": _run_metrics("in_memory", mem_reporter, mem_summary),
+            "file": _run_metrics("file", file_reporter, file_summary),
         },
+        "baseline_elapsed_seconds": baseline_metrics.elapsed_seconds,
     }
     summary_path = output_dir / "gridworld_validation_summary.json"
     write_summary(summary_path, summary_payload)
-    print(f"Summary written to {summary_path}")
+    print(f"\nSummary written to {summary_path}")
 
 
 if __name__ == "__main__":
