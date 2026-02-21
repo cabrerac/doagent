@@ -1,10 +1,10 @@
 ---
 id: "2026-02-16_state-dedup-contract"
 title: "Define state equivalence and deduplication contract"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-02-16"
-last_updated: "2026-02-16"
+last_updated: "2026-02-21"
 category: "features"
 related_cips:
 - "0002"
@@ -32,10 +32,10 @@ Define the contract for state equivalence and outcome deduplication. When record
 
 ## Acceptance Criteria
 
-- [ ] Contract is documented: when to deduplicate, how state is hashed.
-- [ ] Scenario/domain can influence what is included in hash (or default is documented).
-- [ ] Adapter interface or contract specifies that adapters implementing dedup must maintain `state_hash → outcome_id` index.
-- [ ] Write flow is documented: check existence → reuse or create → write trace.
+- [x] Contract is documented: when to deduplicate, how state is hashed.
+- [x] Scenario/domain can influence what is included in hash (or default is documented).
+- [x] Adapter interface or contract specifies that adapters implementing dedup must maintain `state_hash → outcome_id` index.
+- [x] Write flow is documented: check existence → reuse or create → write trace.
 
 ## Implementation Notes
 
@@ -53,3 +53,13 @@ Define the contract for state equivalence and outcome deduplication. When record
 
 ### 2026-02-16
 Task created.
+
+### 2026-02-21
+Implemented state deduplication contract:
+- Expanded `docs/data-model-spec.md` §9 with full contract: equivalence definition, hash algorithm (SHA-256 of canonical JSON), scenario-defined hash input, index ownership, write flow (lookup → reuse/create → index → write traces), outcome purity, and opt-in nature.
+- Added `lookup_outcome_by_hash()` and `index_outcome()` to `SharedDataAdapter` protocol (optional, default no-op).
+- Implemented dedup index in `InMemorySharedData` (in-memory dict).
+- Added `StateHashFn` type alias and `default_state_hash` utility to `RecordWriter`.
+- `RecordWriter.on_outcome_and_traces()` now checks the adapter index before writing a new outcome when `state_hash_fn` is provided.
+- `Session` accepts optional `state_hash_fn` parameter, forwarded to `RecordWriter`.
+- All 49 existing tests pass.

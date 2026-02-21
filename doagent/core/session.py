@@ -17,9 +17,12 @@ from uuid import uuid4
 
 from ..interface.shared_data import SharedDataAdapter
 from ..records import INITIAL_STATE_ID, DecisionRequest, SimpleRecord
-from .record_writer import RecordWriter, _serializable
+from .record_writer import RecordWriter, StateHashFn, default_state_hash, _serializable
 from .run_config import RunConfig
 from .topology import Topology, TopologyConfig
+
+_DEDUP_DEFAULT = object()
+"""Sentinel to distinguish 'not provided' from explicit None (opt-out)."""
 
 
 # ---------------------------------------------------------------------------
@@ -107,6 +110,7 @@ class WrappedEnv:
             actions=actions,
             rewards=extracted["rewards"],
             observations=extracted["observations"],
+            done=extracted.get("done"),
             agent_update_ids=dict(self._agent_update_ids),
             prev_outcome_id=self._prev_outcome_id,
             env_actor=self._env_actor,
@@ -237,14 +241,21 @@ class Session:
         visibility: Optional[Dict[str, List[str]]] = None,
         hub_id: str = "hub",
         agent_write_fn: Optional[Callable[..., None]] = None,
+        state_hash_fn: Any = _DEDUP_DEFAULT,
     ) -> None:
         self._shared_data = shared_data
         self._config = run_config or RunConfig()
         self._topology = topology or TopologyConfig()
         self._visibility = visibility or {}
         self._hub_id = hub_id
+        resolved_hash_fn: Optional[StateHashFn] = (
+            default_state_hash if state_hash_fn is _DEDUP_DEFAULT else state_hash_fn
+        )
         self._record_writer = RecordWriter(
-            shared_data, self._config, agent_write_fn=agent_write_fn,
+            shared_data,
+            self._config,
+            agent_write_fn=agent_write_fn,
+            state_hash_fn=resolved_hash_fn,
         )
         self._wrapped_env: Optional[WrappedEnv] = None
 

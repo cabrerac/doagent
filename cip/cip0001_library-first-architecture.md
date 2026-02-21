@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-01-23"
 id: "0001"
-last_updated: "2026-01-28"
+last_updated: "2026-02-20"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -102,7 +102,7 @@ Iteration 1 complete. Minimal library scaffold, in-memory shared data, stub agen
 ### 2026-02-02
 Next iteration may extend the library definition (more methods, more record types). If this introduces an architectural shift, open a new CIP. Next iteration can also redefine what we expose and what is transparent for users.
 
-### 2026-01-28
+### 2026-02-21
 Session API implemented (backlog: 2026-02-19_session-api). Testing strategy updated to include integration tests that verify full-stack wiring (real env + real policies + Session). Two wiring bugs caught during Session rollout (shared_map cell extraction, _move_towards at origin) demonstrated that unit tests with stubs are insufficient — integration tests at component seams are essential.
 
 ## References

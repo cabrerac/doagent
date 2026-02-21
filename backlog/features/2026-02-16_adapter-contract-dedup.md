@@ -1,10 +1,10 @@
 ---
 id: "2026-02-16_adapter-contract-dedup"
 title: "Document adapter contract for state deduplication"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-02-16"
-last_updated: "2026-02-16"
+last_updated: "2026-02-21"
 category: "features"
 related_cips:
 - "0002"
@@ -28,10 +28,10 @@ Document the adapter contract for state deduplication. Adapters that support out
 
 ## Acceptance Criteria
 
-- [ ] Adapter contract doc specifies: when dedup is expected, how state_hash is computed.
-- [ ] Contract describes optional vs required behaviour for adapters.
-- [ ] JSON: in-memory or sidecar index. DB: native indexes. Streams: medium-specific approach.
-- [ ] Contract is linked from data model spec and state-dedup-contract.
+- [x] Adapter contract doc specifies: when dedup is expected, how state_hash is computed.
+- [x] Contract describes optional vs required behaviour for adapters.
+- [x] JSON: in-memory or sidecar index. DB: native indexes. Streams: medium-specific approach.
+- [x] Contract is linked from data model spec and state-dedup-contract.
 
 ## Implementation Notes
 
@@ -48,3 +48,17 @@ Document the adapter contract for state deduplication. Adapters that support out
 
 ### 2026-02-16
 Task created. Part of REQ-0001/CIP-0002 iteration 2 backlog.
+
+### 2026-02-21
+Created `docs/adapter-contract.md` covering:
+- Core interface (write, read, list, listen) with guarantees (append-only, immutable, ordered).
+- Dedup extension (lookup_outcome_by_hash, index_outcome) — optional, adapters without them work transparently.
+- Implementation guidance for in-memory, file-based (sidecar), database (native index), and stream (compaction/cache) backends.
+- Custom adapter instructions (structural typing via Protocol).
+- Linked from `docs/data-model-spec.md` references section.
+
+### 2026-02-21
+Updated `docs/adapter-contract.md` with:
+- Collection-per-kind storage model (§2) — all adapters now use one collection/file per kind.
+- MongoDB adapter section (§4.3) with collection layout and index guidance.
+- Design decisions log (§6) documenting alternatives considered for storage layout, dedup default, index ownership, hash computation, and MongoDB `_id` strategy.

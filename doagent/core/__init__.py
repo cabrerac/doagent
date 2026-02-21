@@ -3,6 +3,11 @@
 from .agent_adapter import StubAgent
 from .function_agent import FunctionAgent
 from .file_shared_data import FileSharedData
+
+try:
+    from .mongo_shared_data import MongoSharedData
+except ImportError:
+    MongoSharedData = None  # type: ignore[assignment,misc]
 from .participation import (
     InMemoryParticipationRegistry,
     ParticipationRecord,
@@ -15,7 +20,7 @@ from .shared_data import (
     new_record,
     new_trace_record,
 )
-from .record_writer import RecordWriter
+from .record_writer import RecordWriter, StateHashFn, default_state_hash
 from .run_config import (
     DEFAULT_LOGGING_LEVEL,
     RunConfig,
@@ -31,6 +36,7 @@ __all__ = [
     "FunctionAgent",
     "InMemorySharedData",
     "FileSharedData",
+    "MongoSharedData",
     "new_agent_update_record",
     "new_record",
     "new_explanation_record",
@@ -43,6 +49,8 @@ __all__ = [
     "ParticipationRegistry",
     "InMemoryParticipationRegistry",
     "RecordWriter",
+    "StateHashFn",
+    "default_state_hash",
     "RunConfig",
     "DEFAULT_LOGGING_LEVEL",
     "should_include_explanation",

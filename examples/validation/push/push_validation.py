@@ -211,8 +211,7 @@ def main() -> None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path("./output") / f"push_run_{timestamp}"
     output_dir.mkdir(parents=True, exist_ok=True)
-    file_path = output_dir / "push_records.jsonl"
-    file_shared = FileSharedData(file_path)
+    file_shared = FileSharedData(output_dir / "records")
     file_reporter = RunReporter(
         "file", print_every=print_every,
         record_series=True, series_every=1, record_entropy=True, action_space=5,
@@ -221,14 +220,15 @@ def main() -> None:
         file_shared, env, registry, configs, rounds, seed,
         render=render_demo, reporter=file_reporter,
     )
+    records_dir = output_dir / "records"
     file_metrics = measure_baseline(
-        lambda: None, output_path=file_path,
+        lambda: None, output_path=records_dir,
     )
     file_reporter.finalize(
         rounds=rounds, seed=seed, outcomes=file_outcomes,
         elapsed_seconds=file_metrics.elapsed_seconds,
         output_bytes=file_metrics.output_bytes, render=render_demo,
-        path=str(file_path),
+        path=str(records_dir),
     )
 
     summary_payload = {

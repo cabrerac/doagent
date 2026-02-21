@@ -8,3 +8,9 @@ matplotlib
 
 # Configuration dependencies
 pyyaml
+
+# Database adapters (optional)
+pymongo
+
+# Testing dependencies
+mongomock

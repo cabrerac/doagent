@@ -68,8 +68,7 @@ class TestSharedData(unittest.TestCase):
     def test_file_adapter_parity(self) -> None:
         """Ensure file adapter parity with in-memory adapter."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "records.jsonl"
-            file_adapter = FileSharedData(path)
+            file_adapter = FileSharedData(temp_dir)
 
             first = new_record(
                 actor="agent-1",

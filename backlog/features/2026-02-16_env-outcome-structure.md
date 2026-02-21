@@ -1,10 +1,10 @@
 ---
 id: "2026-02-16_env-outcome-structure"
 title: "Formalise environment_outcome payload (reward, env_status)"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-02-16"
-last_updated: "2026-02-16"
+last_updated: "2026-02-21"
 category: "features"
 related_cips:
 - "0002"
@@ -28,10 +28,10 @@ Formalise the environment_outcome record structure as a general form that works 
 
 ## Acceptance Criteria
 
-- [ ] environment_outcome payload structure is documented.
-- [ ] Common optional slots (reward, env_status, actions) are described.
-- [ ] Gridworld and push outcomes align with the documented structure.
-- [ ] Schema supports different domains without imposing rigid schema on payload.
+- [x] environment_outcome payload structure is documented.
+- [x] Common optional slots (reward, env_status, actions) are described.
+- [x] Gridworld and push outcomes align with the documented structure.
+- [x] Schema supports different domains without imposing rigid schema on payload.
 
 ## Implementation Notes
 
@@ -49,3 +49,11 @@ Formalise the environment_outcome record structure as a general form that works 
 
 ### 2026-02-16
 Task created.
+
+### 2026-02-21
+Formalised outcome payload structure:
+- Expanded `docs/data-model-spec.md` §4.1 with a recommended key table: `observations` and `done` (state), `rewards` and `actions` (transition), `round` (temporal). Added category semantics for dedup alignment.
+- Added optional `done` parameter to `RecordWriter.on_outcome_and_traces()` — termination flags are now recorded in the outcome payload.
+- `WrappedEnv.step()` passes `done` from the step adapter to the outcome record.
+- Payload remains open key-value; the table documents recommended keys, not a rigid schema.
+- All 49 existing tests pass.

@@ -6,6 +6,8 @@ directly. RecordWriter encapsulates all record creation and writing.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Any, Callable, Dict, Optional
 
 from ..interface.shared_data import SharedDataAdapter
@@ -17,6 +19,26 @@ from .run_config import (
     should_write_trace,
 )
 from .shared_data import new_agent_update_record, new_record, new_trace_record
+
+
+StateHashFn = Callable[[Dict[str, Any]], str]
+"""Callable: outcome payload -> hex digest string."""
+
+
+_STATE_FIELDS = ("observations", "done")
+"""Payload keys that represent environment state (not transition or temporal)."""
+
+
+def default_state_hash(payload: Dict[str, Any]) -> str:
+    """SHA-256 of state-only fields (observations, done).
+
+    Excludes transition fields (actions, rewards) and temporal fields
+    (round) so that revisiting the same physical state at different
+    rounds correctly deduplicates.
+    """
+    state = {k: payload[k] for k in _STATE_FIELDS if k in payload}
+    canonical = json.dumps(state, sort_keys=True, default=str)
+    return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 def _serializable(value: Any) -> Any:
@@ -42,6 +64,7 @@ class RecordWriter:
         run_config: RunConfig,
         *,
         agent_write_fn: Optional[Callable[[SimpleRecord], None]] = None,
+        state_hash_fn: Optional[StateHashFn] = None,
     ) -> None:
         """Initialise with shared data and run config.
 
@@ -50,10 +73,14 @@ class RecordWriter:
             run_config: Logging level and other config.
             agent_write_fn: Optional. If provided, used for agent_update records
                 (e.g. mp_interface.write_record). Else shared_data.write.
+            state_hash_fn: Optional. If provided, enables state deduplication
+                for environment outcomes. Receives the outcome payload dict and
+                must return a hex digest string.
         """
         self._shared_data = shared_data
         self._config = run_config
         self._agent_write = agent_write_fn or shared_data.write
+        self._state_hash_fn = state_hash_fn
 
     def on_agent_decide(
         self,
@@ -90,6 +117,7 @@ class RecordWriter:
         actions: Dict[str, Any],
         rewards: Dict[str, Any],
         observations: Dict[str, Any],
+        done: Optional[Dict[str, Any]] = None,
         agent_update_ids: Dict[str, str],
         prev_outcome_id: str,
         env_actor: str,
@@ -97,12 +125,61 @@ class RecordWriter:
     ) -> str:
         """Record environment outcome and optionally traces. Returns outcome record id."""
         level = self._config.logging_level
-        payload = {
+        payload: Dict[str, Any] = {
             "round": round_id,
             "actions": _serializable(actions),
             "rewards": _serializable(rewards),
             "observations": _serializable(observations),
         }
+        if done is not None:
+            payload["done"] = _serializable(done)
+
+        outcome_id = self._dedup_or_write_outcome(payload, env_actor, agent_update_ids, level)
+
+        if should_write_trace(level):
+            for agent_id in agent_ids:
+                agent_update_id = agent_update_ids.get(agent_id)
+                if agent_update_id is None:
+                    continue
+                trace_provenance = (
+                    new_provenance(agent=agent_id, sources=[agent_update_id])
+                    if should_include_provenance_accountability(level)
+                    else {}
+                )
+                trace_accountability = (
+                    new_accountability(owner=agent_id) if should_include_provenance_accountability(level) else {}
+                )
+                trace = new_trace_record(
+                    actor=agent_id,
+                    from_id=prev_outcome_id,
+                    to_id=outcome_id,
+                    enabled_by_id=agent_update_id,
+                    relation="enables",
+                    round_=round_id,
+                    notes=f"Round {round_id} decision influenced outcome.",
+                    provenance=trace_provenance,
+                    accountability=trace_accountability,
+                )
+                self._shared_data.write(trace)
+
+        return outcome_id
+
+    def _dedup_or_write_outcome(
+        self,
+        payload: Dict[str, Any],
+        env_actor: str,
+        agent_update_ids: Dict[str, str],
+        level: int,
+    ) -> str:
+        """Check state index for dedup; write new outcome only when needed."""
+        if self._state_hash_fn is not None:
+            state_hash = self._state_hash_fn(payload)
+            lookup = getattr(self._shared_data, "lookup_outcome_by_hash", None)
+            if callable(lookup):
+                existing_id = lookup(state_hash)
+                if existing_id is not None:
+                    return existing_id
+
         outcome_provenance = (
             new_provenance(
                 agent=env_actor,
@@ -124,30 +201,10 @@ class RecordWriter:
         )
         self._shared_data.write(outcome_record)
 
-        if should_write_trace(level):
-            for agent_id in agent_ids:
-                agent_update_id = agent_update_ids.get(agent_id)
-                if agent_update_id is None:
-                    continue
-                trace_provenance = (
-                    new_provenance(agent=agent_id, sources=[agent_update_id])
-                    if should_include_provenance_accountability(level)
-                    else {}
-                )
-                trace_accountability = (
-                    new_accountability(owner=agent_id) if should_include_provenance_accountability(level) else {}
-                )
-                trace = new_trace_record(
-                    actor=agent_id,
-                    from_id=prev_outcome_id,
-                    to_id=outcome_record.id,
-                    enabled_by_id=agent_update_id,
-                    relation="enables",
-                    round_=round_id,
-                    notes=f"Round {round_id} decision influenced outcome.",
-                    provenance=trace_provenance,
-                    accountability=trace_accountability,
-                )
-                self._shared_data.write(trace)
+        if self._state_hash_fn is not None:
+            state_hash = self._state_hash_fn(payload)
+            indexer = getattr(self._shared_data, "index_outcome", None)
+            if callable(indexer):
+                indexer(state_hash, outcome_record.id)
 
         return outcome_record.id

@@ -47,5 +47,5 @@ Completed grid-world tests and metrics summary output.
 ### 2026-02-11
 Added plotting and CSV export for grid-world metrics. Output layout standardised: plots in `plots/` and metrics CSV in `metrics/` subfolders.
 
-### 2026-01-28
+### 2026-02-20
 Added integration tests (`tests/test_session_integration.py`) that exercise the full Session + GridWorldEnv + real policies stack. These complement existing unit tests by verifying wiring at component seams — observation structures, shared map accumulation, agent movement, topology filtering, and coverage growth. Two wiring bugs caught and fixed during this effort.

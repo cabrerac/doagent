@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Iterable, Optional, Protocol
 
+
 from ..records import SimpleRecord
 
 
@@ -28,3 +29,16 @@ class SharedDataAdapter(Protocol):
         until: Optional[str] = None,
     ) -> Iterable[SimpleRecord]:
         """Yield records matching a kind with optional filters."""
+
+    def lookup_outcome_by_hash(self, state_hash: str) -> Optional[str]:
+        """Return the outcome record id for an already-seen state hash.
+
+        Adapters that do not support deduplication should return ``None``.
+        """
+        return None
+
+    def index_outcome(self, state_hash: str, outcome_id: str) -> None:
+        """Store a ``state_hash -> outcome_id`` mapping for dedup lookups.
+
+        Adapters that do not support deduplication may no-op.
+        """

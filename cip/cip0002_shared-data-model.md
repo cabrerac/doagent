@@ -92,7 +92,14 @@ This CIP addresses the following requirements:
 - [x] Document listen semantics and filters
 - [x] Implement file-based adapter
 - [x] Update tests and example usage
-- [ ] Implement more complex adapters
+- [x] State deduplication contract and implementation
+- [x] Formalised environment_outcome payload structure
+- [x] Adapter contract documentation (core + dedup extension)
+- [x] Trace graph and dedup test suite (12 tests)
+- [x] Collection-per-kind storage refactor (all adapters)
+- [x] Dedup on-by-default (`default_state_hash`)
+- [x] MongoDB adapter (`MongoSharedData`)
+- [ ] Stream adapter (Kafka, Redis — future iteration)
 
 ## Progress Updates
 
@@ -110,5 +117,23 @@ Iteration 2 discussion items:
 - Formalising the model (record schema, kind semantics, indexing/query patterns) gives a spec that adapters must implement. That keeps InMemorySharedData and FileSharedData as “flat” implementations, while Mongo/SQL adapters map to richer structures, without changing the public API. A single, explicit data model for all adapters makes sense; the difference is how each adapter maps that model to its storage (flat vs collections vs tables).
 - The environment writes in the shared data model as it was an agent. Does it make sense?
 
+### 2026-02-21
+Iteration 2 implementation — state deduplication, outcome formalisation, adapter contract:
+- **State dedup contract** (§9 of data-model-spec): equivalence via SHA-256 of canonical JSON; scenario-defined `state_hash_fn`; adapter-owned index; opt-in via `Session(state_hash_fn=...)`.
+- **Outcome payload** (§4.1): formalised recommended keys (observations, done, rewards, actions, round) with category semantics (state/transition/temporal) for dedup alignment. Added `done` to `RecordWriter.on_outcome_and_traces()`.
+- **Adapter contract** (`docs/adapter-contract.md`): core interface guarantees + optional `lookup_outcome_by_hash`/`index_outcome` dedup extension. Implementation guidance for in-memory, file, DB, and stream backends.
+- **Adapter implementations**: `InMemorySharedData` and `FileSharedData` both have dedup index (in-memory dict).
+- **Tests**: 12 new tests in `tests/test_trace_dedup.py` covering trace graph structure, state dedup, multi-trace reuse, file adapter dedup, and opt-out behaviour.
+- All 61 tests pass (49 existing + 12 new).
+
+### 2026-02-21
+Collection-per-kind storage refactor, dedup-on-by-default, MongoDB adapter:
+- **Dedup on-by-default**: `Session` now uses `default_state_hash` by default. Traces form a proper graph out-of-the-box. Explicit `state_hash_fn=None` opts out (escape hatch).
+- **Collection-per-kind storage**: All adapters now organise records by kind. `InMemorySharedData` uses `Dict[kind, Dict[id, SimpleRecord]]`. `FileSharedData` uses one `<kind>.jsonl` file per kind in a directory. `MongoSharedData` uses one MongoDB collection per kind. This makes `listen()` efficient and aligns all adapters to the same conceptual model.
+- **MongoSharedData** (`doagent/core/mongo_shared_data.py`): New MongoDB adapter with collection-per-kind layout, native query filters in `listen()`, `_state_index` collection for dedup, and `ensure_indexes()` for recommended indexes. Requires `pymongo` (optional dependency; import guarded).
+- **Design alternatives documented** in `docs/adapter-contract.md` §6: flat-store vs collection-per-kind, opt-in vs default dedup, adapter vs writer-owned index, hash computation location, MongoDB `_id` strategy.
+- **Tests**: 11 new MongoDB adapter tests via `mongomock`. Total: 72 passed, 3 skipped.
+
 ## References
 - [Data Model Specification](../docs/data-model-spec.md) — Record kinds, roles, relationships, provenance/accountability, trace schema, logging levels.
+- [Adapter Contract](../docs/adapter-contract.md) — SharedDataAdapter implementation guide, collection-per-kind model, dedup extension.

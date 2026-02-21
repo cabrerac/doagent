@@ -106,8 +106,7 @@ class TestPushValidation(unittest.TestCase):
 
     def test_validation_with_file_adapter(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "records.jsonl"
-            shared_data = FileSharedData(path)
+            shared_data = FileSharedData(temp_dir)
             env = self._make_external_env()
             registry = PolicyRegistry()
             _register_policies(registry)
@@ -126,7 +125,7 @@ class TestPushValidation(unittest.TestCase):
 
             self.assertEqual(len(agent_updates), 4)
             self.assertEqual(len(outcomes), 2)
-            self.assertGreater(output_bytes_from_path(path), 0)
+            self.assertGreater(output_bytes_from_path(temp_dir), 0)
 
     def test_baseline_run(self):
         shared_data = NoOpSharedData()

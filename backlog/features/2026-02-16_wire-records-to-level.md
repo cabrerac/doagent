@@ -3,7 +3,7 @@ id: "2026-02-16_wire-records-to-level"
 title: "Wire record writing to configured logging level"
 status: "Completed"
 priority: "High"
-created: "2026-02-16"
+created: "2026-02-20"
 last_updated: "2026-02-17"
 category: "features"
 related_cips:
@@ -55,8 +55,8 @@ The library must write records according to the configured logging level. Record
 ### 2026-02-16
 Task created. Part of REQ-0001/CIP-0001 iteration 2 backlog.
 
-### 2026-01-17
+### 2026-02-17
 Level gating implemented (RunConfig, helpers, conditional writes in scenarios). Tests pass.
 
-### 2026-01-28
+### 2026-02-20
 RecordWriter implemented (doagent/core/record_writer.py). Hooks: on_agent_decide, on_outcome_and_traces. Gridworld and push scenarios refactored to use RecordWriter; removed all direct new_* imports from scenarios. All 35 tests pass. Marked complete. Next: transparent user API via Session (new task).

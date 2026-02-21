@@ -91,7 +91,7 @@ for round_id in range(1, rounds + 1):
 ### 2026-02-19
 Task created. Based on brainstorming: scenarios are usage examples and should demonstrate transparency. Session API selected over step recorder and standalone functions.
 
-### 2026-01-28 (initial)
+### 2026-02-10 (initial)
 Implementation of core Session API:
 - Created `doagent/core/session.py` with `Session`, `WrappedEnv`, `SessionAgent` classes.
 - `WrappedEnv` auto-detects common step result formats (dict, tuple, attribute-based) with user-overridable adapter.
@@ -101,7 +101,7 @@ Implementation of core Session API:
 - Refactored push and gridworld scenarios to use Session internally.
 - Exported `Session` from `doagent` top-level package.
 
-### 2026-01-28 (decentralisation + examples rewrite)
+### 2026-02-20 (decentralisation + examples rewrite)
 Session moved from library internals to user-facing code. All three DOA principles now supported:
 - **Shared-data model**: `session.wrap_env()`, `session.create_agents()` record transparently.
 - **Decentralisation**: Added `session.visible_records(agent_id, kind)` with topology-aware filtering (CENTRALISED, PEER_TO_PEER, FEDERATED). Session accepts `topology`, `visibility`, `hub_id` parameters.
@@ -110,7 +110,7 @@ Session moved from library internals to user-facing code. All three DOA principl
 - Rewrote `examples/validation/push/push_validation.py` to use Session directly.
 - 10 Session tests (3 new for topology filtering) + full suite: 42 passed, 3 skipped.
 
-### 2026-01-28 (integration tests + bug fixes)
+### 2026-02-20 (integration tests + bug fixes)
 Two wiring bugs discovered while running the gridworld example:
 1. `build_shared_map` couldn't extract cells from records — `local_knowledge` structure changed to `{"observation": {...}, "shared_map": {...}}` but extraction still looked for `local_knowledge.cells`.
 2. `_move_towards` returned action 1 (left) when src == dest, causing frontier agents to drift left and get stuck.

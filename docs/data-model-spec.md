@@ -70,21 +70,28 @@ All records share a common envelope:
 
 ### 4.1 environment_outcome
 
-**Role:** The environment's response after an env step. Records the resulting state.
+**Role:** The environment's response after an env step. Records the resulting state and transition context.
 
-**Payload:** Domain-specific. Common optional slots:
-- `reward` / `rewards`: Scalar or per-agent
-- `env_status`: Observations, done flag, status
-- `actions`: Actions taken (if env records them)
-- `round`: Step index
+**Payload — recommended top-level keys:**
 
-**Structure:** Envelope fixed; payload is open key-value. Each scenario defines its own structure.
+| Key | Type | Category | Description |
+|-----|------|----------|-------------|
+| `observations` | `Dict[str, Any]` | State | Per-agent observations after the step. This is the primary state content. |
+| `done` | `Dict[str, bool]` | State | Per-agent termination flags. |
+| `rewards` | `Dict[str, float]` | Transition | Per-agent reward values resulting from this transition. |
+| `actions` | `Dict[str, Any]` | Transition | The joint action that caused this transition. |
+| `round` | `int` | Temporal | Step index. Also present on traces for graph queries. |
 
----
+**Payload is open key-value.** Scenarios may add domain-specific keys (e.g. `infos`, `truncations`, `grid_state`). The table above lists recommended common keys, not a rigid schema.
+
+**Category semantics for deduplication:**
+- **State** keys (`observations`, `done`) define what the environment "looks like" — these are the natural candidates for the `state_hash_fn`.
+- **Transition** keys (`rewards`, `actions`) describe how we arrived — useful for analysis but typically excluded from the state hash.
+- **Temporal** keys (`round`) index the step — always excluded from state hashes since the same state can be reached at different times.
 
 ### 4.2 reward, env_status
 
-**Conceptual components** of environment_outcome, not separate record kinds. The payload may expose `reward` and `env_status` as top-level keys.
+**Conceptual components** of environment_outcome, not separate record kinds. `rewards` and `done` are top-level keys in the outcome payload.
 
 ---
 
@@ -133,15 +140,55 @@ At Level 0: agent_update has local_knowledge and decision (no explanation). At L
 
 ## 9. State Equivalence and Deduplication
 
-When recording an environment outcome:
-1. Compute hash of the state (scenario-defined what is included)
-2. Check if equivalent state exists via `state_hash → outcome_id` index
-3. If yes: reuse existing outcome id for `to_id`; write new trace
-4. If no: create new outcome; index it; write trace
+### 9.1 Overview
 
-**Metadata:** Temporal info (round, timestamp) lives on the trace, not on the outcome. Outcomes stay "pure state."
+Environment outcomes represent **states**. When the environment reaches a state it has visited before, the outcome should be deduplicated: the trace's `to_id` points to the existing outcome rather than creating a duplicate. This allows traces to form a **directed graph** of states and transitions, not just a linear chain.
 
-**Adapter responsibility:** Adapters that support deduplication maintain the index. JSON: in-memory or sidecar. DB: native indexes. Streams: medium-specific.
+### 9.2 Equivalence Definition
+
+Two outcomes are **equivalent** when their state content is identical. State content is determined by a **hash function** applied to the outcome payload.
+
+- **Default hash input:** State-category fields only (`observations`, `done`). Transition fields (`actions`, `rewards`) and temporal fields (`round`) are excluded, so revisiting the same physical state at different rounds correctly deduplicates.
+- **Scenario-defined hash input:** Users may provide a custom `state_hash_fn` that selects different parts of the payload. For example, a gridworld scenario might hash only agent positions and landmark positions.
+- **Hash algorithm:** SHA-256 of the canonical JSON serialisation (keys sorted, deterministic). The adapter stores the hex digest.
+
+### 9.3 Index Ownership
+
+The `state_hash → outcome_id` index is owned and maintained by the **adapter**:
+
+- Adapters that support deduplication implement `lookup_outcome_by_hash(state_hash) -> Optional[str]` and `index_outcome(state_hash, outcome_id) -> None`.
+- Adapters that do **not** support deduplication skip the index — every outcome is new. This is valid; deduplication is an optimisation, not a requirement.
+- The index lives for the duration of the adapter's lifetime (single run for in-memory; persisted sidecar for file-based if needed).
+
+### 9.4 Write Flow
+
+When `RecordWriter.on_outcome_and_traces()` records an environment outcome:
+
+1. **Compute hash:** Apply `state_hash_fn` (or default) to the outcome payload → `state_hash`.
+2. **Lookup:** Call `adapter.lookup_outcome_by_hash(state_hash)`.
+3. **If found:** Reuse the existing `outcome_id`. Do **not** write a new outcome record.
+4. **If not found:** Write the new outcome record. Call `adapter.index_outcome(state_hash, outcome_record.id)`.
+5. **Write traces:** Use the (possibly reused) `outcome_id` as `to_id`. Traces are always new — they carry temporal metadata (round, timestamp) specific to this transition.
+
+### 9.5 Outcome Purity
+
+Outcomes represent pure state — no temporal metadata:
+
+- `round`, `timestamp` live on the **trace**, not on the outcome.
+- `rewards` are part of the state transition, not the state itself. Whether to include them in the outcome payload or move them to the trace is scenario-dependent. The default includes them in the outcome payload.
+
+### 9.6 Dedup is On by Default
+
+Deduplication is **enabled by default** using `default_state_hash` (SHA-256 of the full canonical payload). This ensures traces form a proper directed graph rather than a linear chain.
+
+- `Session()` → dedup ON with `default_state_hash`.
+- `Session(state_hash_fn=custom_fn)` → dedup ON with a scenario-specific hash (e.g. hash only observations, ignoring round/rewards).
+- `Session(state_hash_fn=None)` → dedup OFF (escape hatch for edge cases).
+- Adapters without `lookup_outcome_by_hash` / `index_outcome` silently skip dedup (no error).
+
+**Design alternatives considered:**
+- *Opt-in dedup* (user must explicitly pass `state_hash_fn`). Rejected because the trace graph is a core architectural concept; disabling dedup by default would produce degenerate linear chains that undermine the graph model.
+- *Full-payload hash as default* (hash everything including round, actions, rewards). Rejected because identical physical states at different rounds would never deduplicate, producing redundant outcome nodes. The default should hash only state fields to build a meaningful graph.
 
 ---
 
@@ -149,4 +196,5 @@ When recording an environment outcome:
 
 - CIP-0002: Shared Data Model as Agent Interface
 - CIP-0001: Library First Architecture (logging levels)
+- [Adapter Contract](adapter-contract.md) — implementation guidance for `SharedDataAdapter`, including dedup
 - Backlog: 2026-02-16_data-model-spec

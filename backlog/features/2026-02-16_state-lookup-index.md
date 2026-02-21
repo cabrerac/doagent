@@ -1,10 +1,10 @@
 ---
 id: "2026-02-16_state-lookup-index"
 title: "Implement state lookup index for JSON/file adapter"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-02-16"
-last_updated: "2026-02-16"
+last_updated: "2026-02-21"
 category: "features"
 related_cips:
 - "0002"
@@ -28,10 +28,10 @@ Implement the state_hash to outcome_id index for the JSON/file adapter so that e
 
 ## Acceptance Criteria
 
-- [ ] JSON/file adapter maintains state_hash -> outcome_id index.
-- [ ] On outcome write: compute hash, lookup; if exists reuse id, else create and index.
-- [ ] Trace to_id correctly references reused outcome when state is equivalent.
-- [ ] Tests verify deduplication and trace graph construction.
+- [x] JSON/file adapter maintains state_hash -> outcome_id index.
+- [x] On outcome write: compute hash, lookup; if exists reuse id, else create and index.
+- [x] Trace to_id correctly references reused outcome when state is equivalent.
+- [x] Tests verify deduplication and trace graph construction.
 
 ## Implementation Notes
 
@@ -49,3 +49,12 @@ Implement the state_hash to outcome_id index for the JSON/file adapter so that e
 
 ### 2026-02-16
 Task created. Part of REQ-0001/CIP-0002 iteration 2 backlog.
+
+### 2026-02-21
+Implemented state lookup index for both adapters:
+- `InMemorySharedData`: dedup index (`Dict[str, str]`) added with `lookup_outcome_by_hash` and `index_outcome` methods (implemented in state-dedup-contract task).
+- `FileSharedData`: same in-memory dict pattern added. Lives for adapter lifetime (single run).
+- `RecordWriter._dedup_or_write_outcome()` performs the full lookup → reuse/create → index flow.
+- `Session` accepts `state_hash_fn` and passes it to `RecordWriter`.
+- Dedup tests covered in the tests-trace-dedup task.
+- All 49 existing tests pass.

@@ -75,8 +75,7 @@ class TestGridWorldValidation(unittest.TestCase):
 
     def test_validation_with_file_adapter(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "records.jsonl"
-            shared_data = FileSharedData(path)
+            shared_data = FileSharedData(temp_dir)
             env = self._make_env()
             registry = self._make_registry()
 
@@ -95,7 +94,7 @@ class TestGridWorldValidation(unittest.TestCase):
             self.assertEqual(summary.outcomes, 2)
             self.assertEqual(len(agent_updates), 4)
             self.assertEqual(len(outcomes), 2)
-            self.assertGreater(output_bytes_from_path(path), 0)
+            self.assertGreater(output_bytes_from_path(temp_dir), 0)
 
 
 if __name__ == "__main__":

@@ -44,13 +44,15 @@ class BaselineMetrics:
 
 
 def output_bytes_from_path(path: str | Path | None) -> int:
-    """Return output size for a path, or 0 if missing."""
+    """Return output size for a path (file or directory), or 0 if missing."""
     if path is None:
         return 0
-    file_path = Path(path)
-    if not file_path.exists():
+    p = Path(path)
+    if not p.exists():
         return 0
-    return file_path.stat().st_size
+    if p.is_dir():
+        return sum(f.stat().st_size for f in p.iterdir() if f.is_file())
+    return p.stat().st_size
 
 
 def measure_baseline(
