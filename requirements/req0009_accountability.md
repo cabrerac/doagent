@@ -1,10 +1,10 @@
 ---
 id: "0009"
 title: "System Wide Accountability"
-status: "Proposed"
+status: "In Progress"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-01-22"
+last_updated: "2026-02-21"
 related_tenets:
 - "provenance-and-accountability"
 - "interpretability-and-traceability"
@@ -29,9 +29,9 @@ This requirement focuses on responsibility and governance rather than lineage al
 **Who benefits**: Auditors, compliance teams, platform operators, and end users.
 
 ## Acceptance Criteria
-- [ ] Decisions are attributable to specific agents, tools, and policy contexts.
-- [ ] Accountability metadata is preserved alongside shared data records.
-- [ ] Governance context is available for audits and reviews.
+- [x] Decisions are attributable to specific agents, tools, and policy contexts.
+- [x] Accountability metadata is preserved alongside shared data records.
+- [x] Governance context is available for audits and reviews.
 
 ## Notes (Optional)
 Attribution formats and governance policies are defined in CIPs.
@@ -44,3 +44,6 @@ Attribution formats and governance policies are defined in CIPs.
 
 ### 2026-01-22
 Requirement drafted.
+
+### 2026-02-21
+CIP-0009 iteration 1 complete (3/3 items). `Accountability` TypedDict (`owner`, `policy_id`, `responsibility_scope`) on every `SimpleRecord` envelope. `new_accountability()` helper builds metadata. Accountability populated by `RecordWriter` at logging level >= 2. Governance context preserved alongside all shared data records and accessible for auditing.

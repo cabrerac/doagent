@@ -1,10 +1,10 @@
 ---
 id: "0004"
 title: "Open Participation and Resource Exchange"
-status: "Proposed"
+status: "In Progress"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-01-22"
+last_updated: "2026-02-21"
 related_tenets:
 - "open-participation"
 stakeholders:
@@ -28,9 +28,9 @@ This requirement focuses on openness at the system boundary so that agents can c
 **Who benefits**: External partners, platform operators, and end users.
 
 ## Acceptance Criteria
-- [ ] Agents can join or leave without manual system reconfiguration.
+- [x] Agents can join or leave without manual system reconfiguration.
 - [ ] Agents can advertise capabilities and resource constraints in a transparent way.
-- [ ] Participation is supported through stable and documented interfaces.
+- [x] Participation is supported through stable and documented interfaces.
 
 ## Notes (Optional)
 Discovery, admission, and policy enforcement mechanisms are specified in CIPs.
@@ -43,3 +43,6 @@ Discovery, admission, and policy enforcement mechanisms are specified in CIPs.
 
 ### 2026-01-22
 Requirement drafted.
+
+### 2026-02-21
+CIP-0004 iteration 1 complete (4/4 items). `ParticipationRecord`, `ParticipationRegistry` protocol, and `InMemoryParticipationRegistry` implemented. Grid-world validation exercises stochastic join/leave with energy model. Capability advertisement (criterion 2) not yet implemented — deferred to iteration 2.

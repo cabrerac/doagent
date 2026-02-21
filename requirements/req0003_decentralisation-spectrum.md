@@ -1,10 +1,10 @@
 ---
 id: "0003"
 title: "Configurable Decentralisation Spectrum"
-status: "Proposed"
+status: "In Progress"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-01-22"
+last_updated: "2026-02-21"
 related_tenets:
 - "decentralised-by-design"
 stakeholders:
@@ -27,9 +27,9 @@ This requirement ensures that decentralisation is a first class capability and c
 **Who benefits**: System operators, infrastructure teams, and researchers.
 
 ## Acceptance Criteria
-- [ ] The system supports centralised, federated, and peer to peer coordination modes.
-- [ ] Agents can operate across these modes without code changes.
-- [ ] Topology changes can be expressed through configuration or orchestration policy.
+- [x] The system supports centralised, federated, and peer to peer coordination modes.
+- [x] Agents can operate across these modes without code changes.
+- [x] Topology changes can be expressed through configuration or orchestration policy.
 
 ## Notes (Optional)
 Specific protocols and orchestration mechanisms are defined in CIPs.
@@ -42,3 +42,6 @@ Specific protocols and orchestration mechanisms are defined in CIPs.
 
 ### 2026-01-22
 Requirement drafted.
+
+### 2026-02-21
+CIP-0003 iteration 1 complete (4/4 items). `Topology` enum (centralised, peer-to-peer, federated), `TopologyConfig`, `select_routing()`, and topology tests implemented. Grid-world validation exercises all three modes via YAML config. Session API applies topology-filtered `visible_records()` transparently. Routing policies remain stubbed (iteration 2).

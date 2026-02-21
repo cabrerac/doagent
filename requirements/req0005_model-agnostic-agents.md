@@ -1,10 +1,10 @@
 ---
 id: "0005"
 title: "Model Agnostic Agent Core"
-status: "Proposed"
+status: "In Progress"
 priority: "Medium"
 created: "2026-01-22"
-last_updated: "2026-01-22"
+last_updated: "2026-02-21"
 related_tenets:
 - "model-agnostic-core"
 stakeholders:
@@ -27,9 +27,9 @@ This requirement keeps the framework flexible for diverse agent implementations.
 **Who benefits**: Agent developers and researchers building varied decision systems.
 
 ## Acceptance Criteria
-- [ ] Agents can integrate different decision engines without changing system contracts.
-- [ ] Core interfaces do not require model specific inputs or outputs.
-- [ ] The system remains usable across multiple agent model types.
+- [x] Agents can integrate different decision engines without changing system contracts.
+- [x] Core interfaces do not require model specific inputs or outputs.
+- [x] The system remains usable across multiple agent model types.
 
 ## Notes (Optional)
 Adapter patterns and model integration guides are described in CIPs.
@@ -42,3 +42,6 @@ Adapter patterns and model integration guides are described in CIPs.
 
 ### 2026-01-22
 Requirement drafted.
+
+### 2026-02-21
+CIP-0005 iteration 1 complete (4/4 items). `DecisionRequest`/`DecisionResponse` payloads, `FunctionAgent`, `StubAgent`, and `SessionAgent` protocol implemented. Session API wraps any callable policy via `PolicyRegistry`. Validation examples demonstrate multiple policy types (random, greedy, noop) through the same interface. `model_agnostic_agent.py` feature example confirms model-agnostic design.

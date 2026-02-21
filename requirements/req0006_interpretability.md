@@ -1,10 +1,10 @@
 ---
 id: "0006"
 title: "Interpretability of Agent Decisions"
-status: "Proposed"
+status: "In Progress"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-01-22"
+last_updated: "2026-02-21"
 related_tenets:
 - "interpretability-and-traceability"
 stakeholders:
@@ -28,9 +28,9 @@ This requirement focuses on understanding: users should be able to grasp why an 
 **Who benefits**: End users, auditors, and system operators.
 
 ## Acceptance Criteria
-- [ ] Decisions include human readable rationales or summaries.
-- [ ] Explanations can be generated from shared data without contacting the agent.
-- [ ] Interpretability information remains available for auditing.
+- [x] Decisions include human readable rationales or summaries.
+- [x] Explanations can be generated from shared data without contacting the agent.
+- [x] Interpretability information remains available for auditing.
 
 ## Notes (Optional)
 The explanation format and storage strategy are defined in CIPs.
@@ -43,3 +43,6 @@ The explanation format and storage strategy are defined in CIPs.
 
 ### 2026-01-22
 Requirement drafted.
+
+### 2026-02-21
+CIP-0006 iteration 1 complete (4/4 items). `ExplanationPayload`, `ExplanationRecord`, `new_explanation_record` implemented. Explanation is a field inside `agent_update.payload.decision` (produced at logging level >= 1). Explanations are persisted in shared data and accessible without contacting agents. Validation examples produce explanation artefacts.

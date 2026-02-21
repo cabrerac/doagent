@@ -27,9 +27,9 @@ This requirement is about outcomes: a shared data model is the default medium fo
 **Who benefits**: Agent developers, platform operators, auditors, and integrators.
 
 ## Acceptance Criteria
-- [ ] Agents can coordinate using a shared data model without direct message passing.
-- [ ] Agent state and decisions are externally observable through the shared model.
-- [ ] The shared model can serve as the canonical source of truth for system state.
+- [x] Agents can coordinate using a shared data model without direct message passing.
+- [x] Agent state and decisions are externally observable through the shared model.
+- [x] The shared model can serve as the canonical source of truth for system state.
 
 ## Notes (Optional)
 This requirement does not prescribe a specific data backend or protocol.

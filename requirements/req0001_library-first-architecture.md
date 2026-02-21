@@ -27,10 +27,10 @@ This requirement focuses on outcomes: the library is the primary product, and sy
 **Who benefits**: Agent developers, platform teams, and system integrators.
 
 ## Acceptance Criteria
-- [ ] DOAgent can be integrated as a library dependency in external projects.
-- [ ] Core features are exposed through stable, well documented APIs.
-- [ ] System level conveniences are optional and do not constrain library use.
-- [ ] Users can adopt principles independently (shared data, decentralisation, openness) without mandatory coupling.
+- [x] DOAgent can be integrated as a library dependency in external projects.
+- [x] Core features are exposed through stable, well documented APIs.
+- [x] System level conveniences are optional and do not constrain library use.
+- [x] Users can adopt principles independently (shared data, decentralisation, openness) without mandatory coupling.
 
 ## Notes (Optional)
 Packaging, API stability, and compatibility policies are defined in CIPs.
