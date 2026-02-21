@@ -1,10 +1,10 @@
 ---
 id: "0002"
 title: "Shared Data Model as Agent Interface"
-status: "Proposed"
+status: "Implemented"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-01-22"
+last_updated: "2026-02-21"
 related_tenets:
 - "data-first-shared-model"
 stakeholders:
@@ -42,3 +42,6 @@ This requirement does not prescribe a specific data backend or protocol.
 
 ### 2026-01-22
 Requirement drafted.
+
+### 2026-02-21
+Iteration 2 complete. CIP-0002 moved to Implemented. Shared data model defined with record envelope, listen semantics, provenance (flat attribution), accountability, three adapters (InMemory, File, Mongo), collection-per-kind storage, state deduplication on by default, trace graph, and adapter contract documentation. All backlog items closed. Iteration 3 items noted in CIP-0002: partial/no-outcome environments, SQL/stream adapters (deferred).

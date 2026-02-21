@@ -1,10 +1,10 @@
 ---
 id: "0001"
 title: "Library First Architecture"
-status: "In Progress"
+status: "Implemented"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-02-11"
+last_updated: "2026-02-21"
 related_tenets:
 - "library-first"
 stakeholders:
@@ -46,3 +46,6 @@ Requirement drafted.
 
 ### 2026-01-28
 Status updated to In Progress. CIP-0001 (Library First Architecture) is actively being implemented; grid-world validation (CIP-0010) closed.
+
+### 2026-02-21
+Iteration 2 complete. CIP-0001 moved to Implemented. Session API is the primary user-facing surface; library boundaries, adapters (InMemory, File, Mongo), validation examples, and documentation all updated. All backlog items closed. Iteration 3 may revisit exposed API surface based on remaining requirements.
