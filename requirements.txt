@@ -3,8 +3,10 @@ pettingzoo[mpe]
 mpe2
 pygame
 
-# Visualization dependencies
+# Visualization and analysis dependencies
 matplotlib
+networkx
+imageio
 
 # Configuration dependencies
 pyyaml

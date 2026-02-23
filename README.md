@@ -1,406 +1,202 @@
 # DOAgent
 
-Data‑Oriented Agents for accountable multi‑agent systems.
+Data-Oriented Agents for accountable multi-agent systems.
 
-Agentic systems often lack interpretability, traceability, and accountability. DOAgent addresses this by making shared data the primary interface between agents.
+DOAgent is a Python library for building multi-agent systems where **shared data is the primary interface** between agents. Every decision, state transition, and contribution is recorded transparently — giving you interpretability, traceability, and accountability out of the box [1].
 
-DOAgent is a library for building [data‑oriented](https://dl.acm.org/doi/10.1145/3769292) multi‑agent systems with configurable coordination and transparent interaction [1].
+## Why DOAgent?
 
-**Goals**:
-- Shared data model as the communication substrate.
-- Support for decentralisation from centralised to federated and peer‑to‑peer agent orchestration.
-- Open multi-agent systems architectures.
-- Improved interpretability, traceability, provenance, and accountability.
+Agentic systems often lack visibility into *why* decisions were made, *who* contributed what, and *how* state evolved. DOAgent addresses this by making data the first-class citizen:
 
-## Quickstart
+- **Shared data model** — agents communicate through records, not hidden channels
+- **Automatic recording** — wrap your environment and agents once, get full decision and state logs for free
+- **Configurable coordination** — centralised, peer-to-peer, or federated topology
+- **Built-in analysis** — trace graphs, provenance chains, and causal attribution from recorded data
 
-Use these commands to run the example and the tests.
+## Install
 
 ```bash
 pip install -r requirements.txt
-python -m examples.features.minimal_usage
+```
+
+Core dependencies: `pyyaml`. For analysis: `matplotlib`, `networkx`. For the PettingZoo validation scenario: `pettingzoo[mpe]`, `mpe2`, `pygame`.
+
+## Quick start
+
+The Session API is the primary entry point. You provide the environment and the policies; DOAgent handles all recording transparently.
+
+```python
+from doagent import Session, RunConfig
+from doagent.core import InMemorySharedData, FileSharedData
+
+# 1. Choose where records go
+shared_data = InMemorySharedData()          # or FileSharedData("output/records")
+
+# 2. Create a session (logging level 2 = full provenance and accountability)
+session = Session(shared_data, RunConfig(logging_level=2))
+
+# 3. Wrap your environment
+env = session.wrap_env(my_env, env_actor="my_env")
+
+# 4. Create agents from policies
+agents = session.create_agents(configs, registry, goal="explore")
+
+# 5. Run your loop — recording happens automatically
+observations = env.reset(seed=42)
+for round_id in range(1, rounds + 1):
+    actions = {}
+    for agent_id, agent in agents.items():
+        result = agent.decide(observations[agent_id], round_id)
+        actions[agent_id] = result["action"]
+    step = env.step(actions)
+    observations = step["observations"]
+```
+
+After the loop, `shared_data` contains all records: agent decisions, environment outcomes, and trace links connecting them.
+
+## What gets recorded
+
+DOAgent records three kinds of data at configurable verbosity:
+
+| Logging level | Records | Use case |
+|:---:|---|---|
+| **0** | `agent_update` + `outcome` | Lightweight: just decisions and states |
+| **1** | + `trace` + `explanation` | Linked state transitions with decision rationale |
+| **2** | + `provenance` + `accountability` | Full attribution: who created what, from which sources |
+
+Records are stored as JSONL (one file per kind) via adapters:
+
+- `InMemorySharedData` — fast, no I/O, good for experiments
+- `FileSharedData(path)` — persists to disk as `trace.jsonl`, `outcome.jsonl`, `agent_update.jsonl`
+- `MongoSharedData(collection)` — MongoDB-backed (requires `pymongo`)
+
+## Coordination topologies
+
+Control which agents see which records:
+
+```python
+from doagent.core import Topology, TopologyConfig
+
+# All agents see all records
+session = Session(shared_data, topology=TopologyConfig(mode=Topology.CENTRALISED))
+
+# Each agent sees only its own records and designated peers
+session = Session(shared_data,
+    topology=TopologyConfig(mode=Topology.PEER_TO_PEER),
+    visibility={"agent_0": ["agent_1"], "agent_1": ["agent_2"]},
+)
+
+# Agents see only hub-authored records; hub sees everything
+session = Session(shared_data,
+    topology=TopologyConfig(mode=Topology.FEDERATED),
+    hub_id="hub",
+)
+```
+
+Within the run loop, `session.visible_records(agent_id, kind="agent_update")` returns only the records that agent is allowed to see.
+
+## Analysis tools
+
+After a run, use the analysis scripts to visualise and understand what happened. All analysis is derived from the recorded data — no access to agent internals needed.
+
+```bash
+# Trace graph: state transitions coloured by agent
+python examples/analysis/trace_graph.py output/my_run/records
+
+# Provenance walker: "why did this state happen?"
+python examples/analysis/provenance_walker.py output/my_run/records last --depth 4
+
+# Causal attribution: who discovered what, and how effectively
+python examples/analysis/causal_attribution.py output/my_run/records
+
+# Topology comparison: same agents, 3 coordination modes, side-by-side
+python examples/analysis/topology_comparison.py --run
+```
+
+Each script produces PNG/PDF charts and console summaries. See `examples/analysis/README.md` for details.
+
+## Run the validation examples
+
+### Grid-world mapping (dependency-free)
+
+Four agents explore a grid with partial observations, sharing discovered cells via the shared data model. No external dependencies beyond the library.
+
+```bash
+python -m examples.validation.gridworld.gridworld_validation
+```
+
+Configurable via YAML. Edit `examples/validation/gridworld/gridworld_validation_config.yaml` to change grid size, topology, agent policies, energy model, and more.
+
+### Simple push (PettingZoo)
+
+A multi-agent push scenario using PettingZoo's MPE environments.
+
+```bash
+pip install pettingzoo[mpe] mpe2 pygame
+python -m examples.validation.push.push_validation
+```
+
+Both examples produce output directories with JSONL records, summary JSON, and metrics ready for the analysis tools above.
+
+## Run the tests
+
+```bash
 python -m unittest -v
 ```
 
 ## Project layout
 
-DOAgent is powered by [VibeSafe](https://github.com/lawrennd/vibesafe). The project structure is as follows:
-
-- `doagent/` — library implementation (core, records, interfaces)
-- `examples/` — runnable examples (`validation/` by scenario, `features/` by library capability)
-- `tests/` — test suite
-- `cip/`, `requirements/`, `backlog/`, `tenets/` — project documentation and planning powered by [VibeSafe](https://github.com/lawrennd/vibesafe)
-
-> **Status**: This project is in active development.
-> To see the current status, run `./whats-next` (VibeSafe).
-
-## API surface
-
-**Primary API (Session layer — all user code should use these):**
-
-- `doagent.Session` — central entry point: wrap env, create agents, run transparently
-- `doagent.RunConfig` — logging level configuration
-- `doagent.InMemorySharedData` — in-memory shared data adapter
-- `doagent.core.FileSharedData` — file-backed shared data adapter (directory, one JSONL per kind)
-- `doagent.core.MongoSharedData` — MongoDB adapter (optional, requires `pymongo`)
-- `doagent.core.TopologyConfig` / `doagent.core.Topology` — decentralisation topology
-- `doagent.validation.PolicyRegistry` — policy registration and creation
-- `doagent.records.SimpleRecord` — record envelope type
-
-**Internal helpers (for unit tests and feature examples, not typical user code):**
-
-- `doagent.core.new_record`, `new_trace_record`, `new_explanation_record` — low-level record creation
-- `doagent.core.StubAgent` — minimal agent adapter
-- `doagent.core.FunctionAgent` — function-backed decision agent (pre-Session)
-- `doagent.records.new_provenance` — build provenance attribution
-- `doagent.records.new_accountability` — build accountability metadata
-- `doagent.records.Accountability` — accountability envelope type (owner, policy_id, responsibility_scope)
-- `doagent.records.new_accountability` — helper to build accountability for records
-
-## Minimal usage
-
-The smallest example that writes and listens to shared data.
-
-```python
-from doagent.core import InMemorySharedData, StubAgent
-
-shared_data = InMemorySharedData()
-agent = StubAgent("agent-1", shared_data)
-
-agent.write(kind="note", payload={"text": "Hello from DOAgent"})
-
-for record in shared_data.listen("note"):
-    print(record.id, record.kind, record.payload)
+```
+doagent/             Library implementation
+  core/              Session API, adapters, topology, record writing
+  records/           Record types (SimpleRecord, provenance, accountability)
+  validation/        Validation helpers, environments, policies
+  interface/         Abstract adapter contracts
+examples/
+  analysis/          Trace graph, provenance walker, causal attribution
+  validation/        End-to-end scenarios (gridworld, simple push)
+  features/          Focused examples for individual library capabilities
+tests/               Test suite
 ```
 
-See `examples/features/minimal_usage.py` for a runnable example, or run it with:
+## API reference
+
+**Primary API** — what user code should import:
+
+| Import | Purpose |
+|---|---|
+| `doagent.Session` | Central entry point: wrap env, create agents, run |
+| `doagent.RunConfig` | Logging level configuration (0, 1, or 2) |
+| `doagent.InMemorySharedData` | In-memory shared data adapter |
+| `doagent.core.FileSharedData` | File-backed adapter (JSONL per record kind) |
+| `doagent.core.MongoSharedData` | MongoDB adapter (optional) |
+| `doagent.core.TopologyConfig` | Coordination topology configuration |
+| `doagent.core.Topology` | Topology modes: CENTRALISED, PEER_TO_PEER, FEDERATED |
+| `doagent.validation.PolicyRegistry` | Register and create agent policies |
+| `doagent.records.SimpleRecord` | The record envelope type |
+
+**Feature examples** — focused demonstrations of individual capabilities:
 
 ```bash
-python -m examples.features.minimal_usage
+python -m examples.features.minimal_usage           # Write and read records
+python -m examples.features.model_agnostic_agent     # Wrap any callable as an agent
+python -m examples.features.interpretability_usage   # Attach explanations to decisions
+python -m examples.features.traceability_usage       # Link records via trace edges
+python -m examples.features.provenance_usage         # Record who created what
+python -m examples.features.accountability_usage     # Attach ownership and governance
 ```
 
-## Model-agnostic agent example
+## Project management
 
-This section shows how to wrap a callable decision function.
+DOAgent uses [VibeSafe](https://github.com/lawrennd/vibesafe) for project management:
 
-```python
-from doagent.core import FunctionAgent, InMemorySharedData
+- `tenets/` — guiding principles
+- `requirements/` — what the system must do
+- `cip/` — code improvement plans (how to implement requirements)
+- `backlog/` — task tracking
 
-def decide_fn(request: dict) -> dict:
-    return {"decision": {"action": "log", "message": request.get("goal")}}
-
-shared_data = InMemorySharedData()
-agent = FunctionAgent("agent-1", shared_data, decide_fn)
-
-request = {"id": "req-1", "actor": "agent-1", "goal": "store a decision"}
-response = agent.decide(request)
-
-record = list(shared_data.listen("decision"))[0]
-assert record.payload["response"]["id"] == response["id"]
-```
-
-Run the example with:
-
-```bash
-python -m examples.features.model_agnostic_agent
-```
-
-## Interpretability example
-
-This section shows how to attach explanations to decision records.
-
-```python
-from doagent.core import InMemorySharedData, new_explanation_record, new_record
-
-shared_data = InMemorySharedData()
-
-decision = new_record(
-    actor="agent-1",
-    kind="decision",
-    payload={"decision": {"action": "approve"}},
-)
-shared_data.write(decision)
-
-explanation = new_explanation_record(
-    actor="agent-1",
-    decision_id=decision.id,
-    summary="Approved due to policy compliance.",
-    details="The request met all mandatory checks.",
-    evidence=["policy-1"],
-)
-shared_data.write(explanation)
-
-record = list(shared_data.listen("explanation"))[0]
-assert record.payload["decision_id"] == decision.id
-```
-
-Run the example with:
-
-```bash
-python -m examples.features.interpretability_usage
-```
-
-## Traceability example
-
-This section shows how to link records via trace edges.
-
-```python
-from doagent.core import InMemorySharedData, new_record, new_trace_record
-
-shared_data = InMemorySharedData()
-
-upstream = new_record(
-    actor="agent-1",
-    kind="note",
-    payload={"text": "source"},
-)
-downstream = new_record(
-    actor="agent-2",
-    kind="decision",
-    payload={"decision": {"action": "use"}},
-)
-shared_data.write(upstream)
-shared_data.write(downstream)
-
-trace = new_trace_record(
-    actor="agent-2",
-    from_id=upstream.id,
-    to_id=downstream.id,
-    relation="used",
-    notes="Decision used upstream note.",
-)
-shared_data.write(trace)
-
-record = list(shared_data.listen("trace"))[0]
-assert record.payload["from_id"] == upstream.id
-```
-
-Run the example with:
-
-```bash
-python -m examples.features.traceability_usage
-```
-
-## Provenance example
-
-Provenance records who created a record and what they used (sources, tools). Use `new_provenance` to build provenance for `new_record`. Trace sync from provenance (one trace edge per source) is planned for a later iteration.
-
-```python
-from doagent.core import InMemorySharedData, new_record
-from doagent.records import new_provenance
-
-shared_data = InMemorySharedData()
-
-provenance = new_provenance(
-    agent="agent-1",
-    sources=["r1", "r2"],
-    tools=["search"],
-    notes="Created from upstream records.",
-)
-record = new_record(
-    actor="agent-1",
-    kind="decision",
-    payload={"decision": {"action": "approve"}},
-    provenance=provenance,
-)
-shared_data.write(record)
-
-fetched = shared_data.read(record.id)
-assert fetched.provenance["created_by"] == "agent-1"
-assert fetched.provenance["derived_from"] == ["r1", "r2"]
-```
-
-Run the example with:
-
-```bash
-python -m examples.features.provenance_usage
-```
-
-## Accountability example
-
-Accountability attaches ownership and governance context to a record (owner, policy_id, responsibility_scope) so decisions can be reviewed and governed. Use `new_accountability` to build accountability for `new_record`.
-
-```python
-from doagent.core import InMemorySharedData, new_record
-from doagent.records import new_accountability
-
-shared_data = InMemorySharedData()
-
-accountability = new_accountability(
-    owner="team-a",
-    policy_id="policy-001",
-    responsibility_scope="decisions",
-)
-record = new_record(
-    actor="agent-1",
-    kind="decision",
-    payload={"decision": {"action": "approve"}},
-    accountability=accountability,
-)
-shared_data.write(record)
-
-fetched = shared_data.read(record.id)
-assert fetched.accountability["owner"] == "team-a"
-assert fetched.accountability["policy_id"] == "policy-001"
-```
-
-Run the example with:
-
-```bash
-python -m examples.features.accountability_usage
-```
-
-## Validation example (simple push)
-
-This end-to-end validation runs a multi-round simple push scenario with policies, explanations, traces, and provenance. It exercises the shared data model and produces decision, explanation, trace, and outcome records plus run metrics.
-
-The PettingZoo simple push environment has 1 good agent, 1 adversary, and 2 landmarks (one is randomly selected as the goal). The good agent is rewarded based on the distance to the goal landmark. The adversary is rewarded if it is close to the goal landmark, and if the good agent is far from the goal landmark (the difference of the distances). Thus the adversary must learn to push the good agent away from the goal.
-
-```python
-from doagent.validation import PolicyRegistry, PushAgentConfig, make_push_env, run_push_validation
-from doagent.core import InMemorySharedData
-from doagent.records import new_provenance
-
-shared_data = InMemorySharedData()
-env = make_push_env(
-    "pettingzoo:mpe2:simple_push_v3",
-    {"max_cycles": 25, "continuous_actions": False, "dynamic_rescaling": False},
-)
-registry = PolicyRegistry()
-
-def fixed_policy(params):
-    action = params.get("action", 0)
-    def decide(request):
-        return {"decision": {"action": action}}
-    return decide
-
-registry.register("fixed", fixed_policy)
-
-configs = [
-    PushAgentConfig(
-        id="adversary_0",
-        policy={"name": "fixed", "params": {"action": 0}},
-        metadata={
-            "explanation": "Hold position (noop) in push task.",
-            "provenance": new_provenance(agent="adversary_0", sources=[]),
-        },
-    ),
-]
-
-summary = run_push_validation(
-    shared_data=shared_data,
-    env=env,
-    registry=registry,
-    configs=configs,
-    rounds=2,
-    seed=123,
-)
-print(summary.outcomes)
-```
-
-Run the example with:
-
-```bash
-pip install -r requirements.txt
-python -m examples.validation.push.push_validation
-```
-
-Plots and CSVs (requires matplotlib):
-
-```bash
-pip install matplotlib
-python -m examples.validation.plot_validation_metrics "output/push_run_YYYYMMDD_HHMMSS/push_validation_summary.json"
-```
-
-Output layout: summary in run folder root; plots in `plots/`; metrics CSV in `metrics/`.
-
-## Validation example (grid-world mapping)
-
-This validation runs a dependency-free grid-world mapping scenario with partial observations and agent-to-agent communication via shared data. Agents publish `agent_update` records each round, consume the shared map, and decide movement actions. Topology modes control visibility (centralised, federated, peer-to-peer), and optional energy-based participation enables stochastic join/leave.
-
-```python
-from doagent.validation import (
-    PolicyRegistry,
-    GridAgentConfig,
-    make_grid_env,
-    register_gridworld_policies,
-    run_gridworld_validation,
-)
-from doagent.core import (
-    InMemorySharedData,
-    InMemoryParticipationRegistry,
-    Topology,
-    TopologyConfig,
-)
-
-shared_data = InMemorySharedData()
-participation = InMemoryParticipationRegistry()
-registry = PolicyRegistry()
-register_gridworld_policies(registry)
-
-agent_ids = ["agent_0", "agent_1", "agent_2"]
-env = make_grid_env(
-    width=6,
-    height=6,
-    agent_ids=agent_ids,
-    landmarks=2,
-    observation_radius=1,
-    max_cycles=25,
-    seed=7,
-)
-
-configs = [
-    GridAgentConfig(id="agent_0", policy={"name": "grid_frontier", "params": {}}),
-    GridAgentConfig(id="agent_1", policy={"name": "grid_random", "params": {"seed": 1}}),
-    GridAgentConfig(
-        id="agent_2", policy={"name": "grid_auction_frontier", "params": {"seed": 2}}
-    ),
-]
-
-summary = run_gridworld_validation(
-    shared_data=shared_data,
-    env=env,
-    registry=registry,
-    configs=configs,
-    rounds=10,
-    seed=123,
-    topology=TopologyConfig(mode=Topology.PEER_TO_PEER),
-    visibility={"agent_0": ["agent_1"], "agent_1": ["agent_2"]},
-    participation_registry=participation,
-    energy_model=True,
-    energy_min=4,
-    energy_max=10,
-    energy_decay=1,
-    energy_recharge=1,
-    energy_leave_threshold=2,
-)
-print(summary.outcomes)
-```
-
-Run from YAML config: `python -m examples.validation.gridworld.gridworld_validation` (uses `examples/validation/gridworld/gridworld_validation_config.yaml` by default).
-
-## Topology example
-
-This section shows how to select a topology and obtain a routing decision.
-
-```python
-from doagent.core import Topology, TopologyConfig, select_routing
-
-config = TopologyConfig(mode=Topology.FEDERATED)
-decision = select_routing(config)
-```
-
-## Participation example
-
-This section shows how to register and query agent participation.
-
-```python
-from doagent.core import InMemoryParticipationRegistry, ParticipationRecord
-
-registry = InMemoryParticipationRegistry()
-registry.register(ParticipationRecord(agent_id="agent-1", capabilities=["compute"]))
-record = registry.get("agent-1")
-```
+Run `./whats-next` to see current project status.
 
 ## References
+
 [1] Christian Cabrera, Andrei Paleyes, Pierre Thodoroff, and Neil D. Lawrence. 2025. Machine Learning Systems: A Survey from a Data-Oriented Perspective. ACM Computing Surveys. [Available online](https://dl.acm.org/doi/10.1145/3769292)

@@ -8,6 +8,11 @@ from typing import Any, Dict, Iterable, List, Tuple
 
 from ..environment import StepResult, ValidationEnv
 
+try:
+    import numpy as np
+except ImportError:
+    np = None  # type: ignore[assignment]
+
 
 @dataclass(frozen=True)
 class GridCell:
@@ -99,10 +104,12 @@ class GridWorldEnv(ValidationEnv):
             infos=infos,
         )
 
-    def render(self) -> None:
+    def render(self) -> "np.ndarray | None":
         if self._render_mode == "human":
             self._render_pygame()
             return None
+        if self._render_mode == "rgb_array":
+            return self._render_rgb_array()
         self._render_ansi()
         return None
 
@@ -126,19 +133,9 @@ class GridWorldEnv(ValidationEnv):
             lines.append(" ".join(row))
         print("\n".join(lines))
 
-    def _render_pygame(self) -> None:
-        try:
-            import pygame  # type: ignore
-        except Exception:
-            self._render_ansi()
-            return None
-        if self._renderer is None:
-            pygame.init()
-            width_px = self._width * self._cell_size
-            height_px = self._height * self._cell_size
-            self._renderer = pygame.display.set_mode((width_px, height_px))
-            pygame.display.set_caption("GridWorld")
-        surface = self._renderer
+    def _draw_to_surface(self, surface: Any) -> None:
+        """Draw current state onto a pygame Surface (used by human and rgb_array)."""
+        import pygame  # type: ignore
         surface.fill((245, 245, 245))
         for x in range(self._width):
             for y in range(self._height):
@@ -179,6 +176,37 @@ class GridWorldEnv(ValidationEnv):
             text_surf = font.render(label, True, (0, 0, 0))
             text_rect = text_surf.get_rect(center=center)
             surface.blit(text_surf, text_rect)
+
+    def _render_rgb_array(self) -> "np.ndarray | None":
+        """Render to an offscreen buffer and return (H, W, 3) uint8 array."""
+        if np is None:
+            return None
+        try:
+            import pygame  # type: ignore
+        except Exception:
+            return None
+        pygame.init()
+        width_px = self._width * self._cell_size
+        height_px = self._height * self._cell_size
+        surface = pygame.Surface((width_px, height_px))
+        self._draw_to_surface(surface)
+        # pygame.surfarray: (W, H, 3) -> we need (H, W, 3)
+        arr = pygame.surfarray.array3d(surface)
+        return np.asarray(arr).swapaxes(0, 1)
+
+    def _render_pygame(self) -> None:
+        try:
+            import pygame  # type: ignore
+        except Exception:
+            self._render_ansi()
+            return
+        if self._renderer is None:
+            pygame.init()
+            width_px = self._width * self._cell_size
+            height_px = self._height * self._cell_size
+            self._renderer = pygame.display.set_mode((width_px, height_px))
+            pygame.display.set_caption("GridWorld")
+        self._draw_to_surface(self._renderer)
         pygame.display.flip()
 
     def _random_position(self) -> Tuple[int, int]:

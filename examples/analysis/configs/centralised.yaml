@@ -1,34 +1,21 @@
 run:
-  id: "gridworld-demo-001"
-  seed: 999
-  rounds: 100
+  id: "topo-centralised"
+  seed: 42
+  rounds: 50
   deterministic: true
 
 scenario:
   name: "gridworld_mapping"
-  render: true
-  render_mode: "human"
-  print_every: 10
-  # render_delay: 0.3  # seconds between frames (default 0.3 when human)
+  render: false
+  print_every: 0
   env:
     width: 15
     height: 15
-    landmarks: 2
+    landmarks: 0
     observation_radius: 1
     max_cycles: 100
   topology:
-    mode: "peer_to_peer"
-    visibility:
-      agent_0: ["agent_1"]
-      agent_1: ["agent_2"]
-      agent_3: ["agent_0, agent_1"]
-  participation:
-    energy_model: true
-    energy_min: 8
-    energy_max: 10
-    energy_decay: 1
-    energy_recharge: 1
-    energy_leave_threshold: 2
+    mode: "centralised"
 
 agents:
   - id: "agent_0"

@@ -4,6 +4,9 @@ Demonstrates all three DOA principles through the library:
 - Shared-data model: agents share knowledge via shared data, library records transparently.
 - Decentralisation: topology-filtered record access (centralised, peer-to-peer, federated).
 - Openness: user provides environment, policies, and run loop; library provides interfaces.
+
+Run from the repository root so that the doagent package is on the path:
+  python -m examples.validation.gridworld.gridworld_validation [config.yaml] [--record-gif path.gif]
 """
 
 from __future__ import annotations
@@ -120,6 +123,7 @@ def run_with_session(
     render_delay: float = 0.0,
     print_every: int = 0,
     reporter: RunReporter | None = None,
+    record_frames: Optional[List[Any]] = None,
 ) -> Dict[str, Any]:
     """Run gridworld scenario using the DOAgent Session API. Returns summary dict."""
     topology_cfg = topology_cfg or TopologyConfig()
@@ -140,6 +144,10 @@ def run_with_session(
 
     participation_registry = InMemoryParticipationRegistry() if energy_model else None
     observations = wrapped_env.reset(seed=seed)
+    if render and record_frames is not None:
+        frame = env.render()
+        if frame is not None:
+            record_frames.append(frame)
     rng = random.Random(seed)
 
     active_agents = set(agent_ids)
@@ -238,7 +246,9 @@ def run_with_session(
         if total_cells and discovery_round is None and len(discovered_cells) >= total_cells:
             discovery_round = round_id
         if render:
-            wrapped_env.render()
+            frame = env.render()
+            if record_frames is not None and frame is not None:
+                record_frames.append(frame)
             if render_delay > 0:
                 time.sleep(render_delay)
 
@@ -289,7 +299,17 @@ def run_with_session(
 def main() -> None:
     script_dir = Path(__file__).resolve().parent
     default_config = script_dir / "gridworld_validation_config.yaml"
-    config_path = Path(sys.argv[1]) if len(sys.argv) > 1 else default_config
+    argv = list(sys.argv[1:])
+    # Optional: --record-gif [path] writes an animated GIF of the baseline run (requires imageio).
+    record_gif_path: Optional[Path] = None
+    if "--record-gif" in argv:
+        idx = argv.index("--record-gif")
+        argv.pop(idx)
+        if idx < len(argv):
+            record_gif_path = Path(argv.pop(idx))
+        else:
+            record_gif_path = Path("output") / "gridworld_demo.gif"
+    config_path = Path(argv[0]) if argv else default_config
     config = load_config(config_path)
 
     run_cfg = config.get("run", {})
@@ -299,9 +319,11 @@ def main() -> None:
 
     rounds = int(run_cfg.get("rounds", 10))
     seed = int(run_cfg.get("seed", 0))
-    render = bool(scenario.get("render", False))
+    render = bool(scenario.get("render", False)) or record_gif_path is not None
     render_mode = scenario.get("render_mode")
-    if render and render_mode is None:
+    if record_gif_path is not None:
+        render_mode = "rgb_array"
+    elif render and render_mode is None:
         render_mode = "ansi"
     render_delay = float(scenario.get("render_delay", 0.3 if render_mode == "human" else 0.0))
     print_every = int(scenario.get("print_every", 0))
@@ -358,6 +380,8 @@ def main() -> None:
     output_dir = Path("output") / f"gridworld_run_{timestamp}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    record_frames: List[Any] = [] if record_gif_path is not None else []
+
     # -- Baseline run (NoOp adapter — no recording overhead) --
     print("\n=== Baseline run ===")
     baseline_reporter = RunReporter(
@@ -370,8 +394,21 @@ def main() -> None:
         )
     )
     baseline_summary = run_with_session(
-        NoOpSharedData(), **run_kwargs, reporter=baseline_reporter,
+        NoOpSharedData(),
+        **run_kwargs,
+        reporter=baseline_reporter,
+        record_frames=record_frames if record_gif_path is not None else None,
     )
+    if record_gif_path is not None:
+        if record_frames:
+            record_gif_path.parent.mkdir(parents=True, exist_ok=True)
+            import imageio
+            imageio.mimwrite(str(record_gif_path), record_frames, fps=4, loop=0)
+            print(f"GIF written to {record_gif_path} ({len(record_frames)} frames)")
+        else:
+            print("Warning: no frames captured for GIF (ensure pygame and numpy are installed)")
+        record_gif_path = None
+        record_frames = []
 
     # -- In-memory run --
     print("\n=== In-memory run ===")
