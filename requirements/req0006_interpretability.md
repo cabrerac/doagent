@@ -4,7 +4,7 @@ title: "Interpretability of Agent Decisions"
 status: "In Progress"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-02-21"
+last_updated: "2026-01-28"
 related_tenets:
 - "interpretability-and-traceability"
 stakeholders:
@@ -46,3 +46,6 @@ Requirement drafted.
 
 ### 2026-02-21
 CIP-0006 iteration 1 complete (4/4 items). `ExplanationPayload`, `ExplanationRecord`, `new_explanation_record` implemented. Explanation is a field inside `agent_update.payload.decision` (produced at logging level >= 1). Explanations are persisted in shared data and accessible without contacting agents. Validation examples produce explanation artefacts.
+
+### 2026-01-28
+Analysis demo: provenance_walker.py and causal_attribution.py demonstrate external interpretability from recorded data. Provenance chain answers "why did this state happen?"; causal attribution answers "who contributed what?" from trace edges. No agent internals required.

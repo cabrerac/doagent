@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-02-04"
 id: "0008"
-last_updated: "2026-02-05"
+last_updated: "2026-03-04"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -84,6 +84,20 @@ This CIP addresses the following requirements:
 - [x] Update examples and tests
 - [x] Document usage
 
+## Iteration 2 Plan: doagent.analysis.provenance
+
+Promote analysis capabilities into a first-class library module. Iteration 2 adds `doagent.analysis` with property-based submodules; provenance is one of four.
+
+**Deliverable**: `doagent.analysis.provenance` submodule
+- `walk_chain(record_id, records_source, max_depth)` — walk derived_from chain backwards, return structured chain
+- `render_chain_tree(record_id, records_source, output_path)` — produce tree diagram (PNG/PDF)
+- Records source: Path, SharedDataAdapter, or dict of record lists
+- Environment-agnostic: works with any DOAgent run output
+
+**Design**: Group analyses by the property they enable. User imports `from doagent.analysis import provenance`. Provenance chain walking answers "who created what from what?" without agent internals. Future: auto-trace sync from derived_from (separate iteration).
+
+**Related backlog**: 2026-03-04_analysis-module-library
+
 ## Progress Updates
 
 ### 2026-02-04
@@ -103,6 +117,12 @@ Iteration 2 questions to support across scenarios (environment-agnostic):
 - What hidden state should be surfaced to make provenance complete?
 
 These questions should be answerable without assuming a specific environment or toolchain.
+
+### 2026-03-04
+Iteration 2 plan added: `doagent.analysis.provenance` submodule. See Iteration 2 Plan section.
+
+### 2026-01-28
+Analysis demo delivered: provenance_walker.py walks derived_from chains backwards from any record. Demonstrates provenance as source of truth for "who created what from what." Iteration 2 auto-trace sync from derived_from would reduce manual trace creation.
 
 ## References
 - None yet

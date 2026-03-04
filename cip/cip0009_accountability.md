@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-02-04"
 id: "0009"
-last_updated: "2026-02-05"
+last_updated: "2026-03-04"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -82,6 +82,21 @@ This CIP addresses the following requirements:
 - [x] Extend record envelope and new_record
 - [x] Add helper, example, tests, and README
 
+## Iteration 2 Plan: doagent.analysis.accountability
+
+Promote analysis capabilities into a first-class library module. Iteration 2 adds `doagent.analysis` with property-based submodules; accountability is one of four.
+
+**Deliverable**: `doagent.analysis.accountability` submodule
+- `causal_attribution(records_source)` — per-agent contribution from trace edges, return structured dict
+- `render_attribution_charts(attribution, output_path)` — line chart (cumulative discovery), bar chart (total discovery), effectiveness chart (productive vs redundant)
+- Attribution logic uses agent-specific observations (not first-agent-wins)
+- Records source: Path, SharedDataAdapter, or dict of record lists
+- Environment-agnostic: works with any DOAgent run output
+
+**Design**: Group analyses by the property they enable. User imports `from doagent.analysis import accountability`. Causal attribution answers "who contributed what?" with evidence from trace data. Extensible for policy-level attribution, adversarial settings.
+
+**Related backlog**: 2026-03-04_analysis-module-library
+
 ## Progress Updates
 
 ### 2026-02-05
@@ -92,6 +107,9 @@ Accountability is now an optional envelope field (owner, policy_id, responsibili
 Gaps and follow-on needs (candidates for iteration 2):
 - Consider threading accountability through agent write path (e.g. optional accountability on `AgentAdapter.write` or decision agents) so agents can attach ownership without calling `new_record` directly.
 - Optional validation or conventions for policy_id / responsibility_scope (e.g. namespaced identifiers) if governance tooling is added later.
+
+### 2026-03-04
+Iteration 2 plan added: `doagent.analysis.accountability` submodule for causal attribution. See Iteration 2 Plan section.
 
 ### 2026-02-06
 Iteration 2 questions to support across scenarios (environment-agnostic):

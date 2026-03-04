@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-02-04"
 id: "0006"
-last_updated: "2026-02-05"
+last_updated: "2026-03-04"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -82,6 +82,20 @@ This CIP addresses the following requirements:
 - [x] Update examples and tests
 - [x] Document usage
 
+## Iteration 2 Plan: doagent.analysis.interpretability
+
+Promote analysis capabilities into a first-class library module. Iteration 2 adds `doagent.analysis` with property-based submodules; interpretability is one of four.
+
+**Deliverable**: `doagent.analysis.interpretability` submodule
+- `get_explanations_for(record_id, records_source)` — retrieve explanation/decision records for a record
+- Minimal initially; extensible for summarisation, aggregation, and evidence conventions
+- Records source: Path, SharedDataAdapter, or dict of record lists
+- Environment-agnostic: works with any DOAgent run output
+
+**Design**: Group analyses by the property they enable. User imports `from doagent.analysis import interpretability`. New approaches (e.g. explanation summarisation, multi-tier rationales) added as functions in this submodule.
+
+**Related backlog**: 2026-03-04_analysis-module-library
+
 ## Progress Updates
 
 ### 2026-02-04
@@ -101,6 +115,12 @@ Iteration 2 questions to support across scenarios (environment-agnostic):
 - What is the minimal evidence needed to justify an action?
 
 These questions should be answerable without assuming a specific environment or observation schema.
+
+### 2026-03-04
+Iteration 2 plan added: `doagent.analysis.interpretability` submodule. See Iteration 2 Plan section.
+
+### 2026-01-28
+Analysis demo delivered: provenance_walker.py and causal_attribution.py demonstrate external interpretability from recorded data (no agent internals). Provenance chain walker answers "why did this state happen?"; causal attribution answers "who contributed what?" from trace edges. Validates iteration 1 design; iteration 2 artefacts (summarisation, aggregation) can build on this.
 
 ## References
 - None yet

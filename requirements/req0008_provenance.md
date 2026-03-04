@@ -4,7 +4,7 @@ title: "System Wide Provenance"
 status: "In Progress"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-02-21"
+last_updated: "2026-01-28"
 related_tenets:
 - "provenance-and-accountability"
 - "data-first-shared-model"
@@ -47,3 +47,6 @@ Requirement drafted.
 
 ### 2026-02-21
 CIP-0008 iteration 1 complete (4/4 items). Flat provenance attribution (`created_by`, `derived_from`, `used_tools`, `notes`) on every `SimpleRecord` envelope. `new_provenance()` helper builds attribution. Provenance populated automatically by `RecordWriter` at logging level >= 2. Trace records + provenance enable full decision chain reconstruction. Also addressed by CIP-0002 (shared data model).
+
+### 2026-01-28
+Analysis demo: provenance_walker.py walks derived_from chains backwards from any record. Demonstrates provenance as source of truth for "who created what from what." Full chain reconstruction from stored records validated.

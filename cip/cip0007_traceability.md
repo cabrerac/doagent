@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-02-04"
 id: "0007"
-last_updated: "2026-02-05"
+last_updated: "2026-03-04"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -92,6 +92,21 @@ This CIP addresses the following requirements:
 - [x] Update examples and tests
 - [x] Document usage
 
+## Iteration 2 Plan: doagent.analysis.traceability
+
+Promote analysis capabilities into a first-class library module. Iteration 2 adds `doagent.analysis` with property-based submodules; traceability is one of four.
+
+**Deliverable**: `doagent.analysis.traceability` submodule
+- `build_trace_graph(records_source)` — return networkx MultiDiGraph from trace/outcome/agent_update records
+- `get_traces_to(record_id, records_source)` / `get_traces_from(record_id, records_source)` — retrieval helpers
+- `render_trace_graph(graph, output_path)` — export PNG/PDF/DOT; layout handles chain-like and branching structures
+- Records source: Path, SharedDataAdapter, or dict of record lists
+- Environment-agnostic: works with any DOAgent run output
+
+**Design**: Group analyses by the property they enable. User imports `from doagent.analysis import traceability`. Graph traversal and visualisation become library functions, not standalone scripts.
+
+**Related backlog**: 2026-03-04_analysis-module-library
+
 ## Progress Updates
 
 ### 2026-02-04
@@ -113,6 +128,12 @@ Iteration 2 questions to support across scenarios (environment-agnostic):
 - Can outcomes be traced to a minimal set of upstream decisions?
 
 These questions should be answerable without relying on environment-specific mechanics.
+
+### 2026-03-04
+Iteration 2 plan added: `doagent.analysis.traceability` submodule. See Iteration 2 Plan section.
+
+### 2026-01-28
+Analysis demo delivered: trace_graph.py, provenance_walker.py, causal_attribution.py, topology_comparison.py. Trace records form a directed graph; scripts build networkx graph, walk provenance chains, attribute causal contribution per agent, compare topologies. Demonstrates traceability value; iteration 2 should promote graph traversal into doagent.analysis library.
 
 ## References
 - None yet
