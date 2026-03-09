@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-01-23"
 id: "0001"
-last_updated: "2026-02-21"
+last_updated: "2026-03-09"
 status: "Implemented"
 compressed: false
 related_requirements:
@@ -125,6 +125,44 @@ Session-first refactoring of validation examples and library internals:
 - **Feature examples** (`minimal_usage.py`, `model_agnostic_agent.py`) rewritten to use Session API.
 - **README** module listing restructured: primary API (Session layer) vs internal helpers.
 - All 74 tests pass; gridworld validation example runs correctly (66 rounds, 63.5% coverage, 168 agent_updates, 66 outcomes, 168 traces).
+
+### 2026-03-09
+Config-driven API: generic make_env and removal of scenario-specific code.
+
+**What was done:**
+- **Generic `make_env`** added to `doagent.env` and exported from `doagent`. Accepts a string entry point ("module:callable") or a callable; resolves and calls with params. Zero scenario-specific code in the library.
+- **Scenario-specific factories deleted** from the library: `make_push_env` (doagent/validation/push/envs.py), `make_grid_env` and `GridWorldEnv` (doagent/validation/gridworld/env.py), `register_gridworld_policies` (doagent/validation/gridworld/policies.py). Files deleted entirely.
+- **Env/policy code moved to examples**: `examples/validation/push/env.py`, `examples/validation/gridworld/env.py`, `examples/validation/gridworld/policies.py`. Each provides a factory function usable with `make_env`.
+- **Public API trimmed**: `SimpleRecord` no longer exported from `doagent`; `PushAgentConfig`/`GridAgentConfig` no longer exported from validation; agent config is "dict with id, policy, metadata".
+- **`Session.from_config`** added: builds Session from a config dict (shared_data, topology, run_config); adapter construction internal.
+- **All examples and tests updated** to use `make_env` with callable entry points.
+
+**Reflection:**
+- The library is now environment-agnostic: it knows nothing about push or gridworld. Any env that implements reset/step can be used via `make_env`.
+- The hybrid make_env (string or callable) supports both config-driven (YAML) and programmatic usage without adding complexity.
+- The public API surface is smaller and more consistent: `Session`, `RunConfig`, `make_env` from `doagent`; validation runners from `doagent.validation`.
+- Remaining work: examples still import from `doagent.core` (adapters, topology) and `doagent.records` (SimpleRecord); the full config-driven path (where adapters are built from config only) is partially done via `Session.from_config` but examples have not been migrated yet. This is tracked in the config-driven API backlog task.
+
+### 2026-03-09 (continued)
+Config-driven API completed: session.inspect, policy resolution, examples migrated.
+
+**What was done:**
+- **`session.inspect(kind)`** added: returns records by kind from internal adapter. Replaces `shared_data.listen("kind")` for post-run inspection. Supports transparency goal.
+- **`Session.from_config` extended with policy resolution**: config dict accepts `policies: {name: entry_point}` where entry points are resolved via `_resolve_entry_point` (same mechanism as `make_env`). PolicyRegistry built internally.
+- **`Session.from_config` shared_data types**: "memory", "file", "noop" (baseline runs).
+- **`create_agents` registry optional**: falls back to internal registry from config. Users never import PolicyRegistry.
+- **`session.topology_mode` and `session.hub_id` properties**: allow examples to check topology mode as string without importing `Topology` enum.
+- **Push validation example** fully config-driven: imports only `from doagent import Session, make_env` and `from doagent.validation import RunReporter, ...`. Zero doagent.core or doagent.records imports. Policies as callable entry points in config dict.
+- **Gridworld validation example** fully config-driven: same pattern. Uses `_make_session_config()` helper for consistent config creation. Energy model uses plain set instead of InMemoryParticipationRegistry.
+- **topology_comparison analysis script** updated to config-driven Session.
+- **test_session_integration.py** fully config-driven: uses `Session.from_config` with callable policies. New `test_inspect_returns_records` test validates `session.inspect()`.
+
+**Reflection:**
+- The config-driven API backlog task is complete. All 7 acceptance criteria met.
+- User-facing API surface: `doagent.Session` (with `from_config`, `inspect`, `wrap_env`, `create_agents`) and `doagent.make_env`. No doagent.core or doagent.records needed in user code.
+- Internal types (InMemorySharedData, FileSharedData, TopologyConfig, PolicyRegistry, SimpleRecord) are never imported by examples or user code.
+- The same entry-point resolution mechanism powers both `make_env` (environments) and policy registration (policies) -- consistent and learnable.
+- Library internal runners (run_push_validation, run_gridworld_validation) and their tests still use the programmatic API, which is appropriate for infrastructure testing.
 
 ## References
 - [Library Boundaries](../docs/library-boundaries.md)

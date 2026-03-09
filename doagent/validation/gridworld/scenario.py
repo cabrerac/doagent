@@ -19,7 +19,6 @@ from ..environment import ValidationEnv
 from ..multiprocess_interface import MultiProcessInterface
 from ..policy import PolicyRegistry
 from ..reporting import RunReporter
-from .agents import GridAgentConfig
 
 
 @dataclass(frozen=True)
@@ -108,7 +107,7 @@ def run_gridworld_validation(
     shared_data: SharedDataAdapter,
     env: ValidationEnv,
     registry: PolicyRegistry,
-    configs: list[GridAgentConfig],
+    configs: list[Dict[str, Any]],
     rounds: int,
     seed: int,
     run_config: RunConfig | None = None,

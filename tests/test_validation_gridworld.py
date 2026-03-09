@@ -4,14 +4,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from doagent import make_env
 from doagent.core import FileSharedData, InMemorySharedData
 from doagent.validation import (
     PolicyRegistry,
-    make_grid_env,
-    register_gridworld_policies,
     run_gridworld_validation,
     output_bytes_from_path,
 )
+from examples.validation.gridworld.env import create_gridworld_env
+from examples.validation.gridworld.policies import register_gridworld_policies
 
 
 def _agent_configs():
@@ -23,7 +24,8 @@ def _agent_configs():
 
 class TestGridWorldValidation(unittest.TestCase):
     def _make_env(self):
-        return make_grid_env(
+        return make_env(
+            create_gridworld_env,
             width=4,
             height=4,
             agent_ids=["agent_0", "agent_1"],

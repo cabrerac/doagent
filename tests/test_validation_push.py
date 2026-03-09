@@ -4,16 +4,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from doagent import make_env
 from doagent.core import FileSharedData, InMemorySharedData
 from doagent.validation import (
     NoOpSharedData,
     PolicyRegistry,
-    PushAgentConfig,
-    make_push_env,
     measure_baseline,
     output_bytes_from_path,
     run_push_validation,
 )
+from examples.validation.push.env import create_push_env
 
 
 def _register_policies(registry: PolicyRegistry) -> None:
@@ -29,30 +29,21 @@ def _register_policies(registry: PolicyRegistry) -> None:
 
 
 def _agent_configs():
+    """Agent configs as plain dicts (Session API contract)."""
     return [
-        PushAgentConfig(
-            id="adversary_0",
-            policy={"name": "fixed", "params": {"action": 0}},
-            metadata={
-                "explanation": "Hold position (noop) in push task.",
-            },
-        ),
-        PushAgentConfig(
-            id="agent_0",
-            policy={"name": "fixed", "params": {"action": 1}},
-            metadata={
-                "explanation": "Move right in push task.",
-            },
-        ),
+        {"id": "adversary_0", "policy": {"name": "fixed", "params": {"action": 0}}, "metadata": {"explanation": "Hold position (noop) in push task."}},
+        {"id": "agent_0", "policy": {"name": "fixed", "params": {"action": 1}}, "metadata": {"explanation": "Move right in push task."}},
     ]
 
 
 class TestPushValidation(unittest.TestCase):
     def _make_external_env(self):
         try:
-            return make_push_env(
-                "pettingzoo:mpe2:simple_push_v3",
-                {"max_cycles": 25, "continuous_actions": False, "dynamic_rescaling": False},
+            return make_env(
+                create_push_env,
+                max_cycles=25,
+                continuous_actions=False,
+                dynamic_rescaling=False,
             )
         except ImportError as exc:
             raise unittest.SkipTest(str(exc)) from exc

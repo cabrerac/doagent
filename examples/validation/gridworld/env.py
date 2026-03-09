@@ -1,4 +1,8 @@
-"""Lightweight grid-world environment for validation scenarios."""
+"""Grid-world environment factory for the gridworld validation example.
+
+This is example code, not part of the doagent library. It contains the
+GridWorldEnv implementation and a factory function for use with make_env.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ from dataclasses import dataclass
 import random
 from typing import Any, Dict, Iterable, List, Tuple
 
-from ..environment import StepResult, ValidationEnv
+from doagent.validation.environment import StepResult
 
 try:
     import numpy as np
@@ -23,7 +27,7 @@ class GridCell:
     value: str
 
 
-class GridWorldEnv(ValidationEnv):
+class GridWorldEnv:
     """Dependency-free grid-world with partial observations."""
 
     def __init__(
@@ -134,7 +138,6 @@ class GridWorldEnv(ValidationEnv):
         print("\n".join(lines))
 
     def _draw_to_surface(self, surface: Any) -> None:
-        """Draw current state onto a pygame Surface (used by human and rgb_array)."""
         import pygame  # type: ignore
         surface.fill((245, 245, 245))
         for x in range(self._width):
@@ -178,7 +181,6 @@ class GridWorldEnv(ValidationEnv):
             surface.blit(text_surf, text_rect)
 
     def _render_rgb_array(self) -> "np.ndarray | None":
-        """Render to an offscreen buffer and return (H, W, 3) uint8 array."""
         if np is None:
             return None
         try:
@@ -190,7 +192,6 @@ class GridWorldEnv(ValidationEnv):
         height_px = self._height * self._cell_size
         surface = pygame.Surface((width_px, height_px))
         self._draw_to_surface(surface)
-        # pygame.surfarray: (W, H, 3) -> we need (H, W, 3)
         arr = pygame.surfarray.array3d(surface)
         return np.asarray(arr).swapaxes(0, 1)
 
@@ -249,18 +250,20 @@ class GridWorldEnv(ValidationEnv):
         }
 
 
-def make_grid_env(
+def create_gridworld_env(
     *,
-    width: int,
-    height: int,
-    agent_ids: List[str],
+    width: int = 10,
+    height: int = 10,
+    agent_ids: List[str] | None = None,
     landmarks: int = 2,
     observation_radius: int = 1,
     max_cycles: int = 25,
     seed: int | None = None,
     render_mode: str | None = None,
-) -> ValidationEnv:
+) -> GridWorldEnv:
     """Create a grid-world environment for validation."""
+    if agent_ids is None:
+        agent_ids = ["agent_0", "agent_1"]
     return GridWorldEnv(
         width=width,
         height=height,

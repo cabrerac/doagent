@@ -21,6 +21,7 @@ cip/cip_template.md
 .github/copilot-instructions.md
 CLAUDE.md
 AGENTS.md
+NEXT_SESSION.md
 
 # VibeSafe scripts and tools
 scripts/whats_next.py

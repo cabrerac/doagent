@@ -1,6 +1,7 @@
 """Push validation example using the DOAgent Session API.
 
-Demonstrates library usage with a PettingZoo environment.
+Demonstrates config-driven library usage with a PettingZoo environment.
+No doagent.core or doagent.records imports needed.
 """
 
 from __future__ import annotations
@@ -10,94 +11,86 @@ from pathlib import Path
 import random
 from typing import Any, Dict
 
-from doagent import Session, RunConfig
-from doagent.core import FileSharedData, InMemorySharedData
+from doagent import Session, make_env
 from doagent.validation import (
-    NoOpSharedData,
-    PolicyRegistry,
     RunReporter,
     measure_baseline,
     write_summary,
 )
-from doagent.validation.push import PushAgentConfig, make_push_env
+from examples.validation.push.env import create_push_env
 
 
 # ---------------------------------------------------------------------------
-# Policies
+# Policy factories (callable entry points for config-driven registration)
 # ---------------------------------------------------------------------------
 
-def register_policies(registry: PolicyRegistry) -> None:
-    def _action_from_vector(dx: float, dy: float) -> int:
-        if abs(dx) < 1e-6 and abs(dy) < 1e-3:
-            return 0
-        if abs(dx) >= abs(dy):
-            return 2 if dx > 0 else 1
-        return 4 if dy > 0 else 3
+def _action_from_vector(dx: float, dy: float) -> int:
+    if abs(dx) < 1e-6 and abs(dy) < 1e-3:
+        return 0
+    if abs(dx) >= abs(dy):
+        return 2 if dx > 0 else 1
+    return 4 if dy > 0 else 3
 
-    def _epsilon_greedy(base: int, epsilon: float, rng: random.Random) -> int:
-        return rng.choice([0, 1, 2, 3, 4]) if rng.random() < epsilon else base
 
-    def fixed_policy(params):
-        action = params.get("action", 0)
-        def decide(request):
-            return {"decision": {"action": action}}
-        return decide
+def _epsilon_greedy(base: int, epsilon: float, rng: random.Random) -> int:
+    return rng.choice([0, 1, 2, 3, 4]) if rng.random() < epsilon else base
 
-    def heuristic_goal_seek(params):
-        epsilon = float(params.get("epsilon", 0.0))
-        rng = random.Random(params.get("seed", 0))
-        def decide(request):
-            obs = request.get("inputs", {}).get("observation", [])
-            dx, dy = (float(obs[2]), float(obs[3])) if len(obs) >= 4 else (0.0, 0.0)
-            return {"decision": {"action": _epsilon_greedy(_action_from_vector(dx, dy), epsilon, rng)}}
-        return decide
 
-    def heuristic_push_block(params):
-        epsilon = float(params.get("epsilon", 0.0))
-        rng = random.Random(params.get("seed", 0))
-        def decide(request):
-            obs = request.get("inputs", {}).get("observation", [])
-            dx, dy = (float(obs[6]), float(obs[7])) if len(obs) >= 8 else (0.0, 0.0)
-            return {"decision": {"action": _epsilon_greedy(_action_from_vector(dx, dy), epsilon, rng)}}
-        return decide
+def fixed_policy(params: Dict[str, Any]) -> Any:
+    action = params.get("action", 0)
+    def decide(request: Dict[str, Any]) -> Dict[str, Any]:
+        return {"decision": {"action": action}}
+    return decide
 
-    registry.register("fixed", fixed_policy)
-    registry.register("heuristic_goal_seek", heuristic_goal_seek)
-    registry.register("heuristic_push_block", heuristic_push_block)
+
+def heuristic_goal_seek(params: Dict[str, Any]) -> Any:
+    epsilon = float(params.get("epsilon", 0.0))
+    rng = random.Random(params.get("seed", 0))
+    def decide(request: Dict[str, Any]) -> Dict[str, Any]:
+        obs = request.get("inputs", {}).get("observation", [])
+        dx, dy = (float(obs[2]), float(obs[3])) if len(obs) >= 4 else (0.0, 0.0)
+        return {"decision": {"action": _epsilon_greedy(_action_from_vector(dx, dy), epsilon, rng)}}
+    return decide
+
+
+def heuristic_push_block(params: Dict[str, Any]) -> Any:
+    epsilon = float(params.get("epsilon", 0.0))
+    rng = random.Random(params.get("seed", 0))
+    def decide(request: Dict[str, Any]) -> Dict[str, Any]:
+        obs = request.get("inputs", {}).get("observation", [])
+        dx, dy = (float(obs[6]), float(obs[7])) if len(obs) >= 8 else (0.0, 0.0)
+        return {"decision": {"action": _epsilon_greedy(_action_from_vector(dx, dy), epsilon, rng)}}
+    return decide
 
 
 # ---------------------------------------------------------------------------
 # Agent configs
 # ---------------------------------------------------------------------------
 
-def make_agent_configs() -> list[PushAgentConfig]:
+def make_agent_configs() -> list[Dict[str, Any]]:
+    """Agent configs as plain dicts: id, policy, metadata."""
     return [
-        PushAgentConfig(
-            id="adversary_0",
-            policy={"name": "heuristic_push_block", "params": {"epsilon": 0.2, "seed": 1}},
-            metadata={
-                "explanation": "Heuristic push/block with epsilon-greedy exploration.",
-            },
-        ),
-        PushAgentConfig(
-            id="agent_0",
-            policy={"name": "heuristic_goal_seek", "params": {"epsilon": 0.2, "seed": 2}},
-            metadata={
-                "explanation": "Heuristic goal-seek with epsilon-greedy exploration.",
-            },
-        ),
+        {
+            "id": "adversary_0",
+            "policy": {"name": "heuristic_push_block", "params": {"epsilon": 0.2, "seed": 1}},
+            "metadata": {"explanation": "Heuristic push/block with epsilon-greedy exploration."},
+        },
+        {
+            "id": "agent_0",
+            "policy": {"name": "heuristic_goal_seek", "params": {"epsilon": 0.2, "seed": 2}},
+            "metadata": {"explanation": "Heuristic goal-seek with epsilon-greedy exploration."},
+        },
     ]
 
 
 # ---------------------------------------------------------------------------
-# Session-based run
+# Session-based run (config-driven)
 # ---------------------------------------------------------------------------
 
 def run_with_session(
-    shared_data,
-    env,
-    registry: PolicyRegistry,
-    configs: list[PushAgentConfig],
+    session: Session,
+    env: Any,
+    configs: list[Dict[str, Any]],
     rounds: int,
     seed: int,
     *,
@@ -105,11 +98,9 @@ def run_with_session(
     reporter: RunReporter | None = None,
 ) -> int:
     """Run push scenario using the DOAgent Session API. Returns outcome count."""
-    # doagent: create session, wrap env, create agents
-    session = Session(shared_data, RunConfig(logging_level=2))
     wrapped_env = session.wrap_env(env, env_actor="push_env")
     agents = session.create_agents(
-        configs, registry, goal="push_towards_landmark",
+        configs, goal="push_towards_landmark",
     )
 
     observations = wrapped_env.reset(seed=seed)
@@ -120,11 +111,9 @@ def run_with_session(
     for round_id in range(1, rounds + 1):
         actions: Dict[str, Any] = {}
         for agent_id, agent in agents.items():
-            # doagent: agent.decide() records agent_update transparently
             result = agent.decide(observations.get(agent_id, {}), round_id)
             actions[agent_id] = result["action"]
 
-        # doagent: wrapped_env.step() records outcome + traces transparently
         step = wrapped_env.step(actions)
         if reporter is not None:
             reporter.on_outcome(round_id, actions, step["rewards"])
@@ -147,25 +136,31 @@ def main() -> None:
     print_every = 10
 
     try:
-        env_params = {
+        env_params: Dict[str, Any] = {
             "max_cycles": rounds,
             "continuous_actions": False,
             "dynamic_rescaling": False,
         }
         if render_demo:
-            env_params["render_mode"] = "human"
-        env = make_push_env("pettingzoo:mpe2:simple_push_v3", env_params)
+            env_params["render_mode"] = render_demo
+        env = make_env(create_push_env, **env_params)
     except ImportError as exc:
         raise SystemExit(
             "PettingZoo is required for this example. Install with: pip install pettingzoo"
         ) from exc
 
-    registry = PolicyRegistry()
-    register_policies(registry)
     configs = make_agent_configs()
 
-    # -- In-memory run --
-    shared_data = InMemorySharedData()
+    # -- In-memory run (config-driven session) --
+    session = Session.from_config({
+        "shared_data": {"type": "memory"},
+        "run_config": {"logging_level": 2},
+        "policies": {
+            "fixed": fixed_policy,
+            "heuristic_goal_seek": heuristic_goal_seek,
+            "heuristic_push_block": heuristic_push_block,
+        },
+    })
     reporter = RunReporter(
         "in_memory", print_every=print_every,
         record_series=True, series_every=1, record_entropy=True, action_space=5,
@@ -173,17 +168,16 @@ def main() -> None:
 
     def in_memory_run():
         return run_with_session(
-            shared_data, env, registry, configs, rounds, seed,
+            session, env, configs, rounds, seed,
             render=render_demo, reporter=reporter,
         )
 
     metrics = measure_baseline(in_memory_run)
     outcomes = in_memory_run()
 
-    # doagent: records are accessible for inspection via shared_data
-    agent_updates = list(shared_data.listen("agent_update"))
-    traces = list(shared_data.listen("trace"))
-    outcome_records = list(shared_data.listen("outcome"))
+    agent_updates = session.inspect("agent_update")
+    traces = session.inspect("trace")
+    outcome_records = session.inspect("outcome")
     print(f"Records: {len(agent_updates)} agent_updates, {len(outcome_records)} outcomes, {len(traces)} traces")
 
     reporter.finalize(
@@ -192,17 +186,27 @@ def main() -> None:
         output_bytes=metrics.output_bytes, render=render_demo,
     )
 
-    # -- File run --
+    # -- File run (config-driven session) --
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path("./output") / f"push_run_{timestamp}"
     output_dir.mkdir(parents=True, exist_ok=True)
-    file_shared = FileSharedData(output_dir / "records")
+    records_path = str(output_dir / "records")
+
+    file_session = Session.from_config({
+        "shared_data": {"type": "file", "path": records_path},
+        "run_config": {"logging_level": 2},
+        "policies": {
+            "fixed": fixed_policy,
+            "heuristic_goal_seek": heuristic_goal_seek,
+            "heuristic_push_block": heuristic_push_block,
+        },
+    })
     file_reporter = RunReporter(
         "file", print_every=print_every,
         record_series=True, series_every=1, record_entropy=True, action_space=5,
     )
     file_outcomes = run_with_session(
-        file_shared, env, registry, configs, rounds, seed,
+        file_session, env, configs, rounds, seed,
         render=render_demo, reporter=file_reporter,
     )
     records_dir = output_dir / "records"

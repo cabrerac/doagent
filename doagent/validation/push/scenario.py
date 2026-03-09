@@ -9,7 +9,6 @@ from ...core.run_config import RunConfig
 from ...core.session import Session
 from ...interface.shared_data import SharedDataAdapter
 from ..policy import PolicyRegistry
-from .agents import PushAgentConfig
 
 
 @dataclass(frozen=True)
@@ -25,7 +24,7 @@ def run_push_validation(
     shared_data: SharedDataAdapter,
     env: Any,
     registry: PolicyRegistry,
-    configs: list[PushAgentConfig],
+    configs: list[Dict[str, Any]],
     rounds: int,
     seed: int,
     run_config: RunConfig | None = None,

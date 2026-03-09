@@ -1,4 +1,8 @@
-"""Grid-world policy factories for validation scenarios."""
+"""Grid-world policy factories for the gridworld validation example.
+
+This is example code, not part of the doagent library. It contains
+heuristic policies for the grid-world mapping scenario.
+"""
 
 from __future__ import annotations
 
@@ -143,6 +147,7 @@ def auction_frontier_policy(params: Dict[str, Any]):
 
 
 def register_gridworld_policies(registry) -> None:
+    """Register all gridworld policies on a PolicyRegistry."""
     registry.register("grid_random", random_explore_policy)
     registry.register("grid_frontier", frontier_explore_policy)
     registry.register("grid_auction_frontier", auction_frontier_policy)

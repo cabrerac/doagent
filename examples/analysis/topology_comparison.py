@@ -49,10 +49,10 @@ def run_topologies(output_dir: Path) -> Dict[str, Path]:
         parse_topology,
         parse_agent_configs,
         run_with_session,
+        GRIDWORLD_POLICIES,
     )
-    from doagent.core import FileSharedData, TopologyConfig, Topology
-    from doagent.validation import PolicyRegistry
-    from doagent.validation.gridworld import make_grid_env, register_gridworld_policies
+    from doagent import Session, make_env
+    from examples.validation.gridworld.env import create_gridworld_env
 
     configs_dir = Path(__file__).resolve().parent / "configs"
     records_dirs: Dict[str, Path] = {}
@@ -69,9 +69,10 @@ def run_topologies(output_dir: Path) -> Dict[str, Path]:
 
         agent_configs = parse_agent_configs(config)
         agent_ids = [c["id"] for c in agent_configs]
-        topology_cfg, visibility = parse_topology(config)
+        topology_mode, visibility = parse_topology(config)
 
-        env = make_grid_env(
+        env = make_env(
+            create_gridworld_env,
             width=int(env_cfg.get("width", 15)),
             height=int(env_cfg.get("height", 15)),
             agent_ids=agent_ids,
@@ -82,23 +83,23 @@ def run_topologies(output_dir: Path) -> Dict[str, Path]:
             render_mode=None,
         )
 
-        registry = PolicyRegistry()
-        register_gridworld_policies(registry)
-
         topo_dir = output_dir / topo_name
         records_dir = topo_dir / "records"
-        file_shared = FileSharedData(records_dir)
+
+        session = Session.from_config({
+            "shared_data": {"type": "file", "path": str(records_dir)},
+            "run_config": {"logging_level": 2},
+            "topology": {"mode": topology_mode, "visibility": visibility},
+            "policies": GRIDWORLD_POLICIES,
+        })
 
         print(f"\n--- Running {TOPO_LABELS[topo_name]} topology ---")
         summary = run_with_session(
-            file_shared,
+            session,
             env=env,
-            registry=registry,
             configs=agent_configs,
             rounds=rounds,
             seed=seed,
-            topology_cfg=topology_cfg,
-            visibility=visibility,
         )
         records_dirs[topo_name] = records_dir
         agent_policies = {c["id"]: c["policy"].get("name", c["id"]) for c in agent_configs}

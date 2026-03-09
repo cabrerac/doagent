@@ -214,13 +214,19 @@ class SessionAgent:
 # ---------------------------------------------------------------------------
 
 class Session:
-    """DOAgent session — configure once, run transparently.
+    """DOAgent session -- configure once, run transparently.
 
-    Usage::
+    Config-driven usage (recommended)::
 
-        session = Session(shared_data, run_config)
-        env = session.wrap_env(my_env)
-        agents = session.create_agents(configs, registry)
+        session = Session.from_config({
+            "shared_data": {"type": "memory"},
+            "topology": {"mode": "centralised"},
+            "policies": {
+                "my_policy": "my_project.policies:create_my_policy",
+            },
+        })
+        env = session.wrap_env(make_env(create_fn, width=10))
+        agents = session.create_agents(agent_configs)
 
         observations = env.reset(seed=42)
         for round_id in range(1, rounds + 1):
@@ -230,6 +236,14 @@ class Session:
                 actions[agent_id] = result["action"]
             step = env.step(actions)
             observations = step["observations"]
+
+        outcomes = session.inspect("outcome")
+
+    Programmatic usage::
+
+        session = Session(shared_data, run_config)
+        env = session.wrap_env(my_env)
+        agents = session.create_agents(configs, registry)
     """
 
     def __init__(
@@ -258,6 +272,102 @@ class Session:
             state_hash_fn=resolved_hash_fn,
         )
         self._wrapped_env: Optional[WrappedEnv] = None
+        self._policy_registry: Optional[Any] = None
+
+    @property
+    def topology_mode(self) -> str:
+        """Topology mode as a string (e.g. "centralised", "federated")."""
+        return self._topology.mode.value
+
+    @property
+    def hub_id(self) -> str:
+        """Hub agent identifier for federated topology."""
+        return self._hub_id
+
+    def inspect(self, kind: str) -> List[Any]:
+        """Inspect records produced during the run, by kind.
+
+        Provides transparent access to what the library recorded.
+        Supports the transparency goal: users can inspect outcomes,
+        traces, and agent decisions after a run.
+
+        Args:
+            kind: Record kind — "outcome", "trace", or "agent_update".
+
+        Returns:
+            List of records of that kind.
+
+        Examples::
+
+            outcomes = session.inspect("outcome")
+            traces = session.inspect("trace")
+            decisions = session.inspect("agent_update")
+        """
+        return list(self._shared_data.listen(kind))
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]) -> "Session":
+        """Build a Session from a config dict. Keeps adapter construction internal.
+
+        Config keys (all optional):
+          - shared_data: {"type": "memory"|"file"|"noop"} (file requires "path")
+          - run_config: {"logging_level": 0|1|2}
+          - topology: {"mode": "centralised"|"peer_to_peer"|"federated", "visibility": {...}}
+          - policies: {name: entry_point_or_callable, ...}
+          - hub_id: str (default "hub")
+        """
+        from .file_shared_data import FileSharedData
+        from .shared_data import InMemorySharedData
+
+        sd_cfg = config.get("shared_data") or {}
+        sd_type = (sd_cfg.get("type") or "memory").lower()
+        if sd_type == "memory":
+            shared_data: SharedDataAdapter = InMemorySharedData()
+        elif sd_type == "file":
+            path = sd_cfg.get("path")
+            if not path:
+                raise ValueError("shared_data.type 'file' requires shared_data.path")
+            shared_data = FileSharedData(path)
+        elif sd_type == "noop":
+            from ..validation.baseline import NoOpSharedData
+            shared_data = NoOpSharedData()
+        else:
+            raise ValueError(f"shared_data.type must be 'memory', 'file', or 'noop'; got {sd_type!r}")
+
+        rc_cfg = config.get("run_config") or {}
+        level = rc_cfg.get("logging_level", 2)
+        run_config = RunConfig(logging_level=level)
+
+        topo_cfg = config.get("topology") or {}
+        mode_str = (topo_cfg.get("mode") or "centralised").lower()
+        try:
+            mode = Topology(mode_str)
+        except ValueError:
+            mode = Topology("centralised")
+        topology = TopologyConfig(mode=mode)
+        visibility = topo_cfg.get("visibility") or None
+        hub_id = config.get("hub_id", "hub")
+
+        session = cls(
+            shared_data,
+            run_config,
+            topology=topology,
+            visibility=visibility,
+            hub_id=hub_id,
+        )
+
+        policies_cfg = config.get("policies") or {}
+        if policies_cfg:
+            from ..env import _resolve_entry_point
+            from ..validation.policy import PolicyRegistry
+
+            registry = PolicyRegistry()
+            for name, entry_point in policies_cfg.items():
+                factory = _resolve_entry_point(entry_point)
+                registry.register(name, factory)
+            session._policy_registry = registry
+
+        return session
 
     def wrap_env(
         self,
@@ -275,18 +385,34 @@ class Session:
     def create_agents(
         self,
         configs: list[Dict[str, Any]],
-        registry: Any,
+        registry: Any = None,
         *,
         goal: str = "default",
         payload_type: Optional[str] = None,
     ) -> Dict[str, SessionAgent]:
-        """Create wrapped agents from configs and a PolicyRegistry."""
+        """Create wrapped agents from configs and a PolicyRegistry.
+
+        Each config is a dict with:
+          - "id": str -- agent identifier
+          - "policy": dict -- policy name and params (e.g. {"name": "my_policy", "params": {...}})
+          - "metadata": dict, optional -- e.g. {"explanation": "..."} for interpretability
+
+        If *registry* is None, the session's internal registry (built by
+        ``from_config``) is used.  This lets config-driven setups work
+        without the user ever importing ``PolicyRegistry``.
+        """
         if self._wrapped_env is None:
             raise RuntimeError("Call session.wrap_env() before create_agents().")
+        effective_registry = registry or self._policy_registry
+        if effective_registry is None:
+            raise RuntimeError(
+                "No policy registry available. Pass one explicitly or "
+                "include 'policies' in the config given to Session.from_config()."
+            )
         agents: Dict[str, SessionAgent] = {}
         for config in configs:
             agent_id = config["id"]
-            policy = registry.create(config["policy"])
+            policy = effective_registry.create(config["policy"])
             metadata = config.get("metadata", {})
             if metadata:
                 policy = _wrap_policy_with_metadata(policy, metadata)

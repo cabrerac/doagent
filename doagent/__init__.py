@@ -1,17 +1,17 @@
 """DOAgent core library.
 
-User-facing API: Session, RunConfig, adapters, record types.
-Internal helpers (new_record, StubAgent, FunctionAgent) live in doagent.core.
+User-facing API: Session, RunConfig, make_env. Use Session.from_config(config)
+for config-driven setup; adapters and record types are internal.
 """
 
 from .core import InMemorySharedData
 from .core.run_config import RunConfig
 from .core.session import Session
-from .records import SimpleRecord
+from .env import make_env
 
 __all__ = [
     "InMemorySharedData",
-    "SimpleRecord",
     "RunConfig",
     "Session",
+    "make_env",
 ]

@@ -1,25 +1,33 @@
 """Integration tests: Session + real env + real policies + real wiring.
 
-These catch bugs that unit tests with stubs miss — verifying that
+These catch bugs that unit tests with stubs miss -- verifying that
 observations, policies, shared maps, and actions are wired correctly
 end-to-end.
+
+Uses the config-driven Session API (Session.from_config) with no
+doagent.core or doagent.records imports.
 """
 
 import unittest
 from typing import Any, Dict, List, Tuple
 
-from doagent.core import InMemorySharedData, RunConfig, Session, Topology, TopologyConfig
-from doagent.records import SimpleRecord
-from doagent.validation import PolicyRegistry
-from doagent.validation.gridworld import (
-    GridAgentConfig,
-    make_grid_env,
-    register_gridworld_policies,
+from doagent import Session, make_env
+from examples.validation.gridworld.env import create_gridworld_env
+from examples.validation.gridworld.policies import (
+    random_explore_policy,
+    frontier_explore_policy,
+    auction_frontier_policy,
 )
 
+GRIDWORLD_POLICIES = {
+    "grid_random": random_explore_policy,
+    "grid_frontier": frontier_explore_policy,
+    "grid_auction_frontier": auction_frontier_policy,
+}
 
-def _build_shared_map(records: List[SimpleRecord]) -> Dict[str, Any]:
-    """Same logic as the example — must stay in sync."""
+
+def _build_shared_map(records: List[Any]) -> Dict[str, Any]:
+    """Same logic as the example -- must stay in sync."""
     cells: Dict[Tuple[int, int], str] = {}
     for record in records:
         local_knowledge = record.payload.get("local_knowledge", {})
@@ -37,29 +45,31 @@ def _build_shared_map(records: List[SimpleRecord]) -> Dict[str, Any]:
 
 
 class TestSessionIntegration(unittest.TestCase):
-    """Full-stack integration: Session + GridWorldEnv + real policies."""
+    """Full-stack integration: config-driven Session + GridWorldEnv + real policies."""
 
-    def _make_session_and_agents(self, agent_ids, *, topology=None, visibility=None):
+    def _make_session_and_agents(self, agent_ids, *, topology_mode="centralised", visibility=None):
         configs = [
-            GridAgentConfig(id=aid, policy={"name": "grid_frontier", "params": {"seed": i}}, metadata={})
+            {"id": aid, "policy": {"name": "grid_frontier", "params": {"seed": i}}, "metadata": {}}
             for i, aid in enumerate(agent_ids)
         ]
-        shared_data = InMemorySharedData()
-        registry = PolicyRegistry()
-        register_gridworld_policies(registry)
-        env = make_grid_env(width=6, height=6, agent_ids=agent_ids, max_cycles=50, seed=42)
-        session = Session(
-            shared_data, RunConfig(logging_level=2),
-            topology=topology or TopologyConfig(),
-            visibility=visibility,
-        )
+        session_cfg: Dict[str, Any] = {
+            "shared_data": {"type": "memory"},
+            "run_config": {"logging_level": 2},
+            "topology": {"mode": topology_mode},
+            "policies": GRIDWORLD_POLICIES,
+        }
+        if visibility:
+            session_cfg["topology"]["visibility"] = visibility
+
+        session = Session.from_config(session_cfg)
+        env = make_env(create_gridworld_env, width=6, height=6, agent_ids=agent_ids, max_cycles=50, seed=42)
         wrapped_env = session.wrap_env(env, env_actor="gridworld_env")
-        agents = session.create_agents(configs, registry, goal="map_discovery", payload_type="map_update")
-        return session, wrapped_env, agents, shared_data
+        agents = session.create_agents(configs, goal="map_discovery", payload_type="map_update")
+        return session, wrapped_env, agents
 
     def test_policies_receive_correct_observation_structure(self):
         """Policies must get position, width, height, cells in inputs.observation."""
-        session, env, agents, shared_data = self._make_session_and_agents(["a"])
+        session, env, agents = self._make_session_and_agents(["a"])
         observations = env.reset(seed=42)
         obs = observations["a"]
 
@@ -73,7 +83,7 @@ class TestSessionIntegration(unittest.TestCase):
 
     def test_agents_actually_move(self):
         """After several rounds, agent positions must change (not stuck)."""
-        session, env, agents, shared_data = self._make_session_and_agents(["a", "b"])
+        session, env, agents = self._make_session_and_agents(["a", "b"])
         observations = env.reset(seed=42)
         initial_positions = {
             aid: (obs["position"]["x"], obs["position"]["y"])
@@ -103,7 +113,7 @@ class TestSessionIntegration(unittest.TestCase):
 
     def test_shared_map_accumulates_cells(self):
         """After a few rounds, visible_records should yield cells that grow the shared map."""
-        session, env, agents, shared_data = self._make_session_and_agents(["a"])
+        session, env, agents = self._make_session_and_agents(["a"])
         observations = env.reset(seed=42)
 
         for round_id in range(1, 6):
@@ -125,7 +135,7 @@ class TestSessionIntegration(unittest.TestCase):
 
     def test_action_is_valid_integer(self):
         """Actions produced by policies must be valid integers the env accepts."""
-        session, env, agents, shared_data = self._make_session_and_agents(["a"])
+        session, env, agents = self._make_session_and_agents(["a"])
         observations = env.reset(seed=42)
 
         for round_id in range(1, 4):
@@ -143,7 +153,7 @@ class TestSessionIntegration(unittest.TestCase):
 
     def test_records_have_correct_structure(self):
         """agent_update records must contain local_knowledge with observation that has cells."""
-        session, env, agents, shared_data = self._make_session_and_agents(["a"])
+        session, env, agents = self._make_session_and_agents(["a"])
         observations = env.reset(seed=42)
         shared_map = _build_shared_map([])
         agents["a"].decide(observations["a"], 1, inputs={
@@ -151,7 +161,7 @@ class TestSessionIntegration(unittest.TestCase):
             "shared_map": shared_map,
         })
 
-        records = list(shared_data.listen("agent_update"))
+        records = session.inspect("agent_update")
         self.assertEqual(len(records), 1)
         payload = records[0].payload
         self.assertIn("local_knowledge", payload)
@@ -162,9 +172,9 @@ class TestSessionIntegration(unittest.TestCase):
 
     def test_peer_to_peer_topology_filters_records(self):
         """In P2P, agent sees only own + visible peers' records, not all agents."""
-        session, env, agents, shared_data = self._make_session_and_agents(
+        session, env, agents = self._make_session_and_agents(
             ["a", "b", "c"],
-            topology=TopologyConfig(mode=Topology.PEER_TO_PEER),
+            topology_mode="peer_to_peer",
             visibility={"a": ["b"]},
         )
         observations = env.reset(seed=42)
@@ -198,7 +208,7 @@ class TestSessionIntegration(unittest.TestCase):
 
     def test_coverage_increases_over_rounds(self):
         """Running the loop should discover new cells over time."""
-        session, env, agents, shared_data = self._make_session_and_agents(["a", "b"])
+        session, env, agents = self._make_session_and_agents(["a", "b"])
         observations = env.reset(seed=42)
         discovered: set[Tuple[int, int]] = set()
         for obs in observations.values():
@@ -227,6 +237,29 @@ class TestSessionIntegration(unittest.TestCase):
             len(discovered), initial_count,
             "Coverage should increase after 20 rounds of exploration",
         )
+
+    def test_inspect_returns_records(self):
+        """session.inspect() should return records after a run."""
+        session, env, agents = self._make_session_and_agents(["a"])
+        observations = env.reset(seed=42)
+
+        for round_id in range(1, 4):
+            shared_records = session.visible_records("a", kind="agent_update")
+            shared_map = _build_shared_map(shared_records)
+            result = agents["a"].decide(observations["a"], round_id, inputs={
+                "observation": observations["a"],
+                "shared_map": shared_map,
+            })
+            step = env.step({"a": result["action"]})
+            observations = step["observations"]
+
+        agent_updates = session.inspect("agent_update")
+        outcomes = session.inspect("outcome")
+        traces = session.inspect("trace")
+
+        self.assertEqual(len(agent_updates), 3)
+        self.assertEqual(len(outcomes), 3)
+        self.assertEqual(len(traces), 3)
 
 
 if __name__ == "__main__":

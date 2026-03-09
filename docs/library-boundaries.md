@@ -97,7 +97,7 @@ Functions such as `new_record()`, `new_agent_update_record()`, `new_trace_record
 - **Record envelope and data model** — see [data-model-spec.md](data-model-spec.md)
 - **State deduplication** — on by default (`default_state_hash` hashes state-category fields); scenario-overridable
 - **Agent adapters** — `SessionAgent` (via Session), `FunctionAgent`, `StubAgent`
-- **Validation scenarios** — push, gridworld (serve as canonical usage examples)
+- **Validation scenarios** — push, gridworld (canonical usage examples live in `examples/validation/`; the validation *package* is internal to the research project — see [Architecture layers](architecture-layers.md))
 - **Coordination** — topology (centralised/P2P/federated), participation registry, `visible_records()`
 - **Logging levels** — configurable record writing gated by level (0, 1, 2)
 - **Adapter contract** — documented interface with collection-per-kind storage model; see [adapter-contract.md](adapter-contract.md)
@@ -219,6 +219,7 @@ The library does not implement distributed locking or coordination. Parallel sup
 
 ## References
 
+- [Architecture Layers](architecture-layers.md) — core library | analysis (user-facing) | validation/experiments (internal)
 - [Data Model Specification](data-model-spec.md)
 - [Adapter Contract](adapter-contract.md)
 - CIP-0001: Library First Architecture
