@@ -1,21 +1,13 @@
-"""MongoDB shared data adapter using one collection per record kind.
+"""MongoDB shared data adapter: one collection per record kind.
 
-Storage layout:
-
-    <database>/
-        agent_update   (collection)
-        outcome        (collection)
-        trace          (collection)
-        _state_index   (collection — for dedup lookups)
-
-Requires ``pymongo`` as an optional dependency::
+Requires ``pymongo``::
 
     pip install pymongo
 
 Usage::
 
     from pymongo import MongoClient
-    from doagent.core.mongo_shared_data import MongoSharedData
+    from doagent.core.adapters import MongoSharedData
 
     client = MongoClient("mongodb://localhost:27017")
     shared_data = MongoSharedData(client["doagent_run_001"])
@@ -26,8 +18,8 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any, Dict, Iterable, List, Optional
 
-from ..interface.shared_data import SharedDataAdapter
-from ..records import SimpleRecord
+from ...interface.shared_data import SharedDataAdapter
+from ...records import SimpleRecord
 
 _STATE_INDEX_COLLECTION = "_state_index"
 

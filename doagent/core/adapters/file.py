@@ -1,13 +1,4 @@
-"""File-based shared data adapter using one JSONL file per record kind.
-
-Storage layout mirrors MongoDB collections and InMemorySharedData:
-
-    <directory>/
-        agent_update.jsonl
-        outcome.jsonl
-        trace.jsonl
-        ...
-"""
+"""File-based shared data adapter: one JSONL file per record kind."""
 
 from __future__ import annotations
 
@@ -16,8 +7,8 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
-from ..interface.shared_data import SharedDataAdapter
-from ..records import SimpleRecord
+from ...interface.shared_data import SharedDataAdapter
+from ...records import SimpleRecord
 
 
 class FileSharedData(SharedDataAdapter):

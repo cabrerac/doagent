@@ -1,14 +1,14 @@
-"""Tests for simple push validation scenario."""
+"""Tests for simple push validation scenario.
+
+Use only the public API: Session.from_config, make_env, session.inspect.
+"""
 
 import tempfile
 import unittest
 from pathlib import Path
 
-from doagent import make_env
-from doagent.core import FileSharedData, InMemorySharedData
+from doagent import Session, make_env
 from experiments import (
-    NoOpSharedData,
-    PolicyRegistry,
     measure_baseline,
     output_bytes_from_path,
     run_push_validation,
@@ -16,16 +16,13 @@ from experiments import (
 from examples.push_demo.env import create_push_env
 
 
-def _register_policies(registry: PolicyRegistry) -> None:
-    def fixed_policy(params):
-        action = params.get("action", 0)
+def _fixed_policy(params):
+    action = params.get("action", 0)
 
-        def decide(request):
-            return {"decision": {"action": action}}
+    def decide(request):
+        return {"decision": {"action": action}}
 
-        return decide
-
-    registry.register("fixed", fixed_policy)
+    return decide
 
 
 def _agent_configs():
@@ -34,6 +31,18 @@ def _agent_configs():
         {"id": "adversary_0", "policy": {"name": "fixed", "params": {"action": 0}}, "metadata": {"explanation": "Hold position (noop) in push task."}},
         {"id": "agent_0", "policy": {"name": "fixed", "params": {"action": 1}}, "metadata": {"explanation": "Move right in push task."}},
     ]
+
+
+def _session_config(shared_data_type: str = "memory", path: str | None = None) -> dict:
+    cfg = {
+        "shared_data": {"type": shared_data_type},
+        "run_config": {"logging_level": 2},
+        "topology": {"mode": "centralised"},
+        "policies": {"fixed": _fixed_policy},
+    }
+    if path is not None:
+        cfg["shared_data"]["path"] = path
+    return cfg
 
 
 class TestPushValidation(unittest.TestCase):
@@ -51,23 +60,21 @@ class TestPushValidation(unittest.TestCase):
             raise unittest.SkipTest(str(exc)) from exc
 
     def test_validation_with_in_memory_adapter(self):
-        shared_data = InMemorySharedData()
+        config = _session_config("memory")
+        session = Session.from_config(config)
         env = self._make_external_env()
-        registry = PolicyRegistry()
-        _register_policies(registry)
 
         summary = run_push_validation(
-            shared_data=shared_data,
+            session=session,
             env=env,
-            registry=registry,
             configs=_agent_configs(),
             rounds=3,
             seed=123,
         )
 
-        agent_updates = list(shared_data.listen("agent_update"))
-        traces = list(shared_data.listen("trace"))
-        outcomes = list(shared_data.listen("outcome"))
+        agent_updates = session.inspect("agent_update")
+        traces = session.inspect("trace")
+        outcomes = session.inspect("outcome")
 
         self.assertEqual(summary.rounds, 3)
         self.assertEqual(summary.outcomes, 3)
@@ -84,38 +91,34 @@ class TestPushValidation(unittest.TestCase):
 
     def test_validation_with_file_adapter(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            shared_data = FileSharedData(temp_dir)
+            config = _session_config("file", path=temp_dir)
+            session = Session.from_config(config)
             env = self._make_external_env()
-            registry = PolicyRegistry()
-            _register_policies(registry)
 
             run_push_validation(
-                shared_data=shared_data,
+                session=session,
                 env=env,
-                registry=registry,
                 configs=_agent_configs(),
                 rounds=2,
                 seed=321,
             )
 
-            agent_updates = list(shared_data.listen("agent_update"))
-            outcomes = list(shared_data.listen("outcome"))
+            agent_updates = session.inspect("agent_update")
+            outcomes = session.inspect("outcome")
 
             self.assertEqual(len(agent_updates), 4)
             self.assertEqual(len(outcomes), 2)
             self.assertGreater(output_bytes_from_path(temp_dir), 0)
 
     def test_baseline_run(self):
-        shared_data = NoOpSharedData()
+        config = _session_config("noop")
+        session = Session.from_config(config)
         env = self._make_external_env()
-        registry = PolicyRegistry()
-        _register_policies(registry)
 
         def run():
             run_push_validation(
-                shared_data=shared_data,
+                session=session,
                 env=env,
-                registry=registry,
                 configs=_agent_configs(),
                 rounds=2,
                 seed=42,

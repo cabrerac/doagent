@@ -1,18 +1,22 @@
-"""Tests for grid-world validation scenario."""
+"""Tests for grid-world validation scenario.
+
+Use only the public API: Session.from_config, make_env, session.inspect.
+"""
 
 import tempfile
 import unittest
 from pathlib import Path
 
-from doagent import make_env
-from doagent.core import FileSharedData, InMemorySharedData
+from doagent import Session, make_env
 from experiments import (
-    PolicyRegistry,
     run_gridworld_validation,
     output_bytes_from_path,
 )
 from examples.gridworld_demo.env import create_gridworld_env
-from examples.gridworld_demo.policies import register_gridworld_policies
+from examples.gridworld_demo.policies import (
+    random_explore_policy,
+    frontier_explore_policy,
+)
 
 
 def _agent_configs():
@@ -20,6 +24,21 @@ def _agent_configs():
         {"id": "agent_0", "policy": {"name": "grid_random", "params": {"seed": 1}}},
         {"id": "agent_1", "policy": {"name": "grid_frontier", "params": {"seed": 2}}},
     ]
+
+
+def _session_config(shared_data_type: str = "memory", path: str | None = None) -> dict:
+    cfg = {
+        "shared_data": {"type": shared_data_type},
+        "run_config": {"logging_level": 2},
+        "topology": {"mode": "centralised"},
+        "policies": {
+            "grid_random": random_explore_policy,
+            "grid_frontier": frontier_explore_policy,
+        },
+    }
+    if path is not None:
+        cfg["shared_data"]["path"] = path
+    return cfg
 
 
 class TestGridWorldValidation(unittest.TestCase):
@@ -35,28 +54,22 @@ class TestGridWorldValidation(unittest.TestCase):
             seed=7,
         )
 
-    def _make_registry(self):
-        registry = PolicyRegistry()
-        register_gridworld_policies(registry)
-        return registry
-
     def test_validation_with_in_memory_adapter(self):
-        shared_data = InMemorySharedData()
+        config = _session_config("memory")
+        session = Session.from_config(config)
         env = self._make_env()
-        registry = self._make_registry()
 
         summary = run_gridworld_validation(
-            shared_data=shared_data,
+            session=session,
             env=env,
-            registry=registry,
             configs=_agent_configs(),
             rounds=3,
             seed=123,
         )
 
-        agent_updates = list(shared_data.listen("agent_update"))
-        traces = list(shared_data.listen("trace"))
-        outcomes = list(shared_data.listen("outcome"))
+        agent_updates = session.inspect("agent_update")
+        traces = session.inspect("trace")
+        outcomes = session.inspect("outcome")
 
         self.assertEqual(summary.rounds, 3)
         self.assertEqual(summary.outcomes, 3)
@@ -77,21 +90,20 @@ class TestGridWorldValidation(unittest.TestCase):
 
     def test_validation_with_file_adapter(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            shared_data = FileSharedData(temp_dir)
+            config = _session_config("file", path=temp_dir)
+            session = Session.from_config(config)
             env = self._make_env()
-            registry = self._make_registry()
 
             summary = run_gridworld_validation(
-                shared_data=shared_data,
+                session=session,
                 env=env,
-                registry=registry,
                 configs=_agent_configs(),
                 rounds=2,
                 seed=321,
             )
 
-            agent_updates = list(shared_data.listen("agent_update"))
-            outcomes = list(shared_data.listen("outcome"))
+            agent_updates = session.inspect("agent_update")
+            outcomes = session.inspect("outcome")
 
             self.assertEqual(summary.outcomes, 2)
             self.assertEqual(len(agent_updates), 4)

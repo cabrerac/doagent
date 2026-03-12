@@ -10,7 +10,7 @@ except ImportError:
     HAS_MONGOMOCK = False
 
 from doagent.core import new_record
-from doagent.core.mongo_shared_data import MongoSharedData
+from doagent.core import MongoSharedData
 from doagent.records import SimpleRecord
 
 

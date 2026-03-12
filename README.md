@@ -23,25 +23,28 @@ Core dependencies: `pyyaml`. For analysis: `matplotlib`, `networkx`. For the Pet
 
 ## Quick start
 
-The Session API is the primary entry point. You provide the environment and the policies; DOAgent handles all recording transparently.
+The Session API is the primary entry point. You provide a config (environment, policies, where to store records); DOAgent handles all recording transparently.
 
 ```python
-from doagent import Session, RunConfig
-from doagent.core import InMemorySharedData, FileSharedData
+from doagent import Session, RunConfig, make_env
 
-# 1. Choose where records go
-shared_data = InMemorySharedData()          # or FileSharedData("output/records")
+# 1. Build config: shared_data type, run_config, topology, policies
+config = {
+    "shared_data": {"type": "memory"},
+    "run_config": {"logging_level": 2},
+    "topology": {"mode": "centralised"},
+    "policies": {"explore": my_policy_callable},
+    # optional: "state_hash_fn": my_hash_fn
+}
 
-# 2. Create a session (logging level 2 = full provenance and accountability)
-session = Session(shared_data, RunConfig(logging_level=2))
+# 2. Create session; use your own environment or make_env(entry_point, **params)
+session = Session.from_config(config)
+env = session.wrap_env(my_env)  # or session.wrap_env(make_env("my_module:create_env", size=10))
 
-# 3. Wrap your environment
-env = session.wrap_env(my_env, env_actor="my_env")
+# 3. Create agents (policies come from config)
+agents = session.create_agents(agent_configs, goal="explore")
 
-# 4. Create agents from policies
-agents = session.create_agents(configs, registry, goal="explore")
-
-# 5. Run your loop — recording happens automatically
+# 4. Run your loop — recording happens automatically
 observations = env.reset(seed=42)
 for round_id in range(1, rounds + 1):
     actions = {}
@@ -52,7 +55,7 @@ for round_id in range(1, rounds + 1):
     observations = step["observations"]
 ```
 
-After the loop, `shared_data` contains all records: agent decisions, environment outcomes, and trace links connecting them.
+After the loop, use `session.inspect("agent_update")`, `session.inspect("trace")`, etc., or read from the configured store (e.g. file directory) to analyse decisions and state transitions.
 
 ## What gets recorded
 
@@ -64,33 +67,25 @@ DOAgent records three kinds of data at configurable verbosity:
 | **1** | + `trace` + `explanation` | Linked state transitions with decision rationale |
 | **2** | + `provenance` + `accountability` | Full attribution: who created what, from which sources |
 
-Records are stored as JSONL (one file per kind) via adapters:
+Records are stored via the adapter selected in config (`shared_data.type`):
 
-- `InMemorySharedData` — fast, no I/O, good for experiments
-- `FileSharedData(path)` — persists to disk as `trace.jsonl`, `outcome.jsonl`, `agent_update.jsonl`
-- `MongoSharedData(collection)` — MongoDB-backed (requires `pymongo`)
+- `"memory"` — in-memory, single-run, good for tests and experiments
+- `"file"` — persists to a directory (JSONL per record kind)
+- `"noop"` — no persistence (e.g. for dry runs)
 
 ## Coordination topologies
 
-Control which agents see which records:
+Control which agents see which records by setting `topology` in your config:
 
 ```python
-from doagent.core import Topology, TopologyConfig
-
-# All agents see all records
-session = Session(shared_data, topology=TopologyConfig(mode=Topology.CENTRALISED))
-
-# Each agent sees only its own records and designated peers
-session = Session(shared_data,
-    topology=TopologyConfig(mode=Topology.PEER_TO_PEER),
-    visibility={"agent_0": ["agent_1"], "agent_1": ["agent_2"]},
-)
-
-# Agents see only hub-authored records; hub sees everything
-session = Session(shared_data,
-    topology=TopologyConfig(mode=Topology.FEDERATED),
-    hub_id="hub",
-)
+config = {
+    "shared_data": {"type": "memory"},
+    "run_config": {"logging_level": 1},
+    "topology": {"mode": "centralised"},  # all agents see all records
+}
+# Or: "topology": {"mode": "peer_to_peer", "visibility": {"agent_0": ["agent_1"], ...}}
+# Or: "topology": {"mode": "federated", "hub_id": "hub"}
+session = Session.from_config(config)
 ```
 
 Within the run loop, `session.visible_records(agent_id, kind="agent_update")` returns only the records that agent is allowed to see.
@@ -162,19 +157,15 @@ tests/               Test suite
 
 ## API reference
 
-**Primary API** — what user code should import:
+**Primary API** — what user code should import (tests, demos, and experiments use only this surface):
 
 | Import | Purpose |
 |---|---|
-| `doagent.Session` | Central entry point: wrap env, create agents, run |
-| `doagent.RunConfig` | Logging level configuration (0, 1, or 2) |
-| `doagent.InMemorySharedData` | In-memory shared data adapter |
-| `doagent.core.FileSharedData` | File-backed adapter (JSONL per record kind) |
-| `doagent.core.MongoSharedData` | MongoDB adapter (optional) |
-| `doagent.core.TopologyConfig` | Coordination topology configuration |
-| `doagent.core.Topology` | Topology modes: CENTRALISED, PEER_TO_PEER, FEDERATED |
-| `doagent.core.PolicyRegistry` | Register and create agent policies (e.g. for Session.from_config) |
-| `doagent.records.SimpleRecord` | The record envelope type |
+| `doagent.Session` | Create session via `Session.from_config(config)`; wrap env, create agents, inspect records |
+| `doagent.RunConfig` | Logging level configuration (0, 1, or 2); can be part of config dict |
+| `doagent.make_env` | Build an environment from config (when using config-driven env) |
+
+Adapter, topology, and policies are configured via the config dict passed to `Session.from_config` (e.g. `shared_data.type`: `"memory"` | `"file"` | `"noop"`; `topology.mode`; `policies`). Do not import `doagent.core` or `doagent.records` in user-facing code.
 
 **Demos** — end-to-end examples:
 
@@ -182,7 +173,6 @@ tests/               Test suite
 python -m examples.minimal_usage              # Minimal Session.from_config run
 python -m examples.gridworld_demo.gridworld_demo   # Grid-world mapping
 python -m examples.push_demo.push_demo             # Push (PettingZoo)
-```
 ```
 
 ## Project management

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Iterable, Optional
 
-from ..interface.shared_data import SharedDataAdapter
-from ..records import SimpleRecord
+from ...interface.shared_data import SharedDataAdapter
+from ...records import SimpleRecord
 
 
 class NoOpSharedData(SharedDataAdapter):

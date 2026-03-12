@@ -4,10 +4,10 @@ import unittest
 from typing import Any, Dict
 
 from doagent.core import InMemorySharedData, RunConfig, Session
-from doagent.core.file_shared_data import FileSharedData
-from doagent.core.record_writer import default_state_hash
+from doagent.core import FileSharedData
+from doagent.core import default_state_hash
 from doagent.records import INITIAL_STATE_ID
-from doagent.core.policy import PolicyRegistry
+from doagent.core import PolicyRegistry
 
 
 class CyclingEnv:

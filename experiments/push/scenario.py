@@ -1,14 +1,14 @@
-"""Simple push experiment scenario runner."""
+"""Simple push experiment scenario runner.
+
+Uses only the public API: Session is built by the caller via Session.from_config.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict
 
-from doagent.core.run_config import RunConfig
-from doagent.core.session import Session
-from doagent.core.policy import PolicyRegistry
-from doagent.interface.shared_data import SharedDataAdapter
+from doagent import Session
 
 
 @dataclass(frozen=True)
@@ -21,20 +21,20 @@ class PushRunSummary:
 
 def run_push_validation(
     *,
-    shared_data: SharedDataAdapter,
+    session: Session,
     env: Any,
-    registry: PolicyRegistry,
     configs: list[Dict[str, Any]],
     rounds: int,
     seed: int,
-    run_config: RunConfig | None = None,
     render: bool = False,
     on_outcome: Callable[[int, Dict[str, Any], Dict[str, float]], None] | None = None,
 ) -> PushRunSummary:
-    """Run the simple push experiment scenario for a fixed number of rounds."""
-    session = Session(shared_data, run_config)
+    """Run the simple push experiment scenario for a fixed number of rounds.
+
+    Caller must provide a Session built with Session.from_config (including policies).
+    """
     wrapped_env = session.wrap_env(env, env_actor="push_env")
-    agents = session.create_agents(configs, registry, goal="push_towards_landmark")
+    agents = session.create_agents(configs, goal="push_towards_landmark")
 
     observations = wrapped_env.reset(seed=seed)
     if render:

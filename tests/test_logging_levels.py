@@ -1,15 +1,17 @@
-"""Tests for data-oriented logging levels (0, 1, 2)."""
+"""Tests for data-oriented logging levels (0, 1, 2).
+
+Use only the public API: Session.from_config, make_env, session.inspect, RunConfig.
+"""
 
 import unittest
 
-from doagent import make_env
-from doagent.core import InMemorySharedData, RunConfig
-from experiments import (
-    PolicyRegistry,
-    run_gridworld_validation,
-)
+from doagent import Session, RunConfig, make_env
+from experiments import run_gridworld_validation
 from examples.gridworld_demo.env import create_gridworld_env
-from examples.gridworld_demo.policies import register_gridworld_policies
+from examples.gridworld_demo.policies import (
+    random_explore_policy,
+    frontier_explore_policy,
+)
 
 
 def _agent_configs_with_explanation():
@@ -28,6 +30,18 @@ def _agent_configs_with_explanation():
     ]
 
 
+def _session_config(logging_level: int) -> dict:
+    return {
+        "shared_data": {"type": "memory"},
+        "run_config": {"logging_level": logging_level},
+        "topology": {"mode": "centralised"},
+        "policies": {
+            "grid_random": random_explore_policy,
+            "grid_frontier": frontier_explore_policy,
+        },
+    }
+
+
 class TestLoggingLevels(unittest.TestCase):
     def _make_env(self):
         return make_env(
@@ -41,31 +55,23 @@ class TestLoggingLevels(unittest.TestCase):
             seed=7,
         )
 
-    def _make_registry(self):
-        registry = PolicyRegistry()
-        register_gridworld_policies(registry)
-        return registry
-
     def test_level_0_no_trace_no_explanation(self):
         """Level 0: agent_update and outcome; no trace; no decision.explanation."""
-        shared_data = InMemorySharedData()
+        config = _session_config(0)
+        session = Session.from_config(config)
         env = self._make_env()
-        registry = self._make_registry()
-        run_config = RunConfig.with_logging_level(0)
 
         run_gridworld_validation(
-            shared_data=shared_data,
+            session=session,
             env=env,
-            registry=registry,
             configs=_agent_configs_with_explanation(),
             rounds=2,
             seed=123,
-            run_config=run_config,
         )
 
-        agent_updates = list(shared_data.listen("agent_update"))
-        traces = list(shared_data.listen("trace"))
-        outcomes = list(shared_data.listen("outcome"))
+        agent_updates = session.inspect("agent_update")
+        traces = session.inspect("trace")
+        outcomes = session.inspect("outcome")
 
         self.assertEqual(len(agent_updates), 4, "4 agent_updates (2 agents x 2 rounds)")
         self.assertEqual(len(outcomes), 2, "2 outcomes")
@@ -81,24 +87,21 @@ class TestLoggingLevels(unittest.TestCase):
 
     def test_level_1_trace_and_explanation(self):
         """Level 1: adds trace and decision.explanation."""
-        shared_data = InMemorySharedData()
+        config = _session_config(1)
+        session = Session.from_config(config)
         env = self._make_env()
-        registry = self._make_registry()
-        run_config = RunConfig.with_logging_level(1)
 
         run_gridworld_validation(
-            shared_data=shared_data,
+            session=session,
             env=env,
-            registry=registry,
             configs=_agent_configs_with_explanation(),
             rounds=2,
             seed=456,
-            run_config=run_config,
         )
 
-        agent_updates = list(shared_data.listen("agent_update"))
-        traces = list(shared_data.listen("trace"))
-        outcomes = list(shared_data.listen("outcome"))
+        agent_updates = session.inspect("agent_update")
+        traces = session.inspect("trace")
+        outcomes = session.inspect("outcome")
 
         self.assertEqual(len(agent_updates), 4)
         self.assertEqual(len(outcomes), 2)
@@ -113,24 +116,21 @@ class TestLoggingLevels(unittest.TestCase):
 
     def test_level_2_provenance_and_accountability(self):
         """Level 2: adds provenance and accountability on envelope."""
-        shared_data = InMemorySharedData()
+        config = _session_config(2)
+        session = Session.from_config(config)
         env = self._make_env()
-        registry = self._make_registry()
-        run_config = RunConfig.with_logging_level(2)
 
         run_gridworld_validation(
-            shared_data=shared_data,
+            session=session,
             env=env,
-            registry=registry,
             configs=_agent_configs_with_explanation(),
             rounds=2,
             seed=789,
-            run_config=run_config,
         )
 
-        agent_updates = list(shared_data.listen("agent_update"))
-        traces = list(shared_data.listen("trace"))
-        outcomes = list(shared_data.listen("outcome"))
+        agent_updates = session.inspect("agent_update")
+        traces = session.inspect("trace")
+        outcomes = session.inspect("outcome")
 
         self.assertEqual(len(agent_updates), 4)
         self.assertEqual(len(outcomes), 2)
@@ -150,20 +150,19 @@ class TestLoggingLevels(unittest.TestCase):
 
     def test_default_level_2(self):
         """Default run_config yields level 2 behaviour."""
-        shared_data = InMemorySharedData()
+        config = _session_config(2)  # default is 2
+        session = Session.from_config(config)
         env = self._make_env()
-        registry = self._make_registry()
 
         run_gridworld_validation(
-            shared_data=shared_data,
+            session=session,
             env=env,
-            registry=registry,
             configs=_agent_configs_with_explanation(),
             rounds=1,
             seed=111,
         )
 
-        traces = list(shared_data.listen("trace"))
+        traces = session.inspect("trace")
         self.assertGreater(len(traces), 0, "Default should write traces")
 
     def test_run_config_validation_rejects_invalid_level(self):

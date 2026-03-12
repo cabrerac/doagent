@@ -1,28 +1,26 @@
 """Core implementation of DOAgent."""
 
-from .agent_adapter import StubAgent
-from .function_agent import FunctionAgent
-from .file_shared_data import FileSharedData
-
-try:
-    from .mongo_shared_data import MongoSharedData
-except ImportError:
-    MongoSharedData = None  # type: ignore[assignment,misc]
+from ._helpers.agent_adapter import StubAgent
+from ._helpers.function_agent import FunctionAgent
+from .adapters import (
+    InMemorySharedData,
+    FileSharedData,
+    NoOpSharedData,
+    MongoSharedData,
+)
 from .participation import (
     InMemoryParticipationRegistry,
     ParticipationRecord,
     ParticipationRegistry,
 )
-from .shared_data import (
-    InMemorySharedData,
+from ._internal.record_helpers import (
     new_agent_update_record,
     new_explanation_record,
     new_record,
     new_trace_record,
 )
-from .noop_adapter import NoOpSharedData
-from .policy import PolicyRegistry
-from .record_writer import RecordWriter, StateHashFn, default_state_hash
+from ._internal.policy import PolicyRegistry
+from ._internal.record_writer import RecordWriter, StateHashFn, default_state_hash
 from .run_config import (
     DEFAULT_LOGGING_LEVEL,
     RunConfig,

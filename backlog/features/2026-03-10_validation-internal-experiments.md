@@ -34,7 +34,7 @@ DOAgent is a research project. We need to evaluate it, compare it with other sys
 
 ## Goals
 
-1. ~~End users never need to import `doagent.validation`.~~ **Done:** `doagent.validation` removed. Public surface is `doagent` (Session, make_env, PolicyRegistry and NoOpSharedData in doagent.core) and `doagent.analysis` (when implemented).
+1. ~~End users never need to import `doagent.validation`.~~ **Done:** `doagent.validation` removed. Public surface is **only** `doagent.Session`, `doagent.RunConfig`, and `doagent.make_env`; `doagent.analysis` (when implemented) will be the user-facing way to analyse records. Adapters, PolicyRegistry, and record types are internal (`doagent.core` / `doagent.records`).
 2. Validation/experiments code remains in the repo and usable by the research team: `experiments/` at repo root.
 3. Default install does not expose validation as part of the public API; demos in `examples/` use Session API and optionally import `experiments` for running comparisons.
 4. Documentation and packaging clearly separate "what users use" from "what we use for research."

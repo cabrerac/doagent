@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, Protocol, TypedDict
 
-from ..records import DecisionRequest, DecisionResponse
+from ...records import DecisionRequest, DecisionResponse
 
 
 class Policy(Protocol):

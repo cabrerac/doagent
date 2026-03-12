@@ -93,7 +93,8 @@ doagent/
 
 ## Related
 
-- CIP: 0006, 0007, 0008, 0009
+- **Requirements (WHAT the analysis module delivers):** REQ-0006 (interpretability), REQ-0007 (traceability), REQ-0008 (provenance), REQ-0009 (accountability). The analysis module is the user-facing way to obtain these properties from recorded runs.
+- **CIPs (HOW):** 0006, 0007, 0008, 0009
 - Depends on: 2026-01-28_analysis-suite-demo (completed)
 - Documentation: examples/analysis/README.md, README.md
 

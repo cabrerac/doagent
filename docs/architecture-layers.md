@@ -22,7 +22,7 @@ This document defines the three-layer architecture that separates **what end use
 
 **Purpose:** Let users build multi-agent systems with a single, config-driven API. The library records outcomes, traces, and agent decisions transparently.
 
-**Public surface:** `Session`, `make_env`, `RunConfig`; config-driven setup via `Session.from_config`; `session.inspect(kind)` for post-run access. No `doagent.core` or `doagent.records` in user code.
+**Public surface (only these):** `Session`, `RunConfig`, `make_env`. Config-driven setup via `Session.from_config`; `session.inspect(kind)` for post-run access. User code must not import `doagent.core` or `doagent.records`; tests, demos, and experiment runners that validate the library use this surface only.
 
 **Documentation:** [library-boundaries.md](library-boundaries.md), [data-model-spec.md](data-model-spec.md), [adapter-contract.md](adapter-contract.md).
 

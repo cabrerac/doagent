@@ -49,3 +49,6 @@ Status updated to In Progress. CIP-0001 (Library First Architecture) is actively
 
 ### 2026-02-21
 Iteration 2 complete. CIP-0001 moved to Implemented. Session API is the primary user-facing surface; library boundaries, adapters (InMemory, File, Mongo), validation examples, and documentation all updated. All backlog items closed. Iteration 3 may revisit exposed API surface based on remaining requirements.
+
+### 2026-01-28
+Public API restricted to Session, RunConfig, and make_env only. Tests, demos, and experiments that define or validate the library use this surface; adapter/topology/record types are internal (doagent.core). Documentation (README, library-boundaries, AGENTS.md) updated accordingly.

@@ -17,7 +17,7 @@ from uuid import uuid4
 
 from ..interface.shared_data import SharedDataAdapter
 from ..records import INITIAL_STATE_ID, DecisionRequest, SimpleRecord
-from .record_writer import RecordWriter, StateHashFn, default_state_hash, _serializable
+from ._internal.record_writer import RecordWriter, StateHashFn, default_state_hash, _serializable
 from .run_config import RunConfig
 from .topology import Topology, TopologyConfig
 
@@ -315,9 +315,9 @@ class Session:
           - topology: {"mode": "centralised"|"peer_to_peer"|"federated", "visibility": {...}}
           - policies: {name: entry_point_or_callable, ...}
           - hub_id: str (default "hub")
+          - state_hash_fn: callable for dedup (default: default_state_hash)
         """
-        from .file_shared_data import FileSharedData
-        from .shared_data import InMemorySharedData
+        from .adapters import InMemorySharedData, FileSharedData, NoOpSharedData
 
         sd_cfg = config.get("shared_data") or {}
         sd_type = (sd_cfg.get("type") or "memory").lower()
@@ -329,7 +329,6 @@ class Session:
                 raise ValueError("shared_data.type 'file' requires shared_data.path")
             shared_data = FileSharedData(path)
         elif sd_type == "noop":
-            from .noop_adapter import NoOpSharedData
             shared_data = NoOpSharedData()
         else:
             raise ValueError(f"shared_data.type must be 'memory', 'file', or 'noop'; got {sd_type!r}")
@@ -347,6 +346,7 @@ class Session:
         topology = TopologyConfig(mode=mode)
         visibility = topo_cfg.get("visibility") or None
         hub_id = config.get("hub_id", "hub")
+        state_hash_fn = config.get("state_hash_fn", _DEDUP_DEFAULT)
 
         session = cls(
             shared_data,
@@ -354,12 +354,13 @@ class Session:
             topology=topology,
             visibility=visibility,
             hub_id=hub_id,
+            state_hash_fn=state_hash_fn,
         )
 
         policies_cfg = config.get("policies") or {}
         if policies_cfg:
             from ..env import _resolve_entry_point
-            from .policy import PolicyRegistry
+            from ._internal.policy import PolicyRegistry
 
             registry = PolicyRegistry()
             for name, entry_point in policies_cfg.items():

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, Optional
 
-from ..interface.agent_adapter import AgentAdapter
-from ..interface.shared_data import SharedDataAdapter
-from ..records import SimpleRecord
-from .shared_data import new_record
+from ...interface.agent_adapter import AgentAdapter
+from ...interface.shared_data import SharedDataAdapter
+from ...records import SimpleRecord
+from .._internal.record_helpers import new_record
 
 
 class StubAgent:

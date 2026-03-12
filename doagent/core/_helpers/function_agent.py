@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Callable, Dict, Any
+from typing import Any, Callable, Dict
 from uuid import uuid4
 
-from ..interface.decision_agent import DecisionAgent
-from ..interface.shared_data import SharedDataAdapter
-from ..records import DecisionRequest, DecisionResponse
-from .shared_data import new_record
+from ...interface.decision_agent import DecisionAgent
+from ...interface.shared_data import SharedDataAdapter
+from ...records import DecisionRequest, DecisionResponse
+from .._internal.record_helpers import new_record
 
 
 class FunctionAgent(DecisionAgent):

@@ -1,23 +1,17 @@
-"""Grid-world experiment scenario runner with shared-data communication."""
+"""Grid-world experiment scenario runner.
+
+Uses only the public API: Session is built by the caller via Session.from_config.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from multiprocessing import get_context
 import random
 import time
 from typing import Any, Dict, List, Optional
-from uuid import uuid4
 
-from doagent.core.participation import ParticipationRecord, ParticipationRegistry
-from doagent.core.policy import PolicyRegistry
-from doagent.core.run_config import RunConfig
-from doagent.core.session import Session
-from doagent.core.topology import Topology, TopologyConfig
-from doagent.interface.shared_data import SharedDataAdapter
-from doagent.records import DecisionRequest, DecisionResponse, SimpleRecord
+from doagent import Session
 from experiments.environment import ValidationEnv
-from experiments.multiprocess_interface import MultiProcessInterface
 from experiments.reporting import RunReporter
 
 
@@ -46,11 +40,11 @@ def _serializable(value: Any) -> Any:
     return value
 
 
-def _build_map_from_records(records: List[SimpleRecord]) -> Dict[str, Any]:
+def _build_map_from_records(records: List[Any]) -> Dict[str, Any]:
     """Extract merged cell map from agent_update records."""
     cells: Dict[tuple[int, int], str] = {}
     for record in records:
-        payload = record.payload
+        payload = getattr(record, "payload", record) if not isinstance(record, dict) else record.get("payload", record)
         record_type = payload.get("type")
         if record_type not in {"map_update", "map_summary"}:
             continue
@@ -73,51 +67,13 @@ def _build_map_from_records(records: List[SimpleRecord]) -> Dict[str, Any]:
     }
 
 
-def _build_request(
-    *,
-    agent_id: str,
-    observation: Dict[str, Any],
-    shared_map: Dict[str, Any],
-    round_id: int,
-) -> DecisionRequest:
-    return {
-        "id": f"req-{agent_id}-{round_id}-{uuid4()}",
-        "actor": agent_id,
-        "goal": "map_discovery",
-        "context": {"round": round_id},
-        "inputs": {
-            "observation": _serializable(observation),
-            "shared_map": _serializable(shared_map),
-        },
-    }
-
-
-def _decide_worker(
-    policy_name: str,
-    policy_params: Dict[str, Any],
-    factories: Dict[str, Any],
-    request: DecisionRequest,
-) -> DecisionResponse:
-    policy = factories[policy_name](policy_params)
-    return policy(request)
-
-
 def run_gridworld_validation(
     *,
-    shared_data: SharedDataAdapter,
+    session: Session,
     env: ValidationEnv,
-    registry: PolicyRegistry,
     configs: list[Dict[str, Any]],
     rounds: int,
     seed: int,
-    run_config: RunConfig | None = None,
-    topology: TopologyConfig | None = None,
-    visibility: Optional[Dict[str, list[str]]] = None,
-    hub_id: str = "hub",
-    use_multiprocessing: bool = False,
-    mp_context: str = "spawn",
-    mp_interface: MultiProcessInterface | None = None,
-    participation_registry: ParticipationRegistry | None = None,
     energy_model: bool = False,
     energy_min: int = 6,
     energy_max: int = 12,
@@ -130,29 +86,20 @@ def run_gridworld_validation(
     landmarks_total: Optional[int] = None,
     reporter: RunReporter | None = None,
 ) -> GridWorldRunSummary:
-    """Run the grid-world experiment scenario for a fixed number of rounds."""
-    agent_write_fn = None
-    if use_multiprocessing and mp_interface is not None:
-        agent_write_fn = mp_interface.write_record
-    session = Session(
-        shared_data,
-        run_config,
-        agent_write_fn=agent_write_fn,
-        topology=topology,
-        visibility=visibility,
-        hub_id=hub_id,
-    )
+    """Run the grid-world experiment scenario for a fixed number of rounds.
+
+    Caller must provide a Session built with Session.from_config (including policies and topology).
+    """
     wrapped_env = session.wrap_env(env, env_actor="gridworld_env")
     agents = session.create_agents(
-        configs, registry, goal="map_discovery", payload_type="map_update",
+        configs, goal="map_discovery", payload_type="map_update",
     )
 
     observations = wrapped_env.reset(seed=seed)
-    topo_mode = session.topology.mode
+    topo_mode = session.topology_mode
 
     outcome_count = 0
     rng = random.Random(seed)
-    config_map = {cfg["id"]: cfg for cfg in configs}
     agent_ids_all = list(agents.keys())
     active_agents = set(agent_ids_all)
     contributions = {aid: 0 for aid in agent_ids_all}
@@ -183,21 +130,15 @@ def run_gridworld_validation(
                 landmarks_discovered_set.add(coord)
     if total_cells and len(discovered_cells) >= total_cells:
         discovery_round = 0
-    if participation_registry is not None:
-        for aid in active_agents:
-            participation_registry.register(ParticipationRecord(agent_id=aid))
 
     for round_id in range(1, rounds + 1):
         actions: Dict[str, Any] = {}
-        responses: Dict[str, DecisionResponse] = {}
 
         if energy_model:
             for aid in list(active_agents):
                 energy_levels[aid] -= energy_decay
                 if energy_levels[aid] <= 0:
                     active_agents.remove(aid)
-                    if participation_registry is not None:
-                        participation_registry.deregister(aid)
             for aid in agent_ids_all:
                 if aid in active_agents:
                     continue
@@ -206,65 +147,26 @@ def run_gridworld_validation(
                 )
                 if energy_levels[aid] > energy_leave_threshold:
                     active_agents.add(aid)
-                    if participation_registry is not None:
-                        participation_registry.register(
-                            ParticipationRecord(agent_id=aid)
-                        )
 
         active_agent_ids = sorted(active_agents)
 
         shared_maps: Dict[str, Dict[str, Any]] = {}
         for aid in active_agent_ids:
             records = session.visible_records(aid, kind="agent_update")
-            shared_maps[aid] = _build_map_from_records(records)
+            shared_maps[aid] = _build_map_from_records(list(records))
 
-        if use_multiprocessing and active_agent_ids:
-            requests: Dict[str, DecisionRequest] = {}
-            for aid in active_agent_ids:
-                requests[aid] = _build_request(
-                    agent_id=aid,
-                    observation=observations.get(aid, {}),
-                    shared_map=shared_maps[aid],
-                    round_id=round_id,
-                )
-            factories = registry.factories()
-            ctx = get_context(mp_context)
-            with ctx.Pool(processes=len(active_agent_ids)) as pool:
-                tasks = []
-                for aid in active_agent_ids:
-                    policy = config_map[aid]["policy"]
-                    tasks.append((
-                        policy["name"],
-                        policy.get("params", {}),
-                        factories,
-                        requests[aid],
-                    ))
-                results = pool.starmap(_decide_worker, tasks)
-                for aid, response in zip(active_agent_ids, results):
-                    responses[aid] = response
-                    actions[aid] = response.get("decision", {}).get("action", 0)
-                    obs_for_record = {
-                        "cells": observations.get(aid, {}).get("cells", []),
-                        "shared_map": shared_maps[aid],
-                        "round": round_id,
-                    }
-                    session.record_decision(
-                        aid, obs_for_record, response, round_id,
-                        goal="map_discovery", payload_type="map_update",
-                    )
-        else:
-            for aid in active_agent_ids:
-                observation = observations.get(aid, {})
-                result = agents[aid].decide(observation, round_id, inputs={
-                    "observation": observation,
-                    "shared_map": shared_maps[aid],
-                })
-                responses[aid] = result["response"]
-                actions[aid] = result["action"]
+        for aid in active_agent_ids:
+            observation = observations.get(aid, {})
+            result = agents[aid].decide(observation, round_id, inputs={
+                "observation": observation,
+                "shared_map": shared_maps[aid],
+            })
+            actions[aid] = result["action"]
 
-        if topo_mode == Topology.FEDERATED:
+        if topo_mode == "federated":
+            hub_id = getattr(session, "hub_id", "hub")
             hub_records = session.visible_records(hub_id, kind="agent_update")
-            hub_summary = _build_map_from_records(hub_records)
+            hub_summary = _build_map_from_records(list(hub_records))
             session.record_update(hub_id, hub_summary, payload_type="map_summary")
 
         step = wrapped_env.step(actions)
