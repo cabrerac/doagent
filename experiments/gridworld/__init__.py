@@ -1,4 +1,4 @@
-"""Grid-world mapping validation scenario."""
+"""Grid-world experiment scenario."""
 
 from .scenario import GridWorldRunSummary, run_gridworld_validation
 

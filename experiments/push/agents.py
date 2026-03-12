@@ -1,4 +1,4 @@
-"""Grid-world validation agent configuration types."""
+"""Simple push experiment agent configuration types."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ class AgentMetadata(TypedDict, total=False):
     explanation: str
 
 
-class GridAgentConfig(TypedDict):
-    """Configuration for a grid-world validation agent."""
+class PushAgentConfig(TypedDict):
+    """Configuration for a simple push experiment agent."""
 
     id: str
     policy: Dict[str, Any]

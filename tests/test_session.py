@@ -32,7 +32,7 @@ class StubEnv:
 
 
 def _make_registry_and_configs(agent_ids):
-    from doagent.validation.policy import PolicyRegistry
+    from doagent.core.policy import PolicyRegistry
 
     registry = PolicyRegistry()
 

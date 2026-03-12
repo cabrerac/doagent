@@ -12,8 +12,8 @@ import unittest
 from typing import Any, Dict, List, Tuple
 
 from doagent import Session, make_env
-from examples.validation.gridworld.env import create_gridworld_env
-from examples.validation.gridworld.policies import (
+from examples.gridworld_demo.env import create_gridworld_env
+from examples.gridworld_demo.policies import (
     random_explore_policy,
     frontier_explore_policy,
     auction_frontier_policy,

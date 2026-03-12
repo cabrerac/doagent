@@ -1,4 +1,4 @@
-"""Policy interface and registry for validation scenarios."""
+"""Policy interface and registry (used by Session.from_config and experiments)."""
 
 from __future__ import annotations
 

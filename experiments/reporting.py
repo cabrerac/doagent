@@ -1,4 +1,4 @@
-"""Run reporting helpers for validation scenarios."""
+"""Run reporting helpers for experiment runs."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 @dataclass
 class RunReporter:
-    """Collect and print runtime/final summaries for validation runs."""
+    """Collect and print runtime/final summaries for experiment runs."""
 
     label: str
     print_every: int = 0

@@ -97,7 +97,7 @@ Functions such as `new_record()`, `new_agent_update_record()`, `new_trace_record
 - **Record envelope and data model** — see [data-model-spec.md](data-model-spec.md)
 - **State deduplication** — on by default (`default_state_hash` hashes state-category fields); scenario-overridable
 - **Agent adapters** — `SessionAgent` (via Session), `FunctionAgent`, `StubAgent`
-- **Validation scenarios** — push, gridworld (canonical usage examples live in `examples/validation/`; the validation *package* is internal to the research project — see [Architecture layers](architecture-layers.md))
+- **Validation scenarios** — push, gridworld (canonical demos live in `examples/push_demo/`, `examples/gridworld_demo/`; experiment runners and baselines live in `experiments/` at repo root — see [Architecture layers](architecture-layers.md))
 - **Coordination** — topology (centralised/P2P/federated), participation registry, `visible_records()`
 - **Logging levels** — configurable record writing gated by level (0, 1, 2)
 - **Adapter contract** — documented interface with collection-per-kind storage model; see [adapter-contract.md](adapter-contract.md)
@@ -202,7 +202,7 @@ The library does not implement distributed locking or coordination. Parallel sup
 6. **State deduplication is transparent:** `Session` defaults to `default_state_hash` (hashes `observations` + `done` fields). The user can override or disable. Dedup reuses existing outcome IDs and records pointer traces instead of duplicate outcomes.
 7. **Topology is enforced by Session:** `visible_records()` applies topology rules, so agents only see records permitted by the configured mode.
 8. **Config validation:** Library validates config at Session creation; invalid config raises before any writes.
-9. **Examples:** Validation examples (push, gridworld) use only the Session API; feature examples may use low-level helpers for pedagogical purposes.
+9. **Examples:** Demos (push_demo, gridworld_demo) use only the Session API; minimal_usage demonstrates config-driven setup.
 
 ---
 

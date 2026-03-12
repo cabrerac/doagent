@@ -1,7 +1,7 @@
-"""Push environment factory for the push validation example.
+"""Push environment factory for the push demo.
 
 This is example code, not part of the doagent library. It creates a
-PettingZoo MPE2 push environment wrapped in DOAgent's ParallelEnvWrapper.
+PettingZoo MPE2 push environment wrapped via experiments.environment.ParallelEnvWrapper.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ def create_push_env(
     **kwargs: Any,
 ) -> Any:
     """Create a PettingZoo MPE2 push environment."""
-    from doagent.validation.environment import ParallelEnvWrapper
+    from experiments.environment import ParallelEnvWrapper
 
     params: Dict[str, Any] = {
         "max_cycles": max_cycles,

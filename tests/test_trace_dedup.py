@@ -7,7 +7,7 @@ from doagent.core import InMemorySharedData, RunConfig, Session
 from doagent.core.file_shared_data import FileSharedData
 from doagent.core.record_writer import default_state_hash
 from doagent.records import INITIAL_STATE_ID
-from doagent.validation.policy import PolicyRegistry
+from doagent.core.policy import PolicyRegistry
 
 
 class CyclingEnv:

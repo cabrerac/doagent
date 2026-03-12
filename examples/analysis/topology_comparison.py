@@ -44,7 +44,7 @@ TOPO_COLORS = {"centralised": "#1f77b4", "peer_to_peer": "#ff7f0e", "federated":
 
 def run_topologies(output_dir: Path) -> Dict[str, Path]:
     """Run gridworld under each topology and return records directory paths."""
-    from examples.validation.gridworld.gridworld_validation import (
+    from examples.gridworld_demo.gridworld_demo import (
         load_config,
         parse_topology,
         parse_agent_configs,
@@ -52,7 +52,7 @@ def run_topologies(output_dir: Path) -> Dict[str, Path]:
         GRIDWORLD_POLICIES,
     )
     from doagent import Session, make_env
-    from examples.validation.gridworld.env import create_gridworld_env
+    from examples.gridworld_demo.env import create_gridworld_env
 
     configs_dir = Path(__file__).resolve().parent / "configs"
     records_dirs: Dict[str, Path] = {}

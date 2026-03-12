@@ -115,17 +115,17 @@ python examples/analysis/topology_comparison.py --run
 
 Each script produces PNG/PDF charts and console summaries. See `examples/analysis/README.md` for details.
 
-## Run the validation examples
+## Run the demos
 
 ### Grid-world mapping (dependency-free)
 
 Four agents explore a grid with partial observations, sharing discovered cells via the shared data model. No external dependencies beyond the library.
 
 ```bash
-python -m examples.validation.gridworld.gridworld_validation
+python -m examples.gridworld_demo.gridworld_demo
 ```
 
-Configurable via YAML. Edit `examples/validation/gridworld/gridworld_validation_config.yaml` to change grid size, topology, agent policies, energy model, and more.
+Configurable via YAML. Edit `examples/gridworld_demo/gridworld_demo_config.yaml` to change grid size, topology, agent policies, energy model, and more.
 
 ### Simple push (PettingZoo)
 
@@ -133,10 +133,10 @@ A multi-agent push scenario using PettingZoo's MPE environments.
 
 ```bash
 pip install pettingzoo[mpe] mpe2 pygame
-python -m examples.validation.push.push_validation
+python -m examples.push_demo.push_demo
 ```
 
-Both examples produce output directories with JSONL records, summary JSON, and metrics ready for the analysis tools above.
+Both demos produce output directories with JSONL records, summary JSON, and metrics ready for the analysis tools above.
 
 ## Run the tests
 
@@ -149,13 +149,14 @@ python -m unittest -v
 ```
 doagent/             Library implementation
   core/              Session API, adapters, topology, record writing
-  records/           Record types (SimpleRecord, provenance, accountability)
-  validation/        Validation helpers, environments, policies
+  records/          Record types (SimpleRecord, provenance, accountability)
   interface/         Abstract adapter contracts
+experiments/         Runners, reporters, baselines (research use, not public API)
 examples/
   analysis/          Trace graph, provenance walker, causal attribution
-  validation/        End-to-end scenarios (gridworld, simple push)
-  features/          Focused examples for individual library capabilities
+  push_demo/         End-to-end push scenario (PettingZoo)
+  gridworld_demo/    End-to-end gridworld scenario
+  minimal_usage.py   Minimal Session API example
 tests/               Test suite
 ```
 
@@ -172,18 +173,16 @@ tests/               Test suite
 | `doagent.core.MongoSharedData` | MongoDB adapter (optional) |
 | `doagent.core.TopologyConfig` | Coordination topology configuration |
 | `doagent.core.Topology` | Topology modes: CENTRALISED, PEER_TO_PEER, FEDERATED |
-| `doagent.validation.PolicyRegistry` | Register and create agent policies |
+| `doagent.core.PolicyRegistry` | Register and create agent policies (e.g. for Session.from_config) |
 | `doagent.records.SimpleRecord` | The record envelope type |
 
-**Feature examples** — focused demonstrations of individual capabilities:
+**Demos** — end-to-end examples:
 
 ```bash
-python -m examples.features.minimal_usage           # Write and read records
-python -m examples.features.model_agnostic_agent     # Wrap any callable as an agent
-python -m examples.features.interpretability_usage   # Attach explanations to decisions
-python -m examples.features.traceability_usage       # Link records via trace edges
-python -m examples.features.provenance_usage         # Record who created what
-python -m examples.features.accountability_usage     # Attach ownership and governance
+python -m examples.minimal_usage              # Minimal Session.from_config run
+python -m examples.gridworld_demo.gridworld_demo   # Grid-world mapping
+python -m examples.push_demo.push_demo             # Push (PettingZoo)
+```
 ```
 
 ## Project management

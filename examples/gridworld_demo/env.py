@@ -1,4 +1,4 @@
-"""Grid-world environment factory for the gridworld validation example.
+"""Grid-world environment factory for the gridworld demo.
 
 This is example code, not part of the doagent library. It contains the
 GridWorldEnv implementation and a factory function for use with make_env.
@@ -10,7 +10,7 @@ from dataclasses import dataclass
 import random
 from typing import Any, Dict, Iterable, List, Tuple
 
-from doagent.validation.environment import StepResult
+from experiments.environment import StepResult
 
 try:
     import numpy as np
@@ -261,7 +261,7 @@ def create_gridworld_env(
     seed: int | None = None,
     render_mode: str | None = None,
 ) -> GridWorldEnv:
-    """Create a grid-world environment for validation."""
+    """Create a grid-world environment for the demo."""
     if agent_ids is None:
         agent_ids = ["agent_0", "agent_1"]
     return GridWorldEnv(

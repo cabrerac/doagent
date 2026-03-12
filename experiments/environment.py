@@ -1,9 +1,9 @@
-"""Environment interface and wrapper for validation scenarios."""
+"""Environment interface and wrapper for experiment scenarios."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, Protocol, Tuple
+from typing import Any, Dict, Iterable, Protocol
 
 
 @dataclass(frozen=True)
@@ -18,7 +18,7 @@ class StepResult:
 
 
 class ValidationEnv(Protocol):
-    """Scenario-agnostic environment interface for validation runs."""
+    """Scenario-agnostic environment interface for experiment runs."""
 
     def reset(self, *, seed: int | None = None) -> Dict[str, Any]:
         """Reset the environment and return initial observations."""

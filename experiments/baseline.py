@@ -1,4 +1,4 @@
-"""Baseline comparison helpers for validation runs."""
+"""Baseline comparison helpers for experiment runs."""
 
 from __future__ import annotations
 
@@ -6,33 +6,10 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 from time import perf_counter
-from typing import Callable, Dict, Iterable, Optional
+from typing import Callable, Dict
 
-from ..interface.shared_data import SharedDataAdapter
-from ..records import SimpleRecord
-
-
-class NoOpSharedData(SharedDataAdapter):
-    """Shared data adapter that discards writes for baseline runs."""
-
-    def write(self, record: SimpleRecord) -> None:
-        return None
-
-    def read(self, record_id: str) -> Optional[SimpleRecord]:
-        return None
-
-    def list(self) -> Iterable[SimpleRecord]:
-        return []
-
-    def listen(
-        self,
-        kind: str,
-        *,
-        actor: Optional[str] = None,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
-    ) -> Iterable[SimpleRecord]:
-        return []
+# NoOpSharedData lives in doagent.core.noop_adapter for Session.from_config;
+# experiment scripts can import it from doagent.core if needed.
 
 
 @dataclass(frozen=True)

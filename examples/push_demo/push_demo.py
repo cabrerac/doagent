@@ -1,4 +1,4 @@
-"""Push validation example using the DOAgent Session API.
+"""Push demo using the DOAgent Session API.
 
 Demonstrates config-driven library usage with a PettingZoo environment.
 No doagent.core or doagent.records imports needed.
@@ -12,12 +12,12 @@ import random
 from typing import Any, Dict
 
 from doagent import Session, make_env
-from doagent.validation import (
+from experiments import (
     RunReporter,
     measure_baseline,
     write_summary,
 )
-from examples.validation.push.env import create_push_env
+from examples.push_demo.env import create_push_env
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +226,7 @@ def main() -> None:
             "file": file_reporter.metrics(outcomes=file_outcomes),
         },
     }
-    summary_path = output_dir / "push_validation_summary.json"
+    summary_path = output_dir / "push_demo_summary.json"
     write_summary(summary_path, summary_payload)
     print(f"Summary written to {summary_path}")
 

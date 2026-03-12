@@ -1,4 +1,4 @@
-"""Grid-world policy factories for the gridworld validation example.
+"""Grid-world policy factories for the gridworld demo.
 
 This is example code, not part of the doagent library. It contains
 heuristic policies for the grid-world mapping scenario.

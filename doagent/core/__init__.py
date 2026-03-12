@@ -20,6 +20,8 @@ from .shared_data import (
     new_record,
     new_trace_record,
 )
+from .noop_adapter import NoOpSharedData
+from .policy import PolicyRegistry
 from .record_writer import RecordWriter, StateHashFn, default_state_hash
 from .run_config import (
     DEFAULT_LOGGING_LEVEL,
@@ -37,6 +39,8 @@ __all__ = [
     "InMemorySharedData",
     "FileSharedData",
     "MongoSharedData",
+    "NoOpSharedData",
+    "PolicyRegistry",
     "new_agent_update_record",
     "new_record",
     "new_explanation_record",

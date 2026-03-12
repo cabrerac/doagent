@@ -1,19 +1,19 @@
-"""Simple push validation scenario runner."""
+"""Simple push experiment scenario runner."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional
 
-from ...core.run_config import RunConfig
-from ...core.session import Session
-from ...interface.shared_data import SharedDataAdapter
-from ..policy import PolicyRegistry
+from doagent.core.run_config import RunConfig
+from doagent.core.session import Session
+from doagent.core.policy import PolicyRegistry
+from doagent.interface.shared_data import SharedDataAdapter
 
 
 @dataclass(frozen=True)
 class PushRunSummary:
-    """Summary of a simple push validation run."""
+    """Summary of a simple push experiment run."""
 
     rounds: int
     outcomes: int
@@ -31,7 +31,7 @@ def run_push_validation(
     render: bool = False,
     on_outcome: Callable[[int, Dict[str, Any], Dict[str, float]], None] | None = None,
 ) -> PushRunSummary:
-    """Run the simple push validation scenario for a fixed number of rounds."""
+    """Run the simple push experiment scenario for a fixed number of rounds."""
     session = Session(shared_data, run_config)
     wrapped_env = session.wrap_env(env, env_actor="push_env")
     agents = session.create_agents(configs, registry, goal="push_towards_landmark")

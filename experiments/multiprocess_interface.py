@@ -1,4 +1,4 @@
-"""Multiprocessing interface to enable parallelisation in multi-agent systems."""
+"""Multiprocessing interface for parallel experiment runs."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from dataclasses import asdict
 from multiprocessing import Lock, Manager
 from typing import Callable, Iterable, Optional
 
-from ..interface.shared_data import SharedDataAdapter
-from ..records import SimpleRecord
+from doagent.interface.shared_data import SharedDataAdapter
+from doagent.records import SimpleRecord
 
 
 class MultiProcessInterface:

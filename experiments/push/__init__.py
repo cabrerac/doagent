@@ -1,4 +1,4 @@
-"""Simple push validation scenario."""
+"""Simple push experiment scenario."""
 
 from .scenario import PushRunSummary, run_push_validation
 

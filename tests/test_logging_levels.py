@@ -4,12 +4,12 @@ import unittest
 
 from doagent import make_env
 from doagent.core import InMemorySharedData, RunConfig
-from doagent.validation import (
+from experiments import (
     PolicyRegistry,
     run_gridworld_validation,
 )
-from examples.validation.gridworld.env import create_gridworld_env
-from examples.validation.gridworld.policies import register_gridworld_policies
+from examples.gridworld_demo.env import create_gridworld_env
+from examples.gridworld_demo.policies import register_gridworld_policies
 
 
 def _agent_configs_with_explanation():

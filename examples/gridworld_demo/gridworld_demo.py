@@ -1,4 +1,4 @@
-"""Grid-world validation example using the DOAgent Session API.
+"""Grid-world demo using the DOAgent Session API.
 
 Demonstrates all three DOA principles through the library:
 - Shared-data model: agents share knowledge via shared data, library records transparently.
@@ -8,7 +8,7 @@ Demonstrates all three DOA principles through the library:
 Config-driven: no doagent.core or doagent.records imports needed.
 
 Run from the repository root so that the doagent package is on the path:
-  python -m examples.validation.gridworld.gridworld_validation [config.yaml] [--record-gif path.gif]
+  python -m examples.gridworld_demo.gridworld_demo [config.yaml] [--record-gif path.gif]
 """
 
 from __future__ import annotations
@@ -23,14 +23,14 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 from doagent import Session, make_env
-from doagent.validation import (
+from experiments import (
     RunReporter,
     measure_baseline,
     output_bytes_from_path,
     write_summary,
 )
-from examples.validation.gridworld.env import create_gridworld_env
-from examples.validation.gridworld.policies import (
+from examples.gridworld_demo.env import create_gridworld_env
+from examples.gridworld_demo.policies import (
     random_explore_policy,
     frontier_explore_policy,
     auction_frontier_policy,
@@ -294,7 +294,7 @@ def _make_session_config(
 
 def main() -> None:
     script_dir = Path(__file__).resolve().parent
-    default_config = script_dir / "gridworld_validation_config.yaml"
+    default_config = script_dir / "gridworld_demo_config.yaml"
     argv = list(sys.argv[1:])
     record_gif_path: Optional[Path] = None
     if "--record-gif" in argv:
@@ -469,7 +469,7 @@ def main() -> None:
         },
         "baseline_elapsed_seconds": baseline_metrics.elapsed_seconds,
     }
-    summary_path = output_dir / "gridworld_validation_summary.json"
+    summary_path = output_dir / "gridworld_demo_summary.json"
     write_summary(summary_path, summary_payload)
     print(f"\nSummary written to {summary_path}")
 

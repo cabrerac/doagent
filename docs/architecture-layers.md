@@ -44,11 +44,10 @@ This document defines the three-layer architecture that separates **what end use
 
 **Purpose:** Support the DOAgent research project’s own evaluation: compare DOAgent with other systems, compare versions of DOAgent, run controlled benchmarks and baselines. Not for end users.
 
-**Current location:** `doagent.validation` (runners, policy registry, env wrappers, `RunReporter`, `measure_baseline`, etc.).
+**Current location:** `experiments/` at repo root (runners, reporters, baselines, push/gridworld scenario wiring). End-user demos live in `examples/push_demo/` and `examples/gridworld_demo/` and use only the public Session API.
 
-**Target state:** Removed from the public API. Implemented either as:
-- A private subpackage (e.g. `doagent._validation` or `doagent._experiments`), or  
-- Code outside the main package (e.g. `experiments/` or `research/` at repo root).
+**Target state:** Not part of the public API. Implemented as:
+- `experiments/` at repo root (runners, reporters, baselines, scenario wiring). Demos in `examples/` (push_demo, gridworld_demo) show end-user usage and may call into experiments for running comparisons.
 
 **Implications:**
 - Not documented as part of the public API.

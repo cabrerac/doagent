@@ -2,13 +2,13 @@
 
 import unittest
 
-from examples.features import minimal_usage
+from examples.minimal_usage import main
 
 
 class TestExample(unittest.TestCase):
     def test_minimal_usage_runs(self) -> None:
         """Ensure the minimal usage example runs without errors."""
-        minimal_usage.main()
+        main()
 
 
 if __name__ == "__main__":

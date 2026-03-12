@@ -1,4 +1,4 @@
-"""Grid-world validation scenario runner with shared-data communication."""
+"""Grid-world experiment scenario runner with shared-data communication."""
 
 from __future__ import annotations
 
@@ -9,21 +9,21 @@ import time
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from ...core.participation import ParticipationRecord, ParticipationRegistry
-from ...core.run_config import RunConfig
-from ...core.session import Session
-from ...core.topology import Topology, TopologyConfig
-from ...interface.shared_data import SharedDataAdapter
-from ...records import DecisionRequest, DecisionResponse, SimpleRecord
-from ..environment import ValidationEnv
-from ..multiprocess_interface import MultiProcessInterface
-from ..policy import PolicyRegistry
-from ..reporting import RunReporter
+from doagent.core.participation import ParticipationRecord, ParticipationRegistry
+from doagent.core.policy import PolicyRegistry
+from doagent.core.run_config import RunConfig
+from doagent.core.session import Session
+from doagent.core.topology import Topology, TopologyConfig
+from doagent.interface.shared_data import SharedDataAdapter
+from doagent.records import DecisionRequest, DecisionResponse, SimpleRecord
+from experiments.environment import ValidationEnv
+from experiments.multiprocess_interface import MultiProcessInterface
+from experiments.reporting import RunReporter
 
 
 @dataclass(frozen=True)
 class GridWorldRunSummary:
-    """Summary of a grid-world validation run."""
+    """Summary of a grid-world experiment run."""
 
     rounds: int
     outcomes: int
@@ -130,7 +130,7 @@ def run_gridworld_validation(
     landmarks_total: Optional[int] = None,
     reporter: RunReporter | None = None,
 ) -> GridWorldRunSummary:
-    """Run the grid-world validation scenario for a fixed number of rounds."""
+    """Run the grid-world experiment scenario for a fixed number of rounds."""
     agent_write_fn = None
     if use_multiprocessing and mp_interface is not None:
         agent_write_fn = mp_interface.write_record

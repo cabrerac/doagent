@@ -329,7 +329,7 @@ class Session:
                 raise ValueError("shared_data.type 'file' requires shared_data.path")
             shared_data = FileSharedData(path)
         elif sd_type == "noop":
-            from ..validation.baseline import NoOpSharedData
+            from .noop_adapter import NoOpSharedData
             shared_data = NoOpSharedData()
         else:
             raise ValueError(f"shared_data.type must be 'memory', 'file', or 'noop'; got {sd_type!r}")
@@ -359,7 +359,7 @@ class Session:
         policies_cfg = config.get("policies") or {}
         if policies_cfg:
             from ..env import _resolve_entry_point
-            from ..validation.policy import PolicyRegistry
+            from .policy import PolicyRegistry
 
             registry = PolicyRegistry()
             for name, entry_point in policies_cfg.items():
