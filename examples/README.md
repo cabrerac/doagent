@@ -20,7 +20,7 @@ Each demo uses the **public API** only: `Session`, `RunConfig`, `make_env`, `Run
 | **push_demo** | Two agents in a PettingZoo MPE push scenario. File-backed run, then analysis: provenance, traceability, interpretability (no attribution — push has no discovery semantics). Requires `pettingzoo[mpe]`, `mpe2`, `pygame`. |
 | **minimal_usage** | Smallest Session-based run (memory-backed) for quick sanity checks. |
 
-After a file-backed run, output lives under `output/<run_id>/` with `records/`, `metadata.json`, and any analysis artefacts. **Use only the analysis tools that fit your scenario** (see main README “Analysis” and `doagent.analysis` package docstring).
+After a file-backed run, output lives under `output/<run_id>/`: `records/`, `metadata.json`, and `analysis/<category>/` for artefacts (each category gets PNG and PDF for images). **Use only the analysis tools that fit your scenario** (see main README “Analysis” and `doagent.analysis` package docstring).
 
 ## Config alternatives
 

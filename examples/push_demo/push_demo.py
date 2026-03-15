@@ -138,7 +138,7 @@ def main() -> None:
             "dynamic_rescaling": False,
         }
         if render_demo:
-            env_params["render_mode"] = render_demo
+            env_params["render_mode"] = "human"  # PettingZoo expects "human" for a visible window
         env = make_env(create_push_env, **env_params)
     except ImportError as exc:
         raise SystemExit(
@@ -175,34 +175,43 @@ def main() -> None:
         path=str(run_path / "records"),
     )
 
-    # -- Analysis showcase: use only the analyses that fit this scenario --
+    # -- Analysis showcase: output under run_path/analysis/<category>/ (PNG + PDF for images) --
     # Push has no "discovery" semantics, so we skip causal attribution; provenance, traceability, interpretability apply.
     output_base = "./output"
     run_id = session.run_id
     chain = None
+    analysis_base = run_path / "analysis"
     if run_id:
         print(f"\n=== Analysis (run_id={run_id}) ===")
         try:
+            prov_dir = analysis_base / "provenance"
+            prov_dir.mkdir(parents=True, exist_ok=True)
             chain = provenance.walk_chain("last", run_id, output_base=output_base, max_depth=6)
             print(f"Provenance: chain root {chain.get('record_id', '?')}, {len(chain.get('children', []))} direct links")
-            provenance.render_chain_tree("last", run_id, str(run_path / "provenance_tree.png"), output_base=output_base)
-            print(f"  -> {run_path / 'provenance_tree.png'}")
+            provenance.render_chain_tree("last", run_id, str(prov_dir / "provenance_tree.png"), output_base=output_base)
+            provenance.render_chain_tree("last", run_id, str(prov_dir / "provenance_tree.pdf"), output_base=output_base)
+            print(f"  -> {prov_dir / 'provenance_tree.png'}, {prov_dir / 'provenance_tree.pdf'}")
         except Exception as e:
             print(f"  Provenance: {e}")
         try:
+            trace_dir = analysis_base / "traceability"
+            trace_dir.mkdir(parents=True, exist_ok=True)
             G = traceability.build_trace_graph(run_id, output_base=output_base)
             print(f"Traceability: graph {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
-            traceability.render_trace_graph(G, str(run_path / "trace_graph.png"))
-            print(f"  -> {run_path / 'trace_graph.png'}")
+            traceability.render_trace_graph(G, str(trace_dir / "trace_graph.png"))
+            traceability.render_trace_graph(G, str(trace_dir / "trace_graph.pdf"))
+            print(f"  -> {trace_dir / 'trace_graph.png'}, {trace_dir / 'trace_graph.pdf'}")
         except Exception as e:
             print(f"  Traceability: {e}")
         try:
+            interp_dir = analysis_base / "interpretability"
+            interp_dir.mkdir(parents=True, exist_ok=True)
             last_id = chain.get("record_id") if chain else None
             if last_id:
                 explanations = interpretability.get_explanations_for(last_id, run_id, output_base=output_base)
                 print(f"Interpretability: {len(explanations)} explanation/decision records for last outcome")
                 if explanations:
-                    out_file = run_path / "explanations_for_last.json"
+                    out_file = interp_dir / "explanations_for_last.json"
                     with out_file.open("w", encoding="utf-8") as f:
                         json.dump(explanations, f, indent=2, default=str)
                     print(f"  -> {out_file}")
