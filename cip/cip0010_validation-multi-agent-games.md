@@ -33,6 +33,10 @@ title: "Validation on Multi-Agent Games"
 ## Summary
 Validate DOAgent on a representative multi-agent game that exercises coordination, shared data, and interpretability/traceability outputs.
 
+## Future work: validation experiments
+
+The library and demos (gridworld, push) are in place. **Validation experiments** — comparison runners (e.g. `run_gridworld_comparison`, `run_push_comparison`, `run_topology_comparison`) and further validation scenarios in `experiments/` — are to be developed and refined in the future. When planning work on validation, refer to this CIP and the related requirements; extend the experiments suite rather than the core library.
+
 ## Motivation
 Multi-agent games are canonical benchmarks for coordination. A toy game example provides an end-to-end validation of the current architecture with reproducible inputs and outputs. Validation scenarios are a **chosen subset** to demonstrate and stress-test the library; the library is **generic** and is intended for use in game and other use cases beyond these examples. See [Validation and Benchmarks](../docs/validation-and-benchmarks.md) for the principle and for the mapping from the agentic reasoning paper’s §6/§7 to our validation requirements.
 

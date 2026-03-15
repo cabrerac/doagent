@@ -13,7 +13,6 @@ Run from the repository root so that the doagent package is on the path:
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 import random
 import sys
@@ -22,12 +21,12 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
-from doagent import Session, make_env
-from experiments import (
-    RunReporter,
-    measure_baseline,
-    output_bytes_from_path,
-    write_summary,
+from doagent import Session, RunReporter, make_env
+from doagent.analysis import (
+    accountability,
+    interpretability,
+    provenance,
+    traceability,
 )
 from examples.gridworld_demo.env import create_gridworld_env
 from examples.gridworld_demo.policies import (
@@ -269,11 +268,13 @@ def run_with_session(
 def _make_session_config(
     shared_data_type: str = "memory",
     shared_data_path: str | None = None,
+    scenario_name: str | None = None,
+    output_base: str = "output",
     topology_mode: str = "centralised",
     visibility: Dict[str, List[str]] | None = None,
     hub_id: str = "hub",
 ) -> Dict[str, Any]:
-    """Build a Session config dict from run parameters."""
+    """Build a Session config dict from run parameters. For file runs with scenario_name, library creates run_id and folders."""
     cfg: Dict[str, Any] = {
         "shared_data": {"type": shared_data_type},
         "run_config": {"logging_level": 2},
@@ -281,7 +282,10 @@ def _make_session_config(
         "policies": GRIDWORLD_POLICIES,
         "hub_id": hub_id,
     }
-    if shared_data_path:
+    if shared_data_type == "file" and scenario_name:
+        cfg["scenario_name"] = scenario_name
+        cfg["output_base"] = output_base
+    elif shared_data_path:
         cfg["shared_data"]["path"] = shared_data_path
     if visibility:
         cfg["topology"]["visibility"] = visibility
@@ -365,113 +369,75 @@ def main() -> None:
         print_every=print_every,
     )
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = Path("output") / f"gridworld_run_{timestamp}"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
     record_frames: List[Any] = [] if record_gif_path is not None else []
 
-    # -- Baseline run (NoOp adapter) --
-    print("\n=== Baseline run ===")
-    baseline_reporter = RunReporter(
-        "baseline", print_every=print_every,
-        record_series=True, series_every=1, record_entropy=True, action_space=5,
-    )
-    noop_cfg = _make_session_config(
-        shared_data_type="noop", topology_mode=topology_mode,
-        visibility=visibility, hub_id=hub_id,
-    )
-    baseline_session = Session.from_config(noop_cfg)
-    baseline_metrics = measure_baseline(
-        lambda: run_with_session(
-            baseline_session, **run_kwargs, reporter=baseline_reporter,
-        )
-    )
-    baseline_session2 = Session.from_config(noop_cfg)
-    baseline_summary = run_with_session(
-        baseline_session2,
-        **run_kwargs,
-        reporter=baseline_reporter,
-        record_frames=record_frames if record_gif_path is not None else None,
-    )
-    if record_gif_path is not None:
-        if record_frames:
-            record_gif_path.parent.mkdir(parents=True, exist_ok=True)
-            import imageio
-            imageio.mimwrite(str(record_gif_path), record_frames, fps=4, loop=0)
-            print(f"GIF written to {record_gif_path} ({len(record_frames)} frames)")
-        else:
-            print("Warning: no frames captured for GIF (ensure pygame and numpy are installed)")
-        record_gif_path = None
-        record_frames = []
-
-    # -- In-memory run --
-    print("\n=== In-memory run ===")
-    mem_session = Session.from_config(
-        _make_session_config(topology_mode=topology_mode, visibility=visibility, hub_id=hub_id)
-    )
-    mem_reporter = RunReporter(
-        "in_memory", print_every=print_every,
-        record_series=True, series_every=1, record_entropy=True, action_space=5,
-    )
-    mem_summary = run_with_session(
-        mem_session, **run_kwargs, reporter=mem_reporter,
-    )
-
-    agent_updates = mem_session.inspect("agent_update")
-    traces = mem_session.inspect("trace")
-    outcomes = mem_session.inspect("outcome")
-    print(f"Records: {len(agent_updates)} agent_updates, {len(outcomes)} outcomes, {len(traces)} traces")
-
-    mem_reporter.finalize(
-        rounds=rounds, seed=seed, outcomes=mem_summary["outcomes"],
-        elapsed_seconds=0.0, output_bytes=0, render=render,
-    )
-
-    # -- File run --
-    print("\n=== File run ===")
-    records_dir = output_dir / "records"
-    file_session = Session.from_config(
+    # -- Single file run (library creates run_id, output folder, records/, metadata.json) --
+    print("\n=== Grid-world run (file-backed) ===")
+    session = Session.from_config(
         _make_session_config(
             shared_data_type="file",
-            shared_data_path=str(records_dir),
+            scenario_name="gridworld",
+            output_base="output",
             topology_mode=topology_mode,
             visibility=visibility,
             hub_id=hub_id,
         )
     )
-    file_reporter = RunReporter(
-        "file", print_every=print_every,
+    run_path = Path(session.run_path)
+    reporter = RunReporter(
+        "gridworld", print_every=print_every,
         record_series=True, series_every=1, record_entropy=True, action_space=5,
     )
-    file_summary = run_with_session(
-        file_session, **run_kwargs, reporter=file_reporter,
+    summary = run_with_session(
+        session, **run_kwargs, reporter=reporter,
+        record_frames=record_frames if record_gif_path is not None else None,
     )
-
-    file_metrics = measure_baseline(lambda: None, output_path=records_dir)
-    file_reporter.finalize(
-        rounds=rounds, seed=seed, outcomes=file_summary["outcomes"],
-        elapsed_seconds=file_metrics.elapsed_seconds,
-        output_bytes=output_bytes_from_path(records_dir),
-        render=render, path=str(records_dir),
+    reporter.finalize(
+        rounds=rounds, seed=seed, outcomes=summary["outcomes"],
+        elapsed_seconds=0.0, output_bytes=0, render=render,
+        path=str(run_path / "records"),
     )
+    if record_gif_path is not None and record_frames:
+        record_gif_path.parent.mkdir(parents=True, exist_ok=True)
+        import imageio
+        imageio.mimwrite(str(record_gif_path), record_frames, fps=4, loop=0)
+        print(f"GIF written to {record_gif_path} ({len(record_frames)} frames)")
 
-    # -- Combined summary --
-    def _run_metrics(label: str, reporter: RunReporter, summary: Dict[str, Any]) -> Dict[str, Any]:
-        return reporter.metrics(outcomes=summary["outcomes"], extra=summary)
-
-    summary_payload = {
-        "run": {"id": run_cfg.get("id", "gridworld-run"), "seed": seed, "rounds": rounds},
-        "runs": {
-            "baseline": _run_metrics("baseline", baseline_reporter, baseline_summary),
-            "in_memory": _run_metrics("in_memory", mem_reporter, mem_summary),
-            "file": _run_metrics("file", file_reporter, file_summary),
-        },
-        "baseline_elapsed_seconds": baseline_metrics.elapsed_seconds,
-    }
-    summary_path = output_dir / "gridworld_demo_summary.json"
-    write_summary(summary_path, summary_payload)
-    print(f"\nSummary written to {summary_path}")
+    # -- Analysis showcase (what the library enables from recorded data) --
+    output_base = "output"
+    run_id = session.run_id
+    chain = None
+    if run_id:
+        print(f"\n=== Analysis (run_id={run_id}) ===")
+        try:
+            chain = provenance.walk_chain("last", run_id, output_base=output_base, max_depth=6)
+            print(f"Provenance: chain root {chain.get('record_id', '?')}, {len(chain.get('children', []))} direct links")
+            provenance.render_chain_tree("last", run_id, str(run_path / "provenance_tree.png"), output_base=output_base)
+            print(f"  -> {run_path / 'provenance_tree.png'}")
+        except Exception as e:
+            print(f"  Provenance: {e}")
+        try:
+            G = traceability.build_trace_graph(run_id, output_base=output_base)
+            print(f"Traceability: graph {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
+            traceability.render_trace_graph(G, str(run_path / "trace_graph.png"))
+            print(f"  -> {run_path / 'trace_graph.png'}")
+        except Exception as e:
+            print(f"  Traceability: {e}")
+        try:
+            attr = accountability.causal_attribution(run_id, output_base=output_base)
+            print(f"Accountability: {len(attr.get('agents', []))} agents, max_round={attr.get('max_round', 0)}")
+            accountability.render_attribution_charts(attr, str(run_path))
+            print(f"  -> {run_path / 'causal_attribution.png'}")
+        except Exception as e:
+            print(f"  Accountability: {e}")
+        try:
+            last_id = chain.get("record_id") if chain else None
+            if last_id:
+                explanations = interpretability.get_explanations_for(last_id, run_id, output_base=output_base)
+                print(f"Interpretability: {len(explanations)} explanation/decision records for last outcome")
+        except Exception as e:
+            print(f"  Interpretability: {e}")
+    print(f"\nRun output: {run_path} (run_id={run_id})")
 
 
 if __name__ == "__main__":

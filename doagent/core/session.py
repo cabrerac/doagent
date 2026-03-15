@@ -12,6 +12,9 @@ Supports all three DOA principles:
 
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
@@ -23,6 +26,35 @@ from .topology import Topology, TopologyConfig
 
 _DEDUP_DEFAULT = object()
 """Sentinel to distinguish 'not provided' from explicit None (opt-out)."""
+
+
+def _create_run_folders_and_metadata(
+    output_base: str | Path,
+    scenario_name: str,
+    *,
+    storage_type: str = "file",
+    records_dir_name: str = "records",
+) -> tuple[str, Path, Path]:
+    """Create output_base/run_id/, records subfolder, and metadata.json. Return (run_id, run_path, records_path)."""
+    output_base = Path(output_base)
+    run_id = f"{scenario_name}_run_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
+    run_path = output_base / run_id
+    records_path = run_path / records_dir_name
+    run_path.mkdir(parents=True, exist_ok=True)
+    records_path.mkdir(parents=True, exist_ok=True)
+    metadata = {
+        "run_id": run_id,
+        "scenario_name": scenario_name,
+        "storage_type": storage_type,
+        "metadata_schema_version": 1,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if storage_type == "file":
+        metadata["records_dir"] = records_dir_name
+    metadata_path = run_path / "metadata.json"
+    with metadata_path.open("w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2, sort_keys=True)
+    return run_id, run_path, records_path
 
 
 # ---------------------------------------------------------------------------
@@ -256,12 +288,16 @@ class Session:
         hub_id: str = "hub",
         agent_write_fn: Optional[Callable[..., None]] = None,
         state_hash_fn: Any = _DEDUP_DEFAULT,
+        run_id: Optional[str] = None,
+        run_path: Optional[str] = None,
     ) -> None:
         self._shared_data = shared_data
         self._config = run_config or RunConfig()
         self._topology = topology or TopologyConfig()
         self._visibility = visibility or {}
         self._hub_id = hub_id
+        self._run_id = run_id
+        self._run_path = run_path
         resolved_hash_fn: Optional[StateHashFn] = (
             default_state_hash if state_hash_fn is _DEDUP_DEFAULT else state_hash_fn
         )
@@ -273,6 +309,16 @@ class Session:
         )
         self._wrapped_env: Optional[WrappedEnv] = None
         self._policy_registry: Optional[Any] = None
+
+    @property
+    def run_id(self) -> Optional[str]:
+        """Run identifier when this session has an output folder (file-backed with scenario_name). None otherwise."""
+        return self._run_id
+
+    @property
+    def run_path(self) -> Optional[str]:
+        """Path to the run folder (output_base/run_id) when this session has one. None otherwise."""
+        return self._run_path
 
     @property
     def topology_mode(self) -> str:
@@ -310,7 +356,9 @@ class Session:
         """Build a Session from a config dict. Keeps adapter construction internal.
 
         Config keys (all optional):
-          - shared_data: {"type": "memory"|"file"|"noop"} (file requires "path")
+          - shared_data: {"type": "memory"|"file"|"noop"} (file: use "path" or set scenario_name for library-created run folders)
+          - scenario_name: str (e.g. "gridworld", "push"); when set with file storage, library creates run_id, output folders, and metadata.json
+          - output_base: str (default "./output"); base directory for run folders when scenario_name is set
           - run_config: {"logging_level": 0|1|2}
           - topology: {"mode": "centralised"|"peer_to_peer"|"federated", "visibility": {...}}
           - policies: {name: entry_point_or_callable, ...}
@@ -321,13 +369,28 @@ class Session:
 
         sd_cfg = config.get("shared_data") or {}
         sd_type = (sd_cfg.get("type") or "memory").lower()
+        scenario_name = config.get("scenario_name")
+        output_base = config.get("output_base", "./output")
+        run_id: Optional[str] = None
+        run_path: Optional[str] = None
+
         if sd_type == "memory":
             shared_data: SharedDataAdapter = InMemorySharedData()
         elif sd_type == "file":
-            path = sd_cfg.get("path")
-            if not path:
-                raise ValueError("shared_data.type 'file' requires shared_data.path")
-            shared_data = FileSharedData(path)
+            if scenario_name:
+                _run_id, _run_path, records_path = _create_run_folders_and_metadata(
+                    output_base, scenario_name, storage_type="file"
+                )
+                run_id = _run_id
+                run_path = str(_run_path)
+                shared_data = FileSharedData(records_path)
+            else:
+                path = sd_cfg.get("path")
+                if not path:
+                    raise ValueError(
+                        "shared_data.type 'file' requires either shared_data.path or scenario_name in config"
+                    )
+                shared_data = FileSharedData(path)
         elif sd_type == "noop":
             shared_data = NoOpSharedData()
         else:
@@ -355,6 +418,8 @@ class Session:
             visibility=visibility,
             hub_id=hub_id,
             state_hash_fn=state_hash_fn,
+            run_id=run_id,
+            run_path=run_path,
         )
 
         policies_cfg = config.get("policies") or {}

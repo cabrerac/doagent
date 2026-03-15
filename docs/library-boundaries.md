@@ -31,7 +31,7 @@ The user controls **when** things happen. The library handles **how** records ar
 
 ## 3. Records Are Internal — Session Is the API
 
-**Supported public surface:** The library exposes only **`Session`**, **`RunConfig`**, and **`make_env`** from the top-level package (`from doagent import Session, RunConfig, make_env`). Tests, demos, and experiments use this surface only; they do not import adapters, `PolicyRegistry`, or other internals from `doagent.core`.
+**Supported public surface:** The library exposes **`Session`**, **`RunConfig`**, **`make_env`**, and **`RunReporter`** from the top-level package (`from doagent import Session, RunConfig, make_env, RunReporter`). `RunReporter` is an optional helper for run progress and final summaries (e.g. in demos). Tests, demos, and experiments use this surface only; they do not import adapters, `PolicyRegistry`, or other internals from `doagent.core`.
 
 **Users never call low-level record APIs directly.**
 
@@ -161,7 +161,7 @@ The user sets the level; the library gates all record writes accordingly.
 
 ## 10. Testing Boundary
 
-Tests, demos, and experiments that define or validate the library’s supported behaviour use **only the public API**: `Session`, `RunConfig`, `make_env`, `Session.from_config`, `session.wrap_env`, `session.create_agents`, `session.inspect`, etc. No `doagent.core` or `doagent.records` imports in those code paths.
+Tests, demos, and experiments that define or validate the library’s supported behaviour use **only the public API**: `Session`, `RunConfig`, `make_env`, `RunReporter`, `Session.from_config`, `session.wrap_env`, `session.create_agents`, `session.inspect`, etc. No `doagent.core` or `doagent.records` imports in those code paths.
 
 | Test type | Allowed API |
 |-----------|-------------|

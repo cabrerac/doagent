@@ -6,16 +6,16 @@ No doagent.core or doagent.records imports needed.
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 import random
 from typing import Any, Dict
 
-from doagent import Session, make_env
-from experiments import (
-    RunReporter,
-    measure_baseline,
-    write_summary,
+from doagent import Session, RunReporter, make_env
+from doagent.analysis import (
+    accountability,
+    interpretability,
+    provenance,
+    traceability,
 )
 from examples.push_demo.env import create_push_env
 
@@ -151,9 +151,12 @@ def main() -> None:
 
     configs = make_agent_configs()
 
-    # -- In-memory run (config-driven session) --
+    # -- Single file run (library creates run_id, output folder, records/, metadata.json) --
+    print("\n=== Push run (file-backed) ===")
     session = Session.from_config({
-        "shared_data": {"type": "memory"},
+        "shared_data": {"type": "file"},
+        "scenario_name": "push",
+        "output_base": "./output",
         "run_config": {"logging_level": 2},
         "policies": {
             "fixed": fixed_policy,
@@ -161,74 +164,56 @@ def main() -> None:
             "heuristic_push_block": heuristic_push_block,
         },
     })
+    run_path = Path(session.run_path)
     reporter = RunReporter(
-        "in_memory", print_every=print_every,
+        "push", print_every=print_every,
         record_series=True, series_every=1, record_entropy=True, action_space=5,
     )
-
-    def in_memory_run():
-        return run_with_session(
-            session, env, configs, rounds, seed,
-            render=render_demo, reporter=reporter,
-        )
-
-    metrics = measure_baseline(in_memory_run)
-    outcomes = in_memory_run()
-
-    agent_updates = session.inspect("agent_update")
-    traces = session.inspect("trace")
-    outcome_records = session.inspect("outcome")
-    print(f"Records: {len(agent_updates)} agent_updates, {len(outcome_records)} outcomes, {len(traces)} traces")
-
+    outcomes = run_with_session(
+        session, env, configs, rounds, seed,
+        render=render_demo, reporter=reporter,
+    )
     reporter.finalize(
         rounds=rounds, seed=seed, outcomes=outcomes,
-        elapsed_seconds=metrics.elapsed_seconds,
-        output_bytes=metrics.output_bytes, render=render_demo,
+        elapsed_seconds=0.0, output_bytes=0, render=render_demo,
+        path=str(run_path / "records"),
     )
 
-    # -- File run (config-driven session) --
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = Path("./output") / f"push_run_{timestamp}"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    records_path = str(output_dir / "records")
-
-    file_session = Session.from_config({
-        "shared_data": {"type": "file", "path": records_path},
-        "run_config": {"logging_level": 2},
-        "policies": {
-            "fixed": fixed_policy,
-            "heuristic_goal_seek": heuristic_goal_seek,
-            "heuristic_push_block": heuristic_push_block,
-        },
-    })
-    file_reporter = RunReporter(
-        "file", print_every=print_every,
-        record_series=True, series_every=1, record_entropy=True, action_space=5,
-    )
-    file_outcomes = run_with_session(
-        file_session, env, configs, rounds, seed,
-        render=render_demo, reporter=file_reporter,
-    )
-    records_dir = output_dir / "records"
-    file_metrics = measure_baseline(
-        lambda: None, output_path=records_dir,
-    )
-    file_reporter.finalize(
-        rounds=rounds, seed=seed, outcomes=file_outcomes,
-        elapsed_seconds=file_metrics.elapsed_seconds,
-        output_bytes=file_metrics.output_bytes, render=render_demo,
-        path=str(records_dir),
-    )
-
-    summary_payload = {
-        "runs": {
-            "in_memory": reporter.metrics(outcomes=outcomes),
-            "file": file_reporter.metrics(outcomes=file_outcomes),
-        },
-    }
-    summary_path = output_dir / "push_demo_summary.json"
-    write_summary(summary_path, summary_payload)
-    print(f"Summary written to {summary_path}")
+    # -- Analysis showcase (what the library enables from recorded data) --
+    output_base = "./output"
+    run_id = session.run_id
+    chain = None
+    if run_id:
+        print(f"\n=== Analysis (run_id={run_id}) ===")
+        try:
+            chain = provenance.walk_chain("last", run_id, output_base=output_base, max_depth=6)
+            print(f"Provenance: chain root {chain.get('record_id', '?')}, {len(chain.get('children', []))} direct links")
+            provenance.render_chain_tree("last", run_id, str(run_path / "provenance_tree.png"), output_base=output_base)
+            print(f"  -> {run_path / 'provenance_tree.png'}")
+        except Exception as e:
+            print(f"  Provenance: {e}")
+        try:
+            G = traceability.build_trace_graph(run_id, output_base=output_base)
+            print(f"Traceability: graph {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
+            traceability.render_trace_graph(G, str(run_path / "trace_graph.png"))
+            print(f"  -> {run_path / 'trace_graph.png'}")
+        except Exception as e:
+            print(f"  Traceability: {e}")
+        try:
+            attr = accountability.causal_attribution(run_id, output_base=output_base)
+            print(f"Accountability: {len(attr.get('agents', []))} agents, max_round={attr.get('max_round', 0)}")
+            accountability.render_attribution_charts(attr, str(run_path))
+            print(f"  -> {run_path / 'causal_attribution.png'}")
+        except Exception as e:
+            print(f"  Accountability: {e}")
+        try:
+            last_id = chain.get("record_id") if chain else None
+            if last_id:
+                explanations = interpretability.get_explanations_for(last_id, run_id, output_base=output_base)
+                print(f"Interpretability: {len(explanations)} explanation/decision records for last outcome")
+        except Exception as e:
+            print(f"  Interpretability: {e}")
+    print(f"\nRun output: {run_path} (run_id={run_id})")
 
 
 if __name__ == "__main__":

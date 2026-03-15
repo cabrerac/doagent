@@ -1,6 +1,9 @@
 """Tests for the Session-based transparent API."""
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from doagent.core import InMemorySharedData, RunConfig, Session
 
@@ -79,6 +82,34 @@ class TestSession(unittest.TestCase):
         self.assertEqual(len(agent_updates), 6)
         self.assertEqual(len(outcomes), 3)
         self.assertEqual(len(traces), 6)
+
+    def test_from_config_with_scenario_name_creates_run_folders_and_metadata(self):
+        """When scenario_name and file storage are set, library creates run_id, folders, and metadata.json."""
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "shared_data": {"type": "file"},
+                "scenario_name": "gridworld",
+                "output_base": tmp,
+                "run_config": {"logging_level": 0},
+            }
+            session = Session.from_config(config)
+            self.assertIsNotNone(session.run_id)
+            self.assertIsNotNone(session.run_path)
+            self.assertTrue(session.run_id.startswith("gridworld_run_"))
+            run_path = Path(session.run_path)
+            self.assertTrue(run_path.is_dir())
+            records_dir = run_path / "records"
+            self.assertTrue(records_dir.is_dir())
+            metadata_path = run_path / "metadata.json"
+            self.assertTrue(metadata_path.is_file())
+            with metadata_path.open("r", encoding="utf-8") as f:
+                metadata = json.load(f)
+            self.assertEqual(metadata["run_id"], session.run_id)
+            self.assertEqual(metadata["scenario_name"], "gridworld")
+            self.assertEqual(metadata["storage_type"], "file")
+            self.assertEqual(metadata["metadata_schema_version"], 1)
+            self.assertEqual(metadata["records_dir"], "records")
+            self.assertIn("created_at", metadata)
 
     def test_level_0_no_traces(self):
         shared_data = InMemorySharedData()

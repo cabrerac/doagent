@@ -6,9 +6,9 @@ they do not accept adapters or PolicyRegistry.
 MultiProcessInterface (multiprocess_interface module) is internal and not re-exported.
 """
 
+from doagent import RunReporter
 from .baseline import BaselineMetrics, measure_baseline, output_bytes_from_path, write_summary
 from .environment import ParallelEnvWrapper, StepResult, ValidationEnv
-from .reporting import RunReporter
 from .push import PushRunSummary, run_push_validation
 from .gridworld import GridWorldRunSummary, run_gridworld_validation
 

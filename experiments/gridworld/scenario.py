@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from doagent import Session
 from experiments.environment import ValidationEnv
-from experiments.reporting import RunReporter
+from experiments import RunReporter
 
 
 @dataclass(frozen=True)

@@ -1,4 +1,9 @@
-"""Run reporting helpers for experiment runs."""
+"""Run reporting: optional progress and summary for session-based runs.
+
+RunReporter is a small helper for demos and scripts. It is not required for
+recording; the library records via the session regardless. Use it when you
+want periodic console output and a final summary (rounds, outcomes, rewards).
+"""
 
 from __future__ import annotations
 
@@ -9,7 +14,12 @@ from typing import Any, Dict, List, Optional
 
 @dataclass
 class RunReporter:
-    """Collect and print runtime/final summaries for experiment runs."""
+    """Collect and print runtime progress and final summaries for a run.
+
+    Optional: pass to your run loop and call on_outcome each step, then
+    finalize() at the end. Use metrics() to get a dict for writing summary JSON
+    (e.g. in comparison experiments).
+    """
 
     label: str
     print_every: int = 0
@@ -32,6 +42,7 @@ class RunReporter:
         actions: Dict[str, Any],
         rewards: Dict[str, float],
     ) -> None:
+        """Record one step: accumulate rewards and action counts; optionally print."""
         for agent, reward in rewards.items():
             self.total_rewards[agent] = self.total_rewards.get(agent, 0.0) + reward
             if agent not in self.min_rewards:
@@ -65,6 +76,7 @@ class RunReporter:
         render: bool,
         path: Optional[str] = None,
     ) -> None:
+        """Print a short run summary (rounds, outcomes, rewards)."""
         avg_rewards = {
             agent: (total / outcomes if outcomes else 0.0)
             for agent, total in self.total_rewards.items()
@@ -104,6 +116,7 @@ class RunReporter:
         outcomes: int,
         extra: Optional[Dict[str, object]] = None,
     ) -> Dict[str, object]:
+        """Return a dict of run metrics (rewards, action counts, optional entropy and series)."""
         avg_rewards = {
             agent: (total / outcomes if outcomes else 0.0)
             for agent, total in self.total_rewards.items()

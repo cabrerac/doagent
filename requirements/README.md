@@ -120,6 +120,10 @@ Tenets (WHY) → Requirements (WHAT) → CIP (HOW) → Backlog Task (DO) → Imp
 
 This creates bidirectional traceability while keeping each component focused on its immediate context.
 
+## Validation experiments (future work)
+
+Validation experiments (e.g. comparison runners such as `run_gridworld_comparison`, `run_push_comparison`, `run_topology_comparison`, and further validation scenarios) are to be developed and maintained as part of future work. Requirements and CIPs that reference validation (e.g. REQ-0010, CIP-0010) should be read with this in mind: the library and demos are in place; the systematic validation and comparison tooling in `experiments/` is intended to be extended and refined over time.
+
 ## Need Help?
 
 VibeSafe provides thinking tools for requirements discovery in the main documentation. These are reference materials to consult when stuck, not mandatory process steps.
