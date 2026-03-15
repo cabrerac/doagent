@@ -34,7 +34,7 @@ title: "Validation on Multi-Agent Games"
 Validate DOAgent on a representative multi-agent game that exercises coordination, shared data, and interpretability/traceability outputs.
 
 ## Motivation
-Multi-agent games are canonical benchmarks for coordination. A toy game example provides an end-to-end validation of the current architecture with reproducible inputs and outputs.
+Multi-agent games are canonical benchmarks for coordination. A toy game example provides an end-to-end validation of the current architecture with reproducible inputs and outputs. Validation scenarios are a **chosen subset** to demonstrate and stress-test the library; the library is **generic** and is intended for use in game and other use cases beyond these examples. See [Validation and Benchmarks](../docs/validation-and-benchmarks.md) for the principle and for the mapping from the agentic reasoning paper’s §6/§7 to our validation requirements.
 
 ## Detailed Description
 Iteration 1 focuses on the PettingZoo MPE simple_push_v3 scenario that produces decision, explanation, trace, provenance, accountability, and outcome records. The same scenario should run against both in-memory and file-backed shared data adapters, using a minimal Gym/MARL dependency. We also include a baseline run that disables data-oriented writes to estimate overhead.
@@ -303,4 +303,4 @@ Validation examples from multi-agent games (simple push, grid-world mapping) are
 The bid is set but not used in the auction_frontier_policy. In a real auction, a coordinator or P2P protocol could collect bids from agents and assign frontiers using those bids. Right now it’s a stub with the bid ready for that step.
 
 ## References
-- None yet
+- [Validation and Benchmarks](../docs/validation-and-benchmarks.md) — library genericity; paper §6/§7 as reference for benchmarks and application domains.

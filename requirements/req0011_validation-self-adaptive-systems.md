@@ -34,10 +34,11 @@ This requirement focuses on outcomes: representative self-adaptive use cases are
 - [ ] Decentralised coordination can be configured for the use case.
 
 ## Notes (Optional)
-Specific adaptive scenarios and evaluation metrics are selected in CIPs.
+Specific adaptive scenarios and evaluation metrics are selected in CIPs. The library is **generic** and usable in self-adaptive (and other) use cases beyond the validation examples we implement; see [Validation and Benchmarks](../docs/validation-and-benchmarks.md) for the principle and for the mapping from the agentic reasoning paper’s §6/§7 to our validation requirements.
 
 ## References
 - **Related Tenets**: library-first, decentralised-by-design
+- **Validation and benchmarks**: [docs/validation-and-benchmarks.md](../docs/validation-and-benchmarks.md) — library genericity; paper §6/§7 as reference for benchmarks and application domains.
 - **External Links**: None
 
 ## Progress Updates

@@ -35,10 +35,11 @@ This requirement focuses on outcomes: representative game use cases are implemen
 - [x] Interpretability and traceability artefacts are produced for the use case.
 
 ## Notes (Optional)
-Specific games and benchmarks are selected in CIPs.
+Specific games and benchmarks are selected in CIPs. The library is **generic** and usable in game (and other) use cases beyond the validation examples we implement; see [Validation and Benchmarks](../docs/validation-and-benchmarks.md) for the principle and for the mapping from the agentic reasoning paper’s §6/§7 to our validation requirements.
 
 ## References
 - **Related Tenets**: library-first, interpretability-and-traceability
+- **Validation and benchmarks**: [docs/validation-and-benchmarks.md](../docs/validation-and-benchmarks.md) — library genericity; paper §6/§7 as reference for benchmarks and application domains.
 - **External Links**: None
 
 ## Progress Updates

@@ -35,10 +35,11 @@ This requirement focuses on outcomes: a representative maths discovery use case 
 - [ ] Interpretability outputs are available for review.
 
 ## Notes (Optional)
-Specific tasks and evaluation criteria are selected in CIPs.
+Specific tasks and evaluation criteria are selected in CIPs. The library is **generic** and usable in scientific discovery and other reasoning-heavy use cases beyond the validation examples we implement; see [Validation and Benchmarks](../docs/validation-and-benchmarks.md) for the principle and for the mapping from the agentic reasoning paper’s §6/§7 to our validation requirements.
 
 ## References
 - **Related Tenets**: library-first, interpretability-and-traceability, provenance-and-accountability
+- **Validation and benchmarks**: [docs/validation-and-benchmarks.md](../docs/validation-and-benchmarks.md) — library genericity; paper §6/§7 as reference for benchmarks and application domains.
 - **External Links**: None
 
 ## Progress Updates
