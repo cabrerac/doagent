@@ -6,17 +6,13 @@ No doagent.core or doagent.records imports needed.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import random
 from typing import Any, Dict
 
 from doagent import Session, RunReporter, make_env
-from doagent.analysis import (
-    accountability,
-    interpretability,
-    provenance,
-    traceability,
-)
+from doagent.analysis import interpretability, provenance, traceability
 from examples.push_demo.env import create_push_env
 
 
@@ -179,7 +175,8 @@ def main() -> None:
         path=str(run_path / "records"),
     )
 
-    # -- Analysis showcase (what the library enables from recorded data) --
+    # -- Analysis showcase: use only the analyses that fit this scenario --
+    # Push has no "discovery" semantics, so we skip causal attribution; provenance, traceability, interpretability apply.
     output_base = "./output"
     run_id = session.run_id
     chain = None
@@ -200,17 +197,19 @@ def main() -> None:
         except Exception as e:
             print(f"  Traceability: {e}")
         try:
-            attr = accountability.causal_attribution(run_id, output_base=output_base)
-            print(f"Accountability: {len(attr.get('agents', []))} agents, max_round={attr.get('max_round', 0)}")
-            accountability.render_attribution_charts(attr, str(run_path))
-            print(f"  -> {run_path / 'causal_attribution.png'}")
-        except Exception as e:
-            print(f"  Accountability: {e}")
-        try:
             last_id = chain.get("record_id") if chain else None
             if last_id:
                 explanations = interpretability.get_explanations_for(last_id, run_id, output_base=output_base)
                 print(f"Interpretability: {len(explanations)} explanation/decision records for last outcome")
+                if explanations:
+                    out_file = run_path / "explanations_for_last.json"
+                    with out_file.open("w", encoding="utf-8") as f:
+                        json.dump(explanations, f, indent=2, default=str)
+                    print(f"  -> {out_file}")
+                    for ex in explanations[:5]:
+                        print(f"    - {ex.get('kind', '?')} {str(ex.get('id', ''))[:12]}... (actor: {ex.get('actor', '?')})")
+                    if len(explanations) > 5:
+                        print(f"    ... and {len(explanations) - 5} more")
         except Exception as e:
             print(f"  Interpretability: {e}")
     print(f"\nRun output: {run_path} (run_id={run_id})")

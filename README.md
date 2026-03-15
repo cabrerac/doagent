@@ -94,29 +94,36 @@ Within the run loop, `session.visible_records(agent_id, kind="agent_update")` re
 
 After a **file-backed** run, the library writes `output/<run_id>/` (with `records/` and `metadata.json`). Use the `doagent.analysis` package to inspect that run by `run_id` — no access to agent internals needed.
 
+**Use the analyses that fit your scenario.** Not every tool is relevant for every run:
+
+| Tool | When to use |
+|------|--------------|
+| **Provenance** | Any run — "why did this state happen?" (chain of records leading to an outcome). |
+| **Traceability** | Any run — "how did state evolve?" (graph of transitions). |
+| **Accountability** (causal attribution) | Scenarios with a clear notion of *contribution* or *discovery* (e.g. gridworld: who discovered which cells). Skip for scenarios that don't model that (e.g. push). |
+| **Interpretability** | When you need decision or explanation records linked to outcomes. |
+
 ```python
 from doagent.analysis import provenance, traceability, accountability, interpretability
 
 run_id = "gridworld_run_20260315_120000_abc12345"  # or session.run_id after a run
 output_base = "output"
 
-# Why did this state happen?
+# Generic: any run
 chain = provenance.walk_chain("last", run_id, output_base=output_base)
 provenance.render_chain_tree("last", run_id, "provenance_tree.png", output_base=output_base)
-
-# How did the run evolve? (state-transition graph)
 G = traceability.build_trace_graph(run_id, output_base=output_base)
 traceability.render_trace_graph(G, "trace_graph.png")
 
-# Who contributed what?
+# When your scenario has discovery/contribution (e.g. gridworld)
 attr = accountability.causal_attribution(run_id, output_base=output_base)
 accountability.render_attribution_charts(attr, "attribution/")
 
-# Decision/explanation records for a given outcome
+# When you have explanation records
 explanations = interpretability.get_explanations_for(record_id, run_id, output_base=output_base)
 ```
 
-The **demos** (gridworld_demo, push_demo) run one file-backed scenario and then call these analysis methods so you can see outputs in `output/<run_id>/`. For **comparisons** (e.g. baseline vs file, or multiple topologies), use the scripts under `experiments/` (see `examples/README.md`).
+The **demos** show the pattern: gridworld_demo runs all four (it has discovery); push_demo runs provenance, traceability, and interpretability only (no attribution). For **comparisons** (e.g. baseline vs file, or multiple topologies), use the scripts under `experiments/` (see `examples/README.md`).
 
 ## Run the demos
 

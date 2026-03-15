@@ -16,11 +16,11 @@ Each demo uses the **public API** only: `Session`, `RunConfig`, `make_env`, `Run
 
 | Example | Description |
 |--------|-------------|
-| **gridworld_demo** | Four agents explore a grid; shared data stores discovered cells. File-backed run, then analysis (provenance, traceability, accountability, interpretability). |
-| **push_demo** | Two agents in a PettingZoo MPE push scenario. File-backed run, then same analysis showcase. Requires `pettingzoo[mpe]`, `mpe2`, `pygame`. |
+| **gridworld_demo** | Four agents explore a grid; shared data stores discovered cells. File-backed run, then analysis: provenance, traceability, **causal attribution** (fits discovery), interpretability. |
+| **push_demo** | Two agents in a PettingZoo MPE push scenario. File-backed run, then analysis: provenance, traceability, interpretability (no attribution — push has no discovery semantics). Requires `pettingzoo[mpe]`, `mpe2`, `pygame`. |
 | **minimal_usage** | Smallest Session-based run (memory-backed) for quick sanity checks. |
 
-After a file-backed run, output lives under `output/<run_id>/` (e.g. `output/gridworld_run_20260315_120000_abc12345/`) with `records/`, `metadata.json`, and any analysis artefacts (e.g. `provenance_tree.png`, `trace_graph.png`, `causal_attribution.png`).
+After a file-backed run, output lives under `output/<run_id>/` with `records/`, `metadata.json`, and any analysis artefacts. **Use only the analysis tools that fit your scenario** (see main README “Analysis” and `doagent.analysis` package docstring).
 
 ## Config alternatives
 

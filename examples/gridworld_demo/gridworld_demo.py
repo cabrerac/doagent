@@ -13,6 +13,7 @@ Run from the repository root so that the doagent package is on the path:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import random
 import sys
@@ -403,38 +404,58 @@ def main() -> None:
         imageio.mimwrite(str(record_gif_path), record_frames, fps=4, loop=0)
         print(f"GIF written to {record_gif_path} ({len(record_frames)} frames)")
 
-    # -- Analysis showcase (what the library enables from recorded data) --
+    # -- Analysis showcase: output under run_path/analysis/<category>/ (PNG + PDF for images) --
     output_base = "output"
     run_id = session.run_id
     chain = None
+    analysis_base = run_path / "analysis"
     if run_id:
         print(f"\n=== Analysis (run_id={run_id}) ===")
         try:
+            prov_dir = analysis_base / "provenance"
+            prov_dir.mkdir(parents=True, exist_ok=True)
             chain = provenance.walk_chain("last", run_id, output_base=output_base, max_depth=6)
             print(f"Provenance: chain root {chain.get('record_id', '?')}, {len(chain.get('children', []))} direct links")
-            provenance.render_chain_tree("last", run_id, str(run_path / "provenance_tree.png"), output_base=output_base)
-            print(f"  -> {run_path / 'provenance_tree.png'}")
+            provenance.render_chain_tree("last", run_id, str(prov_dir / "provenance_tree.png"), output_base=output_base)
+            provenance.render_chain_tree("last", run_id, str(prov_dir / "provenance_tree.pdf"), output_base=output_base)
+            print(f"  -> {prov_dir / 'provenance_tree.png'}, {prov_dir / 'provenance_tree.pdf'}")
         except Exception as e:
             print(f"  Provenance: {e}")
         try:
+            trace_dir = analysis_base / "traceability"
+            trace_dir.mkdir(parents=True, exist_ok=True)
             G = traceability.build_trace_graph(run_id, output_base=output_base)
             print(f"Traceability: graph {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
-            traceability.render_trace_graph(G, str(run_path / "trace_graph.png"))
-            print(f"  -> {run_path / 'trace_graph.png'}")
+            traceability.render_trace_graph(G, str(trace_dir / "trace_graph.png"))
+            traceability.render_trace_graph(G, str(trace_dir / "trace_graph.pdf"))
+            print(f"  -> {trace_dir / 'trace_graph.png'}, {trace_dir / 'trace_graph.pdf'}")
         except Exception as e:
             print(f"  Traceability: {e}")
         try:
+            acct_dir = analysis_base / "accountability"
+            acct_dir.mkdir(parents=True, exist_ok=True)
             attr = accountability.causal_attribution(run_id, output_base=output_base)
             print(f"Accountability: {len(attr.get('agents', []))} agents, max_round={attr.get('max_round', 0)}")
-            accountability.render_attribution_charts(attr, str(run_path))
-            print(f"  -> {run_path / 'causal_attribution.png'}")
+            accountability.render_attribution_charts(attr, str(acct_dir))
+            print(f"  -> {acct_dir / 'causal_attribution.png'}, {acct_dir / 'causal_attribution.pdf'}")
         except Exception as e:
             print(f"  Accountability: {e}")
         try:
+            interp_dir = analysis_base / "interpretability"
+            interp_dir.mkdir(parents=True, exist_ok=True)
             last_id = chain.get("record_id") if chain else None
             if last_id:
                 explanations = interpretability.get_explanations_for(last_id, run_id, output_base=output_base)
                 print(f"Interpretability: {len(explanations)} explanation/decision records for last outcome")
+                if explanations:
+                    out_file = interp_dir / "explanations_for_last.json"
+                    with out_file.open("w", encoding="utf-8") as f:
+                        json.dump(explanations, f, indent=2, default=str)
+                    print(f"  -> {out_file}")
+                    for ex in explanations[:5]:
+                        print(f"    - {ex.get('kind', '?')} {str(ex.get('id', ''))[:12]}... (actor: {ex.get('actor', '?')})")
+                    if len(explanations) > 5:
+                        print(f"    ... and {len(explanations) - 5} more")
         except Exception as e:
             print(f"  Interpretability: {e}")
     print(f"\nRun output: {run_path} (run_id={run_id})")

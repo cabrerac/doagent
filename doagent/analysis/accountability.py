@@ -200,9 +200,15 @@ def render_attribution_charts(attribution: Dict[str, Any], output_path: str) -> 
     font_tick = 11
     font_legend = 10
 
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5.5))
+    has_discovery = any(discovered.get(a) for a in agents)
+    ylabel_cumulative = "Cumulative contribution" if not has_discovery else "Cumulative cells discovered"
+    ylabel_total = "Contribution (transitions)" if not has_discovery else "Cells discovered"
+    title_cumulative = "Per-Agent Cumulative Contribution" if not has_discovery else "Per-Agent Cumulative Discovery"
+    title_total = "Total Contribution by Agent" if not has_discovery else "Causal Attribution: Total Discovery"
 
-    # Chart 1: Cumulative coverage over time per agent
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5.5), constrained_layout=True)
+
+    # Chart 1: Cumulative over time per agent
     ax1 = axes[0]
     running = {a: [] for a in agents}
     for a in agents:
@@ -216,13 +222,13 @@ def render_attribution_charts(attribution: Dict[str, Any], output_path: str) -> 
         color = agent_colors.get(agent, "#999999")
         ax1.plot(x_rounds, running[agent], label=agent, color=color, linewidth=2)
     ax1.set_xlabel("Round", fontsize=font_axis)
-    ax1.set_ylabel("Cumulative cells discovered", fontsize=font_axis)
-    ax1.set_title("Per-Agent Cumulative Discovery", fontsize=font_title, fontweight="bold")
+    ax1.set_ylabel(ylabel_cumulative, fontsize=font_axis)
+    ax1.set_title(title_cumulative, fontsize=font_title, fontweight="bold")
     ax1.legend(fontsize=font_legend)
     ax1.tick_params(axis="both", labelsize=font_tick)
     ax1.grid(True, alpha=0.3)
 
-    # Chart 2: Total cells discovered per agent (bar chart)
+    # Chart 2: Total per agent (bar chart)
     ax2 = axes[1]
     counts = [len(discovered.get(a, set())) for a in agents]
     colors = [agent_colors.get(a, "#999999") for a in agents]
@@ -230,13 +236,13 @@ def render_attribution_charts(attribution: Dict[str, Any], output_path: str) -> 
     for bar, count in zip(bars, counts):
         ax2.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
                  str(count), ha="center", va="bottom", fontsize=font_tick, fontweight="bold")
-    ax2.set_ylabel("Cells discovered", fontsize=font_axis)
-    ax2.set_title("Causal Attribution: Total Discovery", fontsize=font_title, fontweight="bold")
+    ax2.set_ylabel(ylabel_total, fontsize=font_axis)
+    ax2.set_title(title_total, fontsize=font_title, fontweight="bold")
     ax2.tick_params(axis="x", labelsize=font_tick, rotation=15)
     ax2.tick_params(axis="y", labelsize=font_tick)
     ax2.grid(True, alpha=0.3, axis="y")
 
-    # Chart 3: Decision effectiveness (stacked bar)
+    # Chart 3: Decision effectiveness (productive vs redundant transitions)
     ax3 = axes[2]
     prod_vals = [productive.get(a, 0) for a in agents]
     red_vals = [redundant.get(a, 0) for a in agents]
@@ -255,7 +261,6 @@ def render_attribution_charts(attribution: Dict[str, Any], output_path: str) -> 
     ax3.grid(True, alpha=0.3, axis="y")
 
     fig.suptitle("DOAgent Causal Attribution Analysis", fontsize=16, fontweight="bold", y=1.02)
-    fig.tight_layout()
 
     path = Path(output_path)
     if path.suffix:

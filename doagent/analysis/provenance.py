@@ -339,7 +339,18 @@ def render_chain_tree(
             y = (j - (spread - 1) / 2) * 1.8
             pos[idx] = (x, y)
 
-    fig, ax = plt.subplots(figsize=(max(8, (max_d + 1) * 3.5), max(5, len(nodes) * 0.7)))
+    xs = [pos[i][0] for i in range(len(nodes))]
+    ys = [pos[i][1] for i in range(len(nodes))]
+    x_min, x_max = min(xs), max(xs)
+    y_min, y_max = min(ys), max(ys)
+    pad_x = max(1.5, (x_max - x_min) * 0.15) if x_max != x_min else 1.5
+    pad_y = max(1.0, (y_max - y_min) * 0.15) if y_max != y_min else 1.0
+    x_lo, x_hi = x_min - pad_x, x_max + pad_x
+    y_lo, y_hi = y_min - pad_y, y_max + pad_y
+
+    w = max(6, min(14, (x_hi - x_lo) * 0.8))
+    h = max(4, min(10, (y_hi - y_lo) * 0.8))
+    fig, ax = plt.subplots(figsize=(w, h))
     kind_colors = {"outcome": "#87ceeb", "agent_update": "#90EE90", "trace": "#FFD700", "initial_state": "#333333"}
     for i, (nid, label, depth) in enumerate(nodes):
         x, y = pos[i]
@@ -367,8 +378,10 @@ def render_chain_tree(
         )
     ax.set_title("Provenance Chain — Why Did This State Happen?", fontsize=11, fontweight="bold")
     ax.axis("off")
-    ax.set_xlim(ax.get_xlim()[0] - 1, ax.get_xlim()[1] + 1)
-    fig.tight_layout()
+    ax.set_xlim(x_lo, x_hi)
+    ax.set_ylim(y_lo, y_hi)
+    ax.set_aspect("equal")
+    fig.tight_layout(pad=1.0)
 
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)

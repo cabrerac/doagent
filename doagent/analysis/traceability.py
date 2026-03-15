@@ -203,6 +203,10 @@ def _compute_layout(
         else:
             nodes_by_round[0].append(n)
     is_chain = all(len(v) <= 1 for v in nodes_by_round.values())
+    n_nodes = len(list(G.nodes()))
+    # For long linear runs, use more columns so the graph is wider and easier to read
+    if is_chain and n_nodes > 40:
+        cols_per_row = min(30, max(cols_per_row, (n_nodes + 4) // 4))
     pos: Dict[str, Tuple[float, float]] = {}
     if is_chain and max_round > cols_per_row:
         seq = []
@@ -288,15 +292,16 @@ def render_trace_graph(graph: Any, output_path: str) -> None:
     max_round = max((r for r in rounds.values() if isinstance(r, (int, float))), default=0)
     if not isinstance(max_round, (int, float)):
         max_round = 0
+    n_nodes = graph.number_of_nodes()
     num_rows = max(1, (int(max_round) + 12) // 12) if max_round > 12 else 1
     nodes_in_max_col = max(
         (sum(1 for n in graph.nodes() if rounds.get(n) == r) for r in range(int(max_round) + 1)),
         default=1,
     )
-    fig_width = max(10, min(num_cols * 1.6, 22))
-    fig_height = max(4, num_rows * 2.2 + nodes_in_max_col * 0.6)
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-    node_size = 350 if graph.number_of_nodes() <= 30 else (200 if graph.number_of_nodes() <= 60 else 120)
+    fig_width = max(10, min(num_cols * 1.5, 28))
+    fig_height = max(4, min(num_rows * 2.0 + nodes_in_max_col * 0.5, 14))
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height), constrained_layout=True)
+    node_size = 350 if n_nodes <= 30 else (200 if n_nodes <= 60 else 100)
     node_sizes = [
         max(node_size, node_size + (in_degrees.get(n, 0) - max(len(agents), 1)) * 60)
         for n in graph.nodes()
@@ -344,7 +349,6 @@ def render_trace_graph(graph: Any, output_path: str) -> None:
     ax.legend(handles=legend_patches, loc="upper left", fontsize=8, framealpha=0.9)
     ax.set_title("DOAgent Trace Graph — State Transitions by Agent", fontsize=13, fontweight="bold")
     ax.axis("off")
-    fig.tight_layout()
     if ext == ".png":
         fig.savefig(path, dpi=200, bbox_inches="tight")
     else:
