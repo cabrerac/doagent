@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "doagent"
+version = "0.1.0"
+description = "Data-Oriented Agents for accountable and interpretable multi-agent systems."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = []
+keywords = ["multi-agent", "data-oriented", "interpretability", "traceability", "accountability"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "pyyaml>=6.0",
+    "matplotlib>=3.5",
+    "networkx>=2.6",
+    "pymongo>=4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mongomock",
+]
+
+[project.urls]
+Repository = "https://github.com/cabrerac/doagent"
+Documentation = "https://github.com/cabrerac/doagent#readme"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["doagent*"]

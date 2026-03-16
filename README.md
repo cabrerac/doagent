@@ -16,34 +16,41 @@ Agentic systems often lack visibility into *why* decisions were made, *who* cont
 
 ## Install
 
+Install the library from the repository so you can `import doagent` from your own project:
+
 ```bash
-pip install -r requirements.txt
+pip install git+https://github.com/cabrerac/doagent.git
 ```
 
-Core dependencies: `pyyaml`. For analysis: `matplotlib`, `networkx`. For the push demo (PettingZoo): `pettingzoo[mpe]`, `mpe2`, `pygame`. For MongoDB storage: `pymongo`; install and start MongoDB (default URI `mongodb://localhost:27017`).
+From a local clone (e.g. for development):
+
+```bash
+pip install -e /path/to/doagent
+```
+
+Dependencies include `pyyaml`, `matplotlib`, `networkx`, and `pymongo`. For MongoDB storage, a MongoDB server must be running (default URI `mongodb://localhost:27017`).
 
 ## Run the demos
 
-### Grid-world mapping (dependency-free)
-
-Four agents explore a grid with partial observations, sharing discovered cells via the shared data model. No external dependencies beyond the library.
+The demos show how to use DOAgent as a library. They are not installed with the package as they live in the repository. To run them, clone the repo, install the library, then run from the **repository root** so the demo scripts are on the path.
 
 ```bash
+git clone https://github.com/cabrerac/doagent.git
+cd doagent
+pip install -e .
+# Grid-world demo (no extra deps):
 python -m examples.gridworld_demo.gridworld_demo
-```
-
-Configurable via YAML. Edit `examples/gridworld_demo/gridworld_demo_config.yaml` to change grid size, topology, agent policies, energy model, and more. To use MongoDB for storage, set `storage: "mongo"` in the scenario section; MongoDB must be running (default `mongodb://localhost:27017`).
-
-### Simple push (PettingZoo)
-
-A multi-agent push scenario using PettingZoo's MPE environments.
-
-```bash
+# Push demo (needs PettingZoo):
 pip install pettingzoo[mpe] mpe2 pygame
 python -m examples.push_demo.push_demo
 ```
 
-Both demos run a single file-backed scenario and then run analysis (provenance, traceability, accountability, interpretability), writing charts and summaries into the run output folder.
+- **Grid-world:** Four agents explore a grid; shared data stores discovered cells. Configurable via `examples/gridworld_demo/gridworld_demo_config.yaml`. To use MongoDB, set `storage: "mongo"` in the scenario section (MongoDB must be running).
+- **Push:** Two agents in a PettingZoo MPE scenario. Requires `pettingzoo[mpe]`, `mpe2`, `pygame`.
+
+Both demos run a file-backed (or mongo-backed) scenario and then run analysis, writing outputs under `output/<run_id>/analysis/`.
+
+**Using DOAgent in your own project:** Install the library (`pip install doagent` or `pip install /path/to/doagent`). In your code: `from doagent import Session, make_env, RunReporter` and `from doagent.analysis import provenance, traceability, ...`. Implement your own environment and config.
 
 ## Quick start
 

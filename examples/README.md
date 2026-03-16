@@ -2,7 +2,7 @@
 
 Minimal, file-backed runs that demonstrate the library: config, run loop, and analysis.
 
-Run from the **repository root** so the `doagent` package is on the path:
+**Run from the repository root** after installing the library (`pip install -e .` in the doagent repo). The demos import `doagent` and show how to use it as a library.
 
 ```bash
 python -m examples.gridworld_demo.gridworld_demo [config.yaml]
