@@ -258,13 +258,14 @@ def run_with_session(
 def _make_session_config(
     shared_data_type: str = "memory",
     shared_data_path: str | None = None,
+    shared_data_uri: str | None = None,
     scenario_name: str | None = None,
     output_base: str = "output",
     topology_mode: str = "centralised",
     visibility: Dict[str, List[str]] | None = None,
     hub_id: str = "hub",
 ) -> Dict[str, Any]:
-    """Build a Session config dict from run parameters. For file runs with scenario_name, library creates run_id and folders."""
+    """Build a Session config dict from run parameters. For file/mongo runs with scenario_name, library creates run_id and folders."""
     cfg: Dict[str, Any] = {
         "shared_data": {"type": shared_data_type},
         "run_config": {"logging_level": 2},
@@ -275,6 +276,10 @@ def _make_session_config(
     if shared_data_type == "file" and scenario_name:
         cfg["scenario_name"] = scenario_name
         cfg["output_base"] = output_base
+    elif shared_data_type == "mongo" and scenario_name:
+        cfg["scenario_name"] = scenario_name
+        cfg["output_base"] = output_base
+        cfg["shared_data"]["uri"] = shared_data_uri or "mongodb://localhost:27017"
     elif shared_data_path:
         cfg["shared_data"]["path"] = shared_data_path
     if visibility:
@@ -296,6 +301,9 @@ def main() -> None:
     scenario = config.get("scenario", {})
     env_cfg = scenario.get("env", {})
     participation_cfg = scenario.get("participation", {}) or {}
+    # Storage: "file" (default) or "mongo". For mongo, optional "mongo_uri" in scenario (default mongodb://localhost:27017).
+    storage_type = str(scenario.get("storage", "file")).lower()
+    mongo_uri = scenario.get("mongo_uri") or "mongodb://localhost:27017"
 
     rounds = int(run_cfg.get("rounds", 10))
     seed = int(run_cfg.get("seed", 0))
@@ -350,10 +358,11 @@ def main() -> None:
     output_base = "output"
 
     # -- Single file run (library creates run_id, output folder, records/, metadata.json) --
-    print("\n=== Grid-world run (file-backed) ===")
+    print("\n=== Grid-world run ===")
     session = Session.from_config(
         _make_session_config(
-            shared_data_type="file",
+            shared_data_type=storage_type,
+            shared_data_uri=mongo_uri if storage_type == "mongo" else None,
             scenario_name="gridworld",
             output_base=output_base,
             topology_mode=topology_mode,

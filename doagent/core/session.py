@@ -34,23 +34,28 @@ def _create_run_folders_and_metadata(
     *,
     storage_type: str = "file",
     records_dir_name: str = "records",
-) -> tuple[str, Path, Path]:
-    """Create output_base/run_id/, records subfolder, and metadata.json. Return (run_id, run_path, records_path)."""
+    mongo_uri: Optional[str] = None,
+) -> tuple[str, Path, Optional[Path]]:
+    """Create output_base/run_id/, optional records subfolder, and metadata.json. Return (run_id, run_path, records_path or None)."""
     output_base = Path(output_base)
     run_id = f"{scenario_name}_run_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
     run_path = output_base / run_id
-    records_path = run_path / records_dir_name
     run_path.mkdir(parents=True, exist_ok=True)
-    records_path.mkdir(parents=True, exist_ok=True)
-    metadata = {
+    metadata: Dict[str, Any] = {
         "run_id": run_id,
         "scenario_name": scenario_name,
         "storage_type": storage_type,
         "metadata_schema_version": 1,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    records_path: Optional[Path] = None
     if storage_type == "file":
+        records_path = run_path / records_dir_name
+        records_path.mkdir(parents=True, exist_ok=True)
         metadata["records_dir"] = records_dir_name
+    elif storage_type == "mongo":
+        metadata["mongo_uri"] = mongo_uri or "mongodb://localhost:27017"
+        metadata["mongo_database"] = run_id
     metadata_path = run_path / "metadata.json"
     with metadata_path.open("w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2, sort_keys=True)
@@ -356,8 +361,8 @@ class Session:
         """Build a Session from a config dict. Keeps adapter construction internal.
 
         Config keys (all optional):
-          - shared_data: {"type": "memory"|"file"|"noop"} (file: use "path" or set scenario_name for library-created run folders)
-          - scenario_name: str (e.g. "gridworld", "push"); when set with file storage, library creates run_id, output folders, and metadata.json
+          - shared_data: {"type": "memory"|"file"|"mongo"|"noop"} (file: "path" or scenario_name; mongo: "uri"/"mongo_uri" and optionally scenario_name for library-created run_id + metadata.json)
+          - scenario_name: str (e.g. "gridworld", "push"); when set with file or mongo storage, library creates run_id, output folder, and metadata.json
           - output_base: str (default "./output"); base directory for run folders when scenario_name is set
           - run_config: {"logging_level": 0|1|2}
           - topology: {"mode": "centralised"|"peer_to_peer"|"federated", "visibility": {...}}
@@ -391,10 +396,61 @@ class Session:
                         "shared_data.type 'file' requires either shared_data.path or scenario_name in config"
                     )
                 shared_data = FileSharedData(path)
+        elif sd_type == "mongo":
+            if scenario_name:
+                mongo_uri = sd_cfg.get("uri") or sd_cfg.get("mongo_uri") or "mongodb://localhost:27017"
+                _run_id, _run_path, _ = _create_run_folders_and_metadata(
+                    output_base, scenario_name, storage_type="mongo", mongo_uri=mongo_uri
+                )
+                run_id = _run_id
+                run_path = str(_run_path)
+                try:
+                    from pymongo import MongoClient
+                    from .adapters import MongoSharedData
+                except ImportError as e:
+                    raise ImportError("shared_data.type 'mongo' requires pymongo. pip install pymongo") from e
+                client = MongoClient(mongo_uri)
+                try:
+                    client.server_info()
+                except Exception as conn_err:
+                    err_name = type(conn_err).__name__
+                    if "ServerSelection" in err_name or "Connection" in err_name or "Timeout" in err_name:
+                        raise ValueError(
+                            f"MongoDB is not running or not reachable at {mongo_uri}. "
+                            "Start MongoDB (e.g. start the mongod service), or use storage 'file' in your config."
+                        ) from conn_err
+                    raise
+                shared_data = MongoSharedData(client[run_id])
+            else:
+                uri = sd_cfg.get("uri") or sd_cfg.get("mongo_uri")
+                database = sd_cfg.get("database") or sd_cfg.get("db")
+                if not uri or not database:
+                    raise ValueError(
+                        "shared_data.type 'mongo' with no scenario_name requires shared_data.uri and shared_data.database"
+                    )
+                try:
+                    from pymongo import MongoClient
+                    from .adapters import MongoSharedData
+                except ImportError as e:
+                    raise ImportError("shared_data.type 'mongo' requires pymongo. pip install pymongo") from e
+                client = MongoClient(uri)
+                try:
+                    client.server_info()
+                except Exception as conn_err:
+                    err_name = type(conn_err).__name__
+                    if "ServerSelection" in err_name or "Connection" in err_name or "Timeout" in err_name:
+                        raise ValueError(
+                            f"MongoDB is not running or not reachable at {uri}. "
+                            "Start MongoDB (e.g. start the mongod service) or fix the URI."
+                        ) from conn_err
+                    raise
+                shared_data = MongoSharedData(client[database])
         elif sd_type == "noop":
             shared_data = NoOpSharedData()
         else:
-            raise ValueError(f"shared_data.type must be 'memory', 'file', or 'noop'; got {sd_type!r}")
+            raise ValueError(
+                f"shared_data.type must be 'memory', 'file', 'mongo', or 'noop'; got {sd_type!r}"
+            )
 
         rc_cfg = config.get("run_config") or {}
         level = rc_cfg.get("logging_level", 2)

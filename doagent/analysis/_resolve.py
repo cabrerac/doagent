@@ -10,6 +10,17 @@ from ..core.adapters.file import FileSharedData
 from ..records import SimpleRecord
 
 
+def _get_mongo_shared_data_class() -> Any:
+    """Lazy import of MongoSharedData so pymongo is only required when resolving mongo runs."""
+    try:
+        from ..core.adapters import MongoSharedData
+        return MongoSharedData
+    except ImportError as e:
+        raise ImportError(
+            "Analysis for storage_type 'mongo' requires pymongo. pip install pymongo"
+        ) from e
+
+
 def _load_metadata(run_id: str, output_base: str | Path = "./output") -> dict[str, Any]:
     """Read metadata.json for a run. Raises FileNotFoundError if run folder or metadata missing."""
     base = Path(output_base)
@@ -40,6 +51,19 @@ class _ResolvedRun:
                 raise FileNotFoundError(f"Records directory not found: {records_path}")
             self._adapter = FileSharedData(records_path)
             return self._adapter
+        if storage == "mongo":
+            mongo_uri = self._metadata.get("mongo_uri") or "mongodb://localhost:27017"
+            mongo_database = self._metadata.get("mongo_database")
+            if not mongo_database:
+                raise ValueError(
+                    "Run metadata has storage_type 'mongo' but no mongo_database; "
+                    "metadata may be from an older run or corrupted."
+                )
+            MongoSharedData = _get_mongo_shared_data_class()
+            from pymongo import MongoClient
+            client = MongoClient(mongo_uri)
+            self._adapter = MongoSharedData(client[mongo_database])
+            return self._adapter
         if storage == "memory":
             raise ValueError(
                 "Posterior analysis by run_id is not supported for in-memory runs; "
@@ -61,14 +85,16 @@ def resolve_run(
 ) -> _ResolvedRun:
     """Resolve run_id to a read-only run view with inspect(kind).
 
-    Reads metadata from output_base/run_id/metadata.json and, for file-backed
-    runs, opens the records directory. Returns an object that supports
+    Reads metadata from output_base/run_id/metadata.json. For file-backed runs,
+    opens the records directory; for mongo-backed runs, connects using
+    metadata mongo_uri and mongo_database. Returns an object that supports
     inspect(kind) like Session.
 
     Raises:
         FileNotFoundError: If metadata or records path is missing.
-        ValueError: If storage_type is 'memory' (no posterior analysis).
-        NotImplementedError: If storage_type is not yet supported (e.g. mongo, stream).
+        ValueError: If storage_type is 'memory' (no posterior analysis) or mongo metadata is incomplete.
+        ImportError: If storage_type is 'mongo' and pymongo is not installed.
+        NotImplementedError: If storage_type is not supported.
     """
     metadata = _load_metadata(run_id, output_base)
     return _ResolvedRun(run_id, metadata, Path(output_base))

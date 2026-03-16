@@ -6,6 +6,9 @@ run:
 
 scenario:
   name: "gridworld_mapping"
+  storage: "file"   # default; records in output/<run_id>/records/
+  #storage: "mongo"  # records in MongoDB; requires pymongo and a running Mongo server
+  #mongo_uri: "mongodb://localhost:27017"  # optional when storage is mongo
   render: true
   render_mode: "human"
   print_every: 10
