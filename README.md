@@ -38,9 +38,11 @@ The demos show how to use DOAgent as a library. They are not installed with the 
 
 The **notebooks** in `notebooks/` are designed to run in Google Colab. Each notebook uses only the `doagent` library and code defined in the notebook—no repo clone required. Open in Colab and run cells in order.
 
-- **01_minimal_demo.ipynb** — Install → session → stub env → one step → inspect.
-- **02_push_demo.ipynb** — Install + PettingZoo → file-backed push run → analysis.
-- **03_gridworld_demo.ipynb** — Install → minimal grid env → file-backed run with shared map → full analysis.
+| Notebook | Open in Colab | Description |
+|----------|---------------|-------------|
+| 01_minimal_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/01_minimal_demo.ipynb) | Install → session → stub env → one step → inspect. |
+| 02_push_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/02_push_demo.ipynb) | Install + PettingZoo → file-backed push run → analysis. |
+| 03_gridworld_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/03_gridworld_demo.ipynb) | Install → minimal grid env → file-backed run with shared map → full analysis. |
 
 See `notebooks/README.md` for details.
 
