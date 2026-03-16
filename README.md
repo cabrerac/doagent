@@ -32,7 +32,21 @@ Dependencies include `pyyaml`, `matplotlib`, `networkx`, and `pymongo`. For Mong
 
 ## Run the demos
 
-The demos show how to use DOAgent as a library. They are not installed with the package as they live in the repository. To run them, clone the repo, install the library, then run from the **repository root** so the demo scripts are on the path.
+The demos show how to use DOAgent as a library. They are not installed with the package as they live in the repository.
+
+### Colab notebooks (step-by-step, self-contained)
+
+The **notebooks** in `notebooks/` are designed to run in Google Colab. Each notebook uses only the `doagent` library and code defined in the notebook—no repo clone required. Open in Colab and run cells in order.
+
+- **01_minimal_demo.ipynb** — Install → session → stub env → one step → inspect.
+- **02_push_demo.ipynb** — Install + PettingZoo → file-backed push run → analysis.
+- **03_gridworld_demo.ipynb** — Install → minimal grid env → file-backed run with shared map → full analysis.
+
+See `notebooks/README.md` for details.
+
+### Running demos locally
+
+To run them, clone the repo, install the library, then run from the **repository root** so the demo scripts are on the path.
 
 ```bash
 git clone https://github.com/cabrerac/doagent.git
@@ -50,7 +64,9 @@ python -m examples.push_demo.push_demo
 
 Both demos run a file-backed (or mongo-backed) scenario and then run analysis, writing outputs under `output/<run_id>/analysis/`.
 
-**Using DOAgent in your own project:** Install the library (`pip install doagent` or `pip install /path/to/doagent`). In your code: `from doagent import Session, make_env, RunReporter` and `from doagent.analysis import provenance, traceability, ...`. Implement your own environment and config.
+## Using DOAgent in your own project
+
+Install the library (`pip install git+https://github.com/cabrerac/doagent.git` or `pip install -e /path/to/doagent`). In your code: `from doagent import Session, make_env, RunReporter` and `from doagent.analysis import provenance, traceability, ...`. Implement your own environment and config.
 
 ## Quick start
 
