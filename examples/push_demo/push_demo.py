@@ -1,12 +1,10 @@
-"""Push demo using the DOAgent Session API.
-
+"""
+Push demo using the DOAgent Session API.
 Demonstrates config-driven library usage with a PettingZoo environment.
-No doagent.core or doagent.records imports needed.
 """
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import random
 from typing import Any, Dict
@@ -17,7 +15,7 @@ from examples.push_demo.env import create_push_env
 
 
 # ---------------------------------------------------------------------------
-# Policy factories (callable entry points for config-driven registration)
+# Policy factories
 # ---------------------------------------------------------------------------
 
 def _action_from_vector(dx: float, dy: float) -> int:
@@ -30,13 +28,6 @@ def _action_from_vector(dx: float, dy: float) -> int:
 
 def _epsilon_greedy(base: int, epsilon: float, rng: random.Random) -> int:
     return rng.choice([0, 1, 2, 3, 4]) if rng.random() < epsilon else base
-
-
-def fixed_policy(params: Dict[str, Any]) -> Any:
-    action = params.get("action", 0)
-    def decide(request: Dict[str, Any]) -> Dict[str, Any]:
-        return {"decision": {"action": action}}
-    return decide
 
 
 def heuristic_goal_seek(params: Dict[str, Any]) -> Any:
@@ -80,7 +71,7 @@ def make_agent_configs() -> list[Dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# Session-based run (config-driven)
+# Run environment with DOAgent Session API
 # ---------------------------------------------------------------------------
 
 def run_with_session(
@@ -146,16 +137,16 @@ def main() -> None:
         ) from exc
 
     configs = make_agent_configs()
+    output_base = "./output"
 
     # -- Single file run (library creates run_id, output folder, records/, metadata.json) --
     print("\n=== Push run (file-backed) ===")
     session = Session.from_config({
         "shared_data": {"type": "file"},
         "scenario_name": "push",
-        "output_base": "./output",
+        "output_base": output_base,
         "run_config": {"logging_level": 2},
         "policies": {
-            "fixed": fixed_policy,
             "heuristic_goal_seek": heuristic_goal_seek,
             "heuristic_push_block": heuristic_push_block,
         },
@@ -175,50 +166,25 @@ def main() -> None:
         path=str(run_path / "records"),
     )
 
-    # -- Analysis showcase: output under run_path/analysis/<category>/ (PNG + PDF for images) --
-    # Push has no "discovery" semantics, so we skip causal attribution; provenance, traceability, interpretability apply.
-    output_base = "./output"
+    # -- Analysis: write_output=True writes to output_base/run_id/analysis/<category>/ --
     run_id = session.run_id
-    chain = None
-    analysis_base = run_path / "analysis"
     if run_id:
         print(f"\n=== Analysis (run_id={run_id}) ===")
+        effective_id = None
         try:
-            prov_dir = analysis_base / "provenance"
-            prov_dir.mkdir(parents=True, exist_ok=True)
-            chain = provenance.walk_chain("last", run_id, output_base=output_base, max_depth=6)
-            print(f"Provenance: chain root {chain.get('record_id', '?')}, {len(chain.get('children', []))} direct links")
-            provenance.render_chain_tree("last", run_id, str(prov_dir / "provenance_tree.png"), output_base=output_base)
-            provenance.render_chain_tree("last", run_id, str(prov_dir / "provenance_tree.pdf"), output_base=output_base)
-            print(f"  -> {prov_dir / 'provenance_tree.png'}, {prov_dir / 'provenance_tree.pdf'}")
+            effective_id = provenance.render_chain_tree("last", run_id, output_base=output_base, write_output=True)
+            print("Provenance: wrote analysis/provenance/ (provenance_tree.png, .pdf)")
         except Exception as e:
             print(f"  Provenance: {e}")
         try:
-            trace_dir = analysis_base / "traceability"
-            trace_dir.mkdir(parents=True, exist_ok=True)
-            G = traceability.build_trace_graph(run_id, output_base=output_base)
-            print(f"Traceability: graph {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
-            traceability.render_trace_graph(G, str(trace_dir / "trace_graph.png"))
-            traceability.render_trace_graph(G, str(trace_dir / "trace_graph.pdf"))
-            print(f"  -> {trace_dir / 'trace_graph.png'}, {trace_dir / 'trace_graph.pdf'}")
+            G = traceability.build_trace_graph(run_id, output_base=output_base, write_output=True)
+            print(f"Traceability: wrote analysis/traceability/ ({G.number_of_nodes()} nodes, {G.number_of_edges()} edges)")
         except Exception as e:
             print(f"  Traceability: {e}")
         try:
-            interp_dir = analysis_base / "interpretability"
-            interp_dir.mkdir(parents=True, exist_ok=True)
-            last_id = chain.get("record_id") if chain else None
-            if last_id:
-                explanations = interpretability.get_explanations_for(last_id, run_id, output_base=output_base)
-                print(f"Interpretability: {len(explanations)} explanation/decision records for last outcome")
-                if explanations:
-                    out_file = interp_dir / "explanations_for_last.json"
-                    with out_file.open("w", encoding="utf-8") as f:
-                        json.dump(explanations, f, indent=2, default=str)
-                    print(f"  -> {out_file}")
-                    for ex in explanations[:5]:
-                        print(f"    - {ex.get('kind', '?')} {str(ex.get('id', ''))[:12]}... (actor: {ex.get('actor', '?')})")
-                    if len(explanations) > 5:
-                        print(f"    ... and {len(explanations) - 5} more")
+            last_id = effective_id or "last"
+            explanations = interpretability.get_explanations_for(last_id, run_id, output_base=output_base, write_output=True)
+            print(f"Interpretability: wrote analysis/interpretability/ ({len(explanations)} explanation/decision records)")
         except Exception as e:
             print(f"  Interpretability: {e}")
     print(f"\nRun output: {run_path} (run_id={run_id})")

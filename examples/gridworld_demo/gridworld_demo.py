@@ -1,19 +1,14 @@
-"""Grid-world demo using the DOAgent Session API.
-
+"""
+Grid-world demo using the DOAgent Session API.
 Demonstrates all three DOA principles through the library:
 - Shared-data model: agents share knowledge via shared data, library records transparently.
 - Decentralisation: topology-filtered record access (centralised, peer-to-peer, federated).
 - Openness: user provides environment, policies, and run loop; library provides interfaces.
 
-Config-driven: no doagent.core or doagent.records imports needed.
-
-Run from the repository root so that the doagent package is on the path:
-  python -m examples.gridworld_demo.gridworld_demo [config.yaml] [--record-gif path.gif]
 """
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import random
 import sys
@@ -100,7 +95,7 @@ GRIDWORLD_POLICIES = {
 
 
 # ---------------------------------------------------------------------------
-# Session-based run (config-driven)
+# Run environment with DOAgent Session API
 # ---------------------------------------------------------------------------
 
 def run_with_session(
@@ -121,7 +116,6 @@ def run_with_session(
     render_delay: float = 0.0,
     print_every: int = 0,
     reporter: RunReporter | None = None,
-    record_frames: Optional[List[Any]] = None,
 ) -> Dict[str, Any]:
     """Run gridworld scenario using the DOAgent Session API. Returns summary dict."""
     agent_ids = [c["id"] for c in configs]
@@ -132,10 +126,6 @@ def run_with_session(
     )
 
     observations = wrapped_env.reset(seed=seed)
-    if render and record_frames is not None:
-        frame = env.render()
-        if frame is not None:
-            record_frames.append(frame)
     rng = random.Random(seed)
 
     active_agents = set(agent_ids)
@@ -220,9 +210,7 @@ def run_with_session(
         if total_cells and discovery_round is None and len(discovered_cells) >= total_cells:
             discovery_round = round_id
         if render:
-            frame = env.render()
-            if record_frames is not None and frame is not None:
-                record_frames.append(frame)
+            env.render()
             if render_delay > 0:
                 time.sleep(render_delay)
 
@@ -300,16 +288,7 @@ def _make_session_config(
 def main() -> None:
     script_dir = Path(__file__).resolve().parent
     default_config = script_dir / "gridworld_demo_config.yaml"
-    argv = list(sys.argv[1:])
-    record_gif_path: Optional[Path] = None
-    if "--record-gif" in argv:
-        idx = argv.index("--record-gif")
-        argv.pop(idx)
-        if idx < len(argv):
-            record_gif_path = Path(argv.pop(idx))
-        else:
-            record_gif_path = Path("output") / "gridworld_demo.gif"
-    config_path = Path(argv[0]) if argv else default_config
+    config_path = Path(sys.argv[1]) if len(sys.argv) > 1 else default_config
     config = load_config(config_path)
 
     run_cfg = config.get("run", {})
@@ -319,11 +298,9 @@ def main() -> None:
 
     rounds = int(run_cfg.get("rounds", 10))
     seed = int(run_cfg.get("seed", 0))
-    render = bool(scenario.get("render", False)) or record_gif_path is not None
+    render = bool(scenario.get("render", False))
     render_mode = scenario.get("render_mode")
-    if record_gif_path is not None:
-        render_mode = "rgb_array"
-    elif render and render_mode is None:
+    if render and render_mode is None:
         render_mode = "ansi"
     render_delay = float(scenario.get("render_delay", 0.3 if render_mode == "human" else 0.0))
     print_every = int(scenario.get("print_every", 0))
@@ -369,8 +346,7 @@ def main() -> None:
         render_delay=render_delay,
         print_every=print_every,
     )
-
-    record_frames: List[Any] = [] if record_gif_path is not None else []
+    output_base = "output"
 
     # -- Single file run (library creates run_id, output folder, records/, metadata.json) --
     print("\n=== Grid-world run (file-backed) ===")
@@ -378,7 +354,7 @@ def main() -> None:
         _make_session_config(
             shared_data_type="file",
             scenario_name="gridworld",
-            output_base="output",
+            output_base=output_base,
             topology_mode=topology_mode,
             visibility=visibility,
             hub_id=hub_id,
@@ -389,73 +365,37 @@ def main() -> None:
         "gridworld", print_every=print_every,
         record_series=True, series_every=1, record_entropy=True, action_space=5,
     )
-    summary = run_with_session(
-        session, **run_kwargs, reporter=reporter,
-        record_frames=record_frames if record_gif_path is not None else None,
-    )
+    summary = run_with_session(session, **run_kwargs, reporter=reporter)
     reporter.finalize(
         rounds=rounds, seed=seed, outcomes=summary["outcomes"],
         elapsed_seconds=0.0, output_bytes=0, render=render,
         path=str(run_path / "records"),
     )
-    if record_gif_path is not None and record_frames:
-        record_gif_path.parent.mkdir(parents=True, exist_ok=True)
-        import imageio
-        imageio.mimwrite(str(record_gif_path), record_frames, fps=4, loop=0)
-        print(f"GIF written to {record_gif_path} ({len(record_frames)} frames)")
 
-    # -- Analysis showcase: output under run_path/analysis/<category>/ (PNG + PDF for images) --
-    output_base = "output"
+    # -- Analysis: write_output=True writes to output_base/run_id/analysis/<category>/ --
     run_id = session.run_id
-    chain = None
-    analysis_base = run_path / "analysis"
     if run_id:
         print(f"\n=== Analysis (run_id={run_id}) ===")
+        effective_id = None
         try:
-            prov_dir = analysis_base / "provenance"
-            prov_dir.mkdir(parents=True, exist_ok=True)
-            chain = provenance.walk_chain("last", run_id, output_base=output_base, max_depth=6)
-            print(f"Provenance: chain root {chain.get('record_id', '?')}, {len(chain.get('children', []))} direct links")
-            provenance.render_chain_tree("last", run_id, str(prov_dir / "provenance_tree.png"), output_base=output_base)
-            provenance.render_chain_tree("last", run_id, str(prov_dir / "provenance_tree.pdf"), output_base=output_base)
-            print(f"  -> {prov_dir / 'provenance_tree.png'}, {prov_dir / 'provenance_tree.pdf'}")
+            effective_id = provenance.render_chain_tree("last", run_id, output_base=output_base, write_output=True)
+            print("Provenance: wrote analysis/provenance/ (provenance_tree.png, .pdf)")
         except Exception as e:
             print(f"  Provenance: {e}")
         try:
-            trace_dir = analysis_base / "traceability"
-            trace_dir.mkdir(parents=True, exist_ok=True)
-            G = traceability.build_trace_graph(run_id, output_base=output_base)
-            print(f"Traceability: graph {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
-            traceability.render_trace_graph(G, str(trace_dir / "trace_graph.png"))
-            traceability.render_trace_graph(G, str(trace_dir / "trace_graph.pdf"))
-            print(f"  -> {trace_dir / 'trace_graph.png'}, {trace_dir / 'trace_graph.pdf'}")
+            G = traceability.build_trace_graph(run_id, output_base=output_base, write_output=True)
+            print(f"Traceability: wrote analysis/traceability/ ({G.number_of_nodes()} nodes, {G.number_of_edges()} edges)")
         except Exception as e:
             print(f"  Traceability: {e}")
         try:
-            acct_dir = analysis_base / "accountability"
-            acct_dir.mkdir(parents=True, exist_ok=True)
-            attr = accountability.causal_attribution(run_id, output_base=output_base)
-            print(f"Accountability: {len(attr.get('agents', []))} agents, max_round={attr.get('max_round', 0)}")
-            accountability.render_attribution_charts(attr, str(acct_dir))
-            print(f"  -> {acct_dir / 'causal_attribution.png'}, {acct_dir / 'causal_attribution.pdf'}")
+            attr = accountability.causal_attribution(run_id, output_base=output_base, write_output=True)
+            print(f"Accountability: wrote analysis/accountability/ ({len(attr.get('agents', []))} agents)")
         except Exception as e:
             print(f"  Accountability: {e}")
         try:
-            interp_dir = analysis_base / "interpretability"
-            interp_dir.mkdir(parents=True, exist_ok=True)
-            last_id = chain.get("record_id") if chain else None
-            if last_id:
-                explanations = interpretability.get_explanations_for(last_id, run_id, output_base=output_base)
-                print(f"Interpretability: {len(explanations)} explanation/decision records for last outcome")
-                if explanations:
-                    out_file = interp_dir / "explanations_for_last.json"
-                    with out_file.open("w", encoding="utf-8") as f:
-                        json.dump(explanations, f, indent=2, default=str)
-                    print(f"  -> {out_file}")
-                    for ex in explanations[:5]:
-                        print(f"    - {ex.get('kind', '?')} {str(ex.get('id', ''))[:12]}... (actor: {ex.get('actor', '?')})")
-                    if len(explanations) > 5:
-                        print(f"    ... and {len(explanations) - 5} more")
+            last_id = effective_id or "last"
+            explanations = interpretability.get_explanations_for(last_id, run_id, output_base=output_base, write_output=True)
+            print(f"Interpretability: wrote analysis/interpretability/ ({len(explanations)} explanation/decision records)")
         except Exception as e:
             print(f"  Interpretability: {e}")
     print(f"\nRun output: {run_path} (run_id={run_id})")

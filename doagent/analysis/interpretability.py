@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any, Dict, List
 
 from ._resolve import resolve_run
@@ -25,6 +27,7 @@ def get_explanations_for(
     run_id: str,
     *,
     output_base: str = "./output",
+    write_output: bool = False,
 ) -> List[Dict[str, Any]]:
     """Retrieve the explanation and decision records that explain or justify the given record.
 
@@ -41,12 +44,14 @@ def get_explanations_for(
     agent_update enabled this transition), provenance derived_from, or
     explanation record references. It returns a structured list or dict of
     those records (or their IDs and payloads) so callers can present or
-    summarise them.
+    summarise them. When write_output is True, writes the list to
+    output_base/run_id/analysis/interpretability/explanations_for_last.json.
 
     Args:
         record_id: The record to get explanations for (e.g. an outcome id).
         run_id: Run identifier (same as the run's output folder name).
         output_base: Base directory for run folders; default "./output".
+        write_output: If True, write JSON to output_base/run_id/analysis/interpretability/.
 
     Returns:
         A list of decision/explanation records as dicts (id, kind, actor,
@@ -106,4 +111,12 @@ def get_explanations_for(
                 add_record(ex, "explanation")
 
     result.sort(key=lambda d: (d.get("timestamp", ""), d.get("id", "")))
+
+    if write_output:
+        out_dir = Path(output_base) / run_id / "analysis" / "interpretability"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_file = out_dir / "explanations_for_last.json"
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=2, default=str)
+
     return result

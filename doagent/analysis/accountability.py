@@ -114,6 +114,7 @@ def causal_attribution(
     run_id: str,
     *,
     output_base: str = "./output",
+    write_output: bool = False,
 ) -> Dict[str, Any]:
     """Attribute "who contributed what" to the run by assigning credit from trace edges.
 
@@ -133,11 +134,14 @@ def causal_attribution(
     and compares it to the source outcome's observation for the same agent to
     count what is new. It aggregates these counts per agent across rounds,
     producing a structured dict with per-agent discovery counts, cumulative
-    coverage, and productive vs redundant decision counts.
+    coverage, and productive vs redundant decision counts. When write_output
+    is True, writes attribution charts (PNG + PDF) to
+    output_base/run_id/analysis/accountability/.
 
     Args:
         run_id: Run identifier (same as the run's output folder name).
         output_base: Base directory for run folders; default "./output".
+        write_output: If True, write PNG and PDF to output_base/run_id/analysis/accountability/.
 
     Returns:
         A structured dict with keys: agents (list), agent_discovered (agent -> set
@@ -151,7 +155,12 @@ def causal_attribution(
     resolved = resolve_run(run_id, output_base=output_base)
     outcomes = list(resolved.inspect("outcome"))
     traces = list(resolved.inspect("trace"))
-    return _compute_attribution(traces, outcomes)
+    attribution = _compute_attribution(traces, outcomes)
+    if write_output:
+        out_dir = Path(output_base) / run_id / "analysis" / "accountability"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        render_attribution_charts(attribution, str(out_dir))
+    return attribution
 
 
 def render_attribution_charts(attribution: Dict[str, Any], output_path: str) -> None:

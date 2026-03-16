@@ -275,11 +275,12 @@ def _collect_nodes_edges(
 def render_chain_tree(
     record_id: str,
     run_id: str,
-    output_path: str,
+    output_path: Optional[str] = None,
     *,
     output_base: str = "./output",
-) -> None:
-    """Produce a tree diagram of the provenance chain and write it to a file.
+    write_output: bool = False,
+) -> Optional[str]:
+    """Produce a tree diagram of the provenance chain and optionally write PNG+PDF.
 
     **What it means:** A chain tree is a visual representation of the same
     provenance chain that walk_chain returns: which records led to which,
@@ -287,20 +288,30 @@ def render_chain_tree(
 
     **How it works:** The method builds the provenance chain for the given
     record_id (using the same logic as walk_chain), then lays it out as a
-    tree and renders it to PNG, PDF, or another format depending on
-    output_path extension.
+    tree and optionally renders it. When write_output is True, writes
+    provenance_tree.png and provenance_tree.pdf to output_base/run_id/analysis/provenance/.
+    When write_output is False, output_path must be provided and a single file is written.
 
     Args:
         record_id: The record to root the tree at (e.g. outcome id or "last").
         run_id: Run identifier (same as the run's output folder name).
-        output_path: Path for the output file (e.g. chain.png, chain.pdf).
+        output_path: Path for a single output file when write_output is False.
         output_base: Base directory for run folders; default "./output".
+        write_output: If True, write PNG and PDF to output_base/run_id/analysis/provenance/
+            and return the effective record_id (for use with get_explanations_for).
+
+    Returns:
+        When write_output is True, the effective record_id (e.g. last outcome id);
+        otherwise None.
 
     Raises:
         FileNotFoundError: If run metadata or records are not found.
         ValueError: If record_id is "last" but the run has no outcomes, or if
-            record_id is not in the run. ImportError if matplotlib is not installed.
+            record_id is not in the run; or if write_output is False and output_path is None.
+        ImportError: If matplotlib is not installed.
     """
+    if not write_output and output_path is None:
+        raise ValueError("Either output_path or write_output=True must be provided")
     resolved = resolve_run(run_id, output_base=output_base)
     index = _build_index(resolved)
     effective_id = record_id
@@ -316,7 +327,7 @@ def render_chain_tree(
     _collect_nodes_edges(effective_id, index, 20, 0, set(), nodes, edges)
 
     if not nodes:
-        return
+        return effective_id if write_output else None
 
     try:
         import matplotlib
@@ -383,6 +394,13 @@ def render_chain_tree(
     ax.set_aspect("equal")
     fig.tight_layout(pad=1.0)
 
+    if write_output:
+        out_dir = Path(output_base) / run_id / "analysis" / "provenance"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        fig.savefig(out_dir / "provenance_tree.png", dpi=200, bbox_inches="tight")
+        fig.savefig(out_dir / "provenance_tree.pdf", bbox_inches="tight")
+        plt.close(fig)
+        return effective_id
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     ext = path.suffix.lower()
@@ -393,3 +411,4 @@ def render_chain_tree(
     else:
         fig.savefig(path, dpi=200, bbox_inches="tight")
     plt.close(fig)
+    return None

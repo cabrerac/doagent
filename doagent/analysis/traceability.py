@@ -26,6 +26,7 @@ def build_trace_graph(
     run_id: str,
     *,
     output_base: str = "./output",
+    write_output: bool = False,
 ) -> Any:
     """Build a directed graph of how the run evolved: states and who moved between them.
 
@@ -41,11 +42,13 @@ def build_trace_graph(
     node), and one edge per trace record from from_id to to_id, annotated with
     the acting agent and round. The result is a networkx MultiDiGraph (or
     equivalent) that can be passed to render_trace_graph or traversed for
-    get_traces_to / get_traces_from.
+    get_traces_to / get_traces_from. When write_output is True, writes
+    trace_graph.png and trace_graph.pdf to output_base/run_id/analysis/traceability/.
 
     Args:
         run_id: Run identifier (same as the run's output folder name).
         output_base: Base directory for run folders; default "./output".
+        write_output: If True, write PNG and PDF to output_base/run_id/analysis/traceability/.
 
     Returns:
         A networkx MultiDiGraph with nodes for outcomes and edges for trace
@@ -106,6 +109,13 @@ def build_trace_graph(
         )
 
     G.graph["node_meta"] = node_meta
+
+    if write_output:
+        out_dir = Path(output_base) / run_id / "analysis" / "traceability"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        render_trace_graph(G, str(out_dir / "trace_graph.png"))
+        render_trace_graph(G, str(out_dir / "trace_graph.pdf"))
+
     return G
 
 
