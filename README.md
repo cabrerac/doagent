@@ -36,13 +36,13 @@ The demos show how to use DOAgent as a library. They are not installed with the 
 
 ### Colab notebooks (step-by-step, self-contained)
 
-The **notebooks** in `notebooks/` are designed to run in Google Colab. Each notebook uses only the `doagent` library and code defined in the notebook—no repo clone required. Open in Colab and run cells in order.
+The **notebooks** in `notebooks/` are designed to run in Google Colab. Each notebook uses only the `doagent` library and code defined in the notebook—no repo clone required. Open in Colab and run cells in order. (To open a link in a new tab: right-click the badge → **Open link in new tab**.)
 
 | Notebook | Open in Colab | Description |
 |----------|---------------|-------------|
-| 01_minimal_demo | <a href="https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/01_minimal_demo.ipynb" target="_blank" rel="noopener noreferrer"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> | Install → session → stub env → one step → inspect. |
-| 02_push_demo | <a href="https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/02_push_demo.ipynb" target="_blank" rel="noopener noreferrer"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> | Install + PettingZoo → file-backed push run → analysis. |
-| 03_gridworld_demo | <a href="https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/03_gridworld_demo.ipynb" target="_blank" rel="noopener noreferrer"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> | Install → minimal grid env → file-backed run with shared map → full analysis. |
+| 01_minimal_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/01_minimal_demo.ipynb) | Install → session → stub env → one step → inspect. |
+| 02_push_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/02_push_demo.ipynb) | Install + PettingZoo → file-backed push run → analysis. |
+| 03_gridworld_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/03_gridworld_demo.ipynb) | Install → minimal grid env → file-backed run with shared map → full analysis. |
 
 See `notebooks/README.md` for details.
 
