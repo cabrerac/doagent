@@ -40,9 +40,9 @@ The **notebooks** in `notebooks/` are designed to run in Google Colab. Each note
 
 | Notebook | Open in Colab | Description |
 |----------|---------------|-------------|
-| 01_minimal_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/01_minimal_demo.ipynb) | Install → session → stub env → one step → inspect. |
-| 02_push_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/02_push_demo.ipynb) | Install + PettingZoo → file-backed push run → analysis. |
-| 03_gridworld_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/03_gridworld_demo.ipynb) | Install → minimal grid env → file-backed run with shared map → full analysis. |
+| 01_minimal_demo | <a href="https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/01_minimal_demo.ipynb" target="_blank" rel="noopener noreferrer"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> | Install → session → stub env → one step → inspect. |
+| 02_push_demo | <a href="https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/02_push_demo.ipynb" target="_blank" rel="noopener noreferrer"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> | Install + PettingZoo → file-backed push run → analysis. |
+| 03_gridworld_demo | <a href="https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/03_gridworld_demo.ipynb" target="_blank" rel="noopener noreferrer"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> | Install → minimal grid env → file-backed run with shared map → full analysis. |
 
 See `notebooks/README.md` for details.
 
