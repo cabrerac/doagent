@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-02-03"
 id: "0004"
-last_updated: "2025-03-13"
+last_updated: "2026-03-17"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -75,8 +75,10 @@ Key points:
    - Register, update, deregister, get, list operations.
 3. **Implement in-memory registry**
    - Simple adapter for tests and examples.
-4. **Update examples and tests**
-   - Cover registration and listing.
+4. **Expose the participation registry through the session**
+   - Allow Session to accept an optional participation registry (e.g. in config or constructor) and expose it (e.g. `session.participation_registry` or `session.get_participation_registry()`). Default: none or an in-memory instance created by the session when participation is enabled. This enables examples and run loops to call register/deregister when agents join or leave.
+5. **Update examples and tests**
+   - Cover registration and listing using the exposed registry.
 
 ## Backward Compatibility
 Additive only; no breaking changes.
@@ -93,7 +95,8 @@ This CIP addresses the following requirements:
 - [x] Define participation record
 - [x] Define registry interface
 - [x] Implement in-memory registry
-- [x] Update examples and tests
+- [ ] **Expose participation registry through Session** — required so examples and run loops can register/deregister agents when they join or leave
+- [x] Update examples and tests (registration and listing; not yet using session-exposed registry)
 - [ ] Registry vs store / chunk ownership (placement in registry when data is distributed) — future iteration; see Discussion items
 - [ ] Admission and policy enforcement hooks — future iteration; already in gaps
 - [ ] Discovery across domains (participant and data/resource discovery) — future iteration; see Discussion items
@@ -105,7 +108,11 @@ Iteration 1 complete. Participation record, registry interface, in-memory regist
 
 The system now exposes a participation registry contract, but decentralised discovery and policy controls are deferred.
 
+### (later)
+The participation registry is not yet exposed through the Session: users cannot pass it in config or obtain it from the session. Scenarios that simulate join/leave (e.g. gridworld energy model) therefore cannot register/deregister agents with the library. This CIP is updated to require **exposing the participation registry** (e.g. via Session config and a session property or accessor) so that examples and run loops can use it.
+
 Gaps and follow-on needs:
+- **Expose participation registry through Session** (see Implementation Plan and Implementation Status).
 - Align participation registry with topology modes (centralised vs federated).
 - Provide distributed or pluggable registry backends.
 - Add admission and policy enforcement hooks.
@@ -113,10 +120,10 @@ Gaps and follow-on needs:
 ### 2026-02-06
 Iteration 2 discussion item: The current simple_push validation example does not demonstrate open participation. Iteration 2 should include a scenario that exercises join/leave and capability discovery.
 
-### 2025-03-13
+### 2026-03-13
 Added **alignment with DOA and the agentic reasoning paper** to Motivation: openness as the "collaboration" pillar in the paper's triad (shared memory, communication mechanisms, collaboration); registry and participation enable multi-agent collaboration in an open ecosystem. References reading guide §3.
 
-### 2025-03-13
+### 2026-03-13
 Added **Discussion items / Future iteration**: (1) Registry vs store / chunk ownership — registry may describe data placement or chunk ownership when shared data is distributed. (2) Admission and policy enforcement — keep as explicit discussion topic (already in gaps). (3) Discovery across domains — participant discovery across registries (federated directory) and data/resource discovery (where is chunk X). Implementation Status updated with unchecked items for these.
 
 ## References
