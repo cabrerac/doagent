@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 from doagent import Session, RunReporter, make_env
+from doagent.core import ParticipationRecord
 from doagent.analysis import (
     accountability,
     interpretability,
@@ -125,6 +126,11 @@ def run_with_session(
         configs, goal="map_discovery", payload_type="map_update",
     )
 
+    registry = session.participation_registry
+    if registry and energy_model:
+        for aid in agent_ids:
+            registry.register(ParticipationRecord(agent_id=aid, capabilities=["map_discovery"]))
+
     observations = wrapped_env.reset(seed=seed)
     rng = random.Random(seed)
 
@@ -163,12 +169,16 @@ def run_with_session(
                 energy_levels[aid] -= energy_decay
                 if energy_levels[aid] <= 0:
                     active_agents.remove(aid)
+                    if registry:
+                        registry.deregister(aid)
             for aid in agent_ids:
                 if aid in active_agents:
                     continue
                 energy_levels[aid] = min(energy_levels[aid] + energy_recharge, energy_max)
                 if energy_levels[aid] > energy_leave_threshold:
                     active_agents.add(aid)
+                    if registry:
+                        registry.register(ParticipationRecord(agent_id=aid, capabilities=["map_discovery"]))
 
         active_ids = sorted(active_agents)
         actions: Dict[str, Any] = {}
@@ -264,6 +274,7 @@ def _make_session_config(
     topology_mode: str = "centralised",
     visibility: Dict[str, List[str]] | None = None,
     hub_id: str = "hub",
+    participation: bool = False,
 ) -> Dict[str, Any]:
     """Build a Session config dict from run parameters. For file/mongo runs with scenario_name, library creates run_id and folders."""
     cfg: Dict[str, Any] = {
@@ -273,6 +284,8 @@ def _make_session_config(
         "policies": GRIDWORLD_POLICIES,
         "hub_id": hub_id,
     }
+    if participation:
+        cfg["participation"] = True
     if shared_data_type == "file" and scenario_name:
         cfg["scenario_name"] = scenario_name
         cfg["output_base"] = output_base
@@ -368,6 +381,7 @@ def main() -> None:
             topology_mode=topology_mode,
             visibility=visibility,
             hub_id=hub_id,
+            participation=energy_model,
         )
     )
     run_path = Path(session.run_path)

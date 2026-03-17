@@ -21,6 +21,7 @@ from uuid import uuid4
 from ..interface.shared_data import SharedDataAdapter
 from ..records import INITIAL_STATE_ID, DecisionRequest, SimpleRecord
 from ._internal.record_writer import RecordWriter, StateHashFn, default_state_hash, _serializable
+from .participation import InMemoryParticipationRegistry, ParticipationRecord
 from .run_config import RunConfig
 from .topology import Topology, TopologyConfig
 
@@ -295,6 +296,7 @@ class Session:
         state_hash_fn: Any = _DEDUP_DEFAULT,
         run_id: Optional[str] = None,
         run_path: Optional[str] = None,
+        participation_registry: Optional[Any] = None,
     ) -> None:
         self._shared_data = shared_data
         self._config = run_config or RunConfig()
@@ -303,6 +305,7 @@ class Session:
         self._hub_id = hub_id
         self._run_id = run_id
         self._run_path = run_path
+        self._participation_registry = participation_registry
         resolved_hash_fn: Optional[StateHashFn] = (
             default_state_hash if state_hash_fn is _DEDUP_DEFAULT else state_hash_fn
         )
@@ -367,6 +370,8 @@ class Session:
           - run_config: {"logging_level": 0|1|2}
           - topology: {"mode": "centralised"|"peer_to_peer"|"federated", "visibility": {...}}
           - policies: {name: entry_point_or_callable, ...}
+          - participation: bool (default False); if True, session gets an in-memory participation registry
+          - participation_registry: optional registry instance (overrides participation: True)
           - hub_id: str (default "hub")
           - state_hash_fn: callable for dedup (default: default_state_hash)
         """
@@ -467,6 +472,10 @@ class Session:
         hub_id = config.get("hub_id", "hub")
         state_hash_fn = config.get("state_hash_fn", _DEDUP_DEFAULT)
 
+        part_registry: Optional[Any] = config.get("participation_registry")
+        if part_registry is None and config.get("participation") is True:
+            part_registry = InMemoryParticipationRegistry()
+
         session = cls(
             shared_data,
             run_config,
@@ -476,6 +485,7 @@ class Session:
             state_hash_fn=state_hash_fn,
             run_id=run_id,
             run_path=run_path,
+            participation_registry=part_registry,
         )
 
         policies_cfg = config.get("policies") or {}

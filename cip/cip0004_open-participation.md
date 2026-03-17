@@ -62,6 +62,8 @@ Key points:
 
 - **Discovery across domains.** Open collaboration across organisations may require **discovery** beyond a single registry: (a) **participant discovery** — finding agents or capabilities across multiple registries or domains (e.g. federated directory, registry-of-registries); (b) **data/resource discovery** — finding where a given chunk or capability lives when data is distributed. For future iteration.
 
+- **Persistence of participation.** Currently the participation registry is **in-memory only** (e.g. `InMemoryParticipationRegistry`). For future iteration we may want to **persist participation** to the same backend as the shared data model—e.g. file (when `shared_data.type` is file) or Mongo (when `shared_data.type` is mongo)—so that who is participating survives process restarts and is consistent with where records are stored.
+
 ## Iteration Deliverable (PoC)
 - Participation record structure.
 - Registry interface + in-memory implementation.
@@ -95,8 +97,9 @@ This CIP addresses the following requirements:
 - [x] Define participation record
 - [x] Define registry interface
 - [x] Implement in-memory registry
-- [ ] **Expose participation registry through Session** — required so examples and run loops can register/deregister agents when they join or leave
-- [x] Update examples and tests (registration and listing; not yet using session-exposed registry)
+- [x] **Expose participation registry through Session** — Session accepts `participation: True` or `participation_registry` in config and exposes `session.participation_registry`; examples and notebooks use it on leave/rejoin (2026-03-17).
+- [x] Update examples and tests (gridworld demo and notebook use registry; push notebook notes openness).
+- [ ] **Persist participation** (file/Mongo aligned with shared data model) — future iteration; currently in-memory only (see Discussion items).
 - [ ] Registry vs store / chunk ownership (placement in registry when data is distributed) — future iteration; see Discussion items
 - [ ] Admission and policy enforcement hooks — future iteration; already in gaps
 - [ ] Discovery across domains (participant and data/resource discovery) — future iteration; see Discussion items
