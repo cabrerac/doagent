@@ -52,6 +52,7 @@ Key points:
 - ParticipationRecord captures agent id, capabilities, resource limits, and optional metadata.
 - ParticipationRegistry interface defines register, update, deregister, get, and list methods.
 - InMemoryParticipationRegistry provides a minimal adapter.
+- **The participation registry must be exposed** so that examples and run loops can use it when agents join or leave. Today the registry exists in the library but is not wired to the Session: users cannot pass a registry in config or obtain one from the session, so scenarios that simulate or implement join/leave (e.g. energy-based leave/rejoin) cannot register or deregister agents with the library. Exposing the registry (e.g. via Session config and a session property or accessor) is required so that openness is usable in examples and in production run loops.
 
 ### Discussion items / Future iteration
 
@@ -64,7 +65,8 @@ Key points:
 ## Iteration Deliverable (PoC)
 - Participation record structure.
 - Registry interface + in-memory implementation.
-- Example and tests for participation registration and retrieval.
+- **Expose the participation registry** so callers can use it (e.g. via Session: accept an optional registry in config and expose it on the session, or provide a session method to obtain the registry). Without this, examples cannot register/deregister agents when they join or leave.
+- Example and tests for participation registration and retrieval (using the exposed registry).
 
 ## Implementation Plan
 1. **Define participation record**
