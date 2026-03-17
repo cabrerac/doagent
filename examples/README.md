@@ -1,6 +1,6 @@
 # Examples
 
-Minimal, file-backed runs that demonstrate the library: config, run loop, and analysis.
+Minimal runs that demonstrate the library with file as the shared data model: config, run loop, and analysis.
 
 **Run from the repository root** after installing the library (`pip install -e .` in the doagent repo). The demos import `doagent` and show how to use it as a library.
 
@@ -17,12 +17,12 @@ Each demo uses the **public API** only: `Session`, `RunConfig`, `make_env`, `Run
 
 | Example            | Description                                                                                                                                                                                                                |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **gridworld_demo** | Four agents explore a grid; shared data stores discovered cells. File-backed run, then analysis: provenance, traceability, **causal attribution** (fits discovery), interpretability.                                      |
-| **push_demo**      | Two agents in a PettingZoo MPE push scenario. File-backed run, then analysis: provenance, traceability, interpretability (no attribution — push has no discovery semantics). Requires `pettingzoo[mpe]`, `mpe2`, `pygame`. |
-| **minimal_usage**  | Smallest Session-based run (memory-backed) for quick sanity checks.                                                                                                                                                        |
+| **gridworld_demo** | Four agents explore a grid; shared data stores discovered cells. Session with file as shared data model, then analysis: provenance, traceability, **causal attribution** (fits discovery), interpretability. |
+| **push_demo**      | Two agents in a PettingZoo MPE push scenario. Session with file as shared data model, then analysis: provenance, traceability, interpretability (no attribution — push has no discovery semantics). Requires `pettingzoo[mpe]`, `mpe2`, `pygame`. |
+| **minimal_usage**  | Smallest Session-based run (in-memory as shared data model) for quick sanity checks. |
 
 
-After a file-backed run, output lives under `output/<run_id>/`: `records/`, `metadata.json`, and `analysis/<category>/` for artefacts. The demos call analysis with `write_output=True`, so the library writes PNG, PDF, and JSON into each category folder. **Use only the analysis tools that fit your scenario** (see main README “Analysis” and `doagent.analysis` package docstring).
+When the session uses file as the shared data model, output lives under `output/<run_id>/`: `records/`, `metadata.json`, and `analysis/<category>/` for artefacts. The demos call analysis with `write_output=True`, so the library writes PNG, PDF, and JSON into each category folder. **Use only the analysis tools that fit your scenario** (see main README “Analysis” and `doagent.analysis` package docstring).
 
 ## Config alternatives
 
@@ -53,11 +53,11 @@ In your config, set `scenario.topology` (or the top-level `topology` key, depend
 
 Gridworld demo reads topology from `scenario.topology` in its YAML; see `gridworld_demo_config.yaml`.
 
-### Storage
+### Storage (shared data model)
 
-- **File-backed (for demos and analysis)** — use `shared_data.type: "file"` and set `scenario_name` and `output_base`. The library creates `output_base/<run_id>/`, `records/`, and `metadata.json`.
-- **Mongo-backed** — use `shared_data.type: "mongo"` and set `scenario_name` and `output_base`; optionally `shared_data.uri` (default `mongodb://localhost:27017`). The library creates `output_base/<run_id>/` and `metadata.json` (with `mongo_uri` and `mongo_database`); records are stored in MongoDB. Run_id-based analysis resolves from metadata and reads from Mongo. Requires `pymongo`.
-- **In-memory** — `shared_data.type: "memory"` for single-run experiments; no posterior analysis by `run_id` after the session ends.
+- **File as shared data model (for demos and analysis)** — use `shared_data.type: "file"` and set `scenario_name` and `output_base`. The library creates `output_base/<run_id>/`, `records/`, and `metadata.json`.
+- **Mongo as shared data model** — use `shared_data.type: "mongo"` and set `scenario_name` and `output_base`; optionally `shared_data.uri` (default `mongodb://localhost:27017`). The library creates `output_base/<run_id>/` and `metadata.json` (with `mongo_uri` and `mongo_database`); records are stored in MongoDB. Run_id-based analysis resolves from metadata and reads from Mongo. Requires `pymongo`.
+- **In-memory as shared data model** — `shared_data.type: "memory"` for single-run experiments; no posterior analysis by `run_id` after the session ends.
 - **NoOp** — `shared_data.type: "noop"` for baseline/dry runs (no persistence).
 
 ### Logging level

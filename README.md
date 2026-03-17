@@ -34,6 +34,11 @@ Dependencies include `pyyaml`, `matplotlib`, `networkx`, and `pymongo`. For Mong
 
 The demos show how to use DOAgent as a library. They are not installed with the package as they live in the repository.
 
+- **Grid-world:** Four agents explore a grid; shared data stores discovered cells. Configurable via `examples/gridworld_demo/gridworld_demo_config.yaml`. To use MongoDB, set `storage: "mongo"` in the scenario section (MongoDB must be running).
+- **Push:** Two agents in a PettingZoo MPE scenario. Requires `pettingzoo[mpe]`, `mpe2`, `pygame`.
+
+Both demos use a session with file (or mongo) as the shared data model and then run analysis, writing outputs under `output/<run_id>/analysis/`.
+
 ### Colab notebooks (step-by-step, self-contained)
 
 The **notebooks** in `notebooks/` are designed to run in Google Colab. Each notebook uses only the `doagent` library and code defined in the notebook—no repo clone required. Open in Colab and run cells in order. (To open a link in a new tab: right-click the badge → **Open link in new tab**.)
@@ -41,8 +46,8 @@ The **notebooks** in `notebooks/` are designed to run in Google Colab. Each note
 | Notebook | Open in Colab | Description |
 |----------|---------------|-------------|
 | 01_minimal_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/01_minimal_demo.ipynb) | Install → session → stub env → one step → inspect. |
-| 02_push_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/02_push_demo.ipynb) | Install + PettingZoo → file-backed push run → analysis. |
-| 03_gridworld_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/03_gridworld_demo.ipynb) | Install → minimal grid env → file-backed run with shared map → full analysis. |
+| 02_push_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/02_push_demo.ipynb) | Install + PettingZoo → session with file as shared data model → push run → analysis. |
+| 03_gridworld_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/03_gridworld_demo.ipynb) | Install → minimal grid env → session with file as shared data model → run with shared map → full analysis. |
 
 See `notebooks/README.md` for details.
 
@@ -60,11 +65,6 @@ python -m examples.gridworld_demo.gridworld_demo
 pip install pettingzoo[mpe] mpe2 pygame
 python -m examples.push_demo.push_demo
 ```
-
-- **Grid-world:** Four agents explore a grid; shared data stores discovered cells. Configurable via `examples/gridworld_demo/gridworld_demo_config.yaml`. To use MongoDB, set `storage: "mongo"` in the scenario section (MongoDB must be running).
-- **Push:** Two agents in a PettingZoo MPE scenario. Requires `pettingzoo[mpe]`, `mpe2`, `pygame`.
-
-Both demos run a file-backed (or mongo-backed) scenario and then run analysis, writing outputs under `output/<run_id>/analysis/`.
 
 ## Using DOAgent in your own project
 
