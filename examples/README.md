@@ -17,7 +17,7 @@ Each demo uses the **public API** only: `Session`, `RunConfig`, `make_env`, `Run
 
 | Example            | Description                                                                                                                                                                                                                |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **gridworld_demo** | Four agents explore a grid; shared data stores discovered cells. Session with file as shared data model, then analysis: provenance, traceability, **causal attribution** (fits discovery), interpretability. |
+| **gridworld_demo** | Four agents explore a grid; shared data stores discovered cells. Session with file as shared data model and optional **participation registry** (openness: register/deregister when agents leave or rejoin in the energy model). Analysis: provenance, traceability, **causal attribution** (fits discovery), interpretability. |
 | **push_demo**      | Two agents in a PettingZoo MPE push scenario. Session with file as shared data model, then analysis: provenance, traceability, interpretability (no attribution — push has no discovery semantics). Requires `pettingzoo[mpe]`, `mpe2`, `pygame`. |
 | **minimal_usage**  | Smallest Session-based run (in-memory as shared data model) for quick sanity checks. |
 
@@ -63,3 +63,7 @@ Gridworld demo reads topology from `scenario.topology` in its YAML; see `gridwor
 ### Logging level
 
 In `run_config`, set `logging_level` to 0, 1, or 2 to control how much is recorded (e.g. agent_update, outcome, trace, provenance). Level 2 enables full attribution for analysis.
+
+### Participation (openness)
+
+When your scenario has agents that join or leave (e.g. gridworld energy model), set `participation: True` in the session config so the session gets a **participation registry** (`session.participation_registry`). In the run loop, call `registry.register(ParticipationRecord(agent_id=..., capabilities=[...]))` when an agent joins and `registry.deregister(agent_id)` when they leave. Gridworld demo does this when `scenario.participation.energy_model` is true in the YAML.

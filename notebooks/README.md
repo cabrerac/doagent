@@ -9,3 +9,5 @@ Step-by-step Colab-ready notebooks that use only the `doagent` library and code 
 | 03_gridworld_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/03_gridworld_demo.ipynb) | Install doagent → minimal grid env and random policy → session with file as shared data model → run loop with shared map → full analysis (including causal attribution). |
 
 **How to run:** Click **Open in Colab** above (or open the notebook from GitHub in [Colab](https://colab.research.google.com/)). Run cells in order. The first cell installs the library from the repository.
+
+**Config alignment:** Push and gridworld notebooks use the same parameters as the local examples (`examples/push_demo/`, `examples/gridworld_demo/`, `gridworld_demo_config.yaml`) so behaviour matches between Colab and local runs. The gridworld notebook demonstrates **decentralisation** (peer-to-peer topology) and **openness** (participation registry on leave/rejoin).

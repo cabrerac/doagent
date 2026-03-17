@@ -129,5 +129,8 @@ Added **alignment with DOA and the agentic reasoning paper** to Motivation: open
 ### 2026-03-13
 Added **Discussion items / Future iteration**: (1) Registry vs store / chunk ownership — registry may describe data placement or chunk ownership when shared data is distributed. (2) Admission and policy enforcement — keep as explicit discussion topic (already in gaps). (3) Discovery across domains — participant discovery across registries (federated directory) and data/resource discovery (where is chunk X). Implementation Status updated with unchecked items for these.
 
+### 2026-03-17
+Participation registry exposed through Session: config keys `participation: True` (creates in-memory registry) and `participation_registry` (user-supplied); property `session.participation_registry`. Gridworld example and notebook updated to register/deregister on leave/rejoin; push notebook notes that openness is demonstrated in gridworld. **Persistence:** For future iteration we may persist participation to file or Mongo depending on the shared data model in use; currently the registry is in-memory only. Added Discussion item "Persistence of participation" and Implementation Status item for persist participation (file/Mongo).
+
 ## References
 - None yet

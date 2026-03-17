@@ -4,6 +4,8 @@ Data-Oriented Agents for accountable and interpretable multi-agent systems.
 
 DOAgent is a Python library for building multi-agent systems where **shared data is the primary interface** between **decentralised agents** that cooperate in **open environments**. Every decision, state transition, and contribution is recorded transparently, providing interpretability, traceability, and accountability out of the box [1].
 
+**In this document:** [Why DOAgent?](#why-doagent) · [Install](#install) · [Run the demos](#run-the-demos) · [Quick start](#quick-start) · [What gets recorded](#what-gets-recorded) · [Decentralisation](#decentralisation-topologies) · [Openness](#open-and-collaborative-environments) · [Analysis](#analysis) · [Implement your own scenario](#implement-your-own-scenario) · [Project layout](#project-layout) · [API reference](#api-reference)
+
 ## Why DOAgent?
 
 Agentic systems often lack visibility into *why* decisions were made, *who* contributed what, and *how* state evolved. DOAgent addresses this by making data the first-class citizen:
@@ -146,7 +148,7 @@ Within the run loop, `session.visible_records(agent_id, kind="agent_update")` re
 
 In DOA, **openness** means the environment is not closed to a fixed set of agents: who participates can change over time, and the system records contributions from whoever acts, without assuming a fixed number of participants.
 
-Agents can effectively “join” or “leave” from the environment’s point of view (e.g. when energy runs out or a condition is met), and DOAgent still attributes and traces only the contributions that actually occurred. The gridworld demo illustrates this with an optional energy model: agents leave when energy is depleted and rejoin when recharged; the run loop uses an `active_agents` set and only those agents decide and are included in the step.
+Agents can effectively “join” or “leave” from the environment’s point of view (e.g. when energy runs out or a condition is met), and DOAgent still attributes and traces only the contributions that actually occurred. Enable a **participation registry** with `participation: True` in config; then `session.participation_registry` supports `register(record)` and `deregister(agent_id)` so the library knows who is participating. The gridworld demo uses this with an optional energy model: agents leave when energy is depleted and rejoin when recharged; the run loop updates the registry on each leave/rejoin and only active agents decide and are included in the step. See the gridworld notebook and `examples/gridworld_demo` for the pattern.
 
 ## Analysis
 
