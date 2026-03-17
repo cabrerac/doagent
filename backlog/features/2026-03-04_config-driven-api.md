@@ -1,7 +1,7 @@
 ---
 id: "2026-03-04_config-driven-api"
 title: "Config-driven API: hide internals, no scenario-specific env factories"
-status: "Done"
+status: "Completed"
 priority: "High"
 created: "2026-03-04"
 last_updated: "2026-03-09"

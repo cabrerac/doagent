@@ -1,7 +1,7 @@
 ---
 id: "2026-03-10_validation-internal-experiments"
 title: "Validation internal: remove from public API, structure for research/experiments"
-status: "Done"
+status: "Completed"
 priority: "High"
 created: "2026-03-10"
 last_updated: "2026-01-28"

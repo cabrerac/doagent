@@ -1,7 +1,7 @@
 ---
 id: "2026-01-28_library-writes-run-metadata"
 title: "Library creates run_id, folders (including ./output/), and metadata.json"
-status: "Done"
+status: "Completed"
 priority: "High"
 created: "2026-01-28"
 last_updated: "2026-01-28"

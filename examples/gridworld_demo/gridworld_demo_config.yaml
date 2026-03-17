@@ -24,7 +24,7 @@ scenario:
     visibility:
       agent_0: ["agent_1"]
       agent_1: ["agent_2"]
-      agent_3: ["agent_0, agent_1"]
+      agent_3: ["agent_0", "agent_1"]
   participation:
     energy_model: true
     energy_min: 8
