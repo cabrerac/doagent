@@ -338,6 +338,11 @@ class Session:
         """Hub agent identifier for federated topology."""
         return self._hub_id
 
+    @property
+    def participation_registry(self) -> Optional[Any]:
+        """Participation registry for open join/leave (openness principle). None if not configured."""
+        return self._participation_registry
+
     def inspect(self, kind: str) -> List[Any]:
         """Inspect records produced during the run, by kind.
 
