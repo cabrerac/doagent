@@ -10,7 +10,7 @@ doagent/          Library: Session, adapters, topology, records, participation
   interface/
 examples/         gridworld_demo, push_demo, minimal_usage, README (config)
 notebooks/        Colab step-by-step demos
-guides/           This file + demos-and-custom-builds + doa-principles
+guides/           doa-principles + layout-and-api (README has the env checklist)
 experiments/      Comparison runners, baselines
 docs/             Architecture / adapter notes for contributors
 tests/

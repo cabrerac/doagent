@@ -1,9 +1,8 @@
-# Guides (detail beyond the main README)
+# Guides (extra detail)
 
 | File | Contents |
 |------|----------|
-| [demos-and-custom-builds.md](demos-and-custom-builds.md) | Quick start session code + checklist to implement your own env |
-| [doa-principles.md](doa-principles.md) | Shared data, decentralisation, openness — each with code snippets |
-| [layout-and-api.md](layout-and-api.md) | Repo layout + what to import |
+| [doa-principles.md](doa-principles.md) | Shared data, decentralisation, openness — code snippets each |
+| [layout-and-api.md](layout-and-api.md) | Repo layout + API table |
 
-Main entry: [README.md](../README.md).
+Main entry: [README.md](../README.md) (install, demos, **your own env checklist**, principles link, analysis, layout link).

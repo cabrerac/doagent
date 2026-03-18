@@ -69,7 +69,32 @@ python -m examples.push_demo.push_demo
 
 Extra options (topology, mongo, participation): [`examples/README.md`](examples/README.md). Notebook notes: [`notebooks/README.md`](notebooks/README.md).
 
-**Next:** [Quick start code + checklist for your own environment →](guides/demos-and-custom-builds.md)
+## Your own environment (checklist)
+
+1. **Environment** — Object (or factory via `make_env`) with `reset(seed)` → per-agent observations, `step(actions)` → observations, rewards, terminations/done.
+
+2. **Config** — `shared_data` (`memory`, or `file` + `scenario_name` + `output_base`, or `mongo`), `run_config.logging_level`, `topology`, `policies`. Optional: `participation: True`.
+
+3. **Session** — `Session.from_config(config)`. File/mongo + `scenario_name` gives `session.run_id` for analysis.
+
+4. **Wrap + agents + loop** — `env = session.wrap_env(your_env, env_actor="…")`, `agents = session.create_agents(agent_configs, goal="…")`. Each round: build `actions` from `agent.decide(obs, round_id, inputs={…})`, then `env.step(actions)`. Use `session.visible_records(agent_id, kind="agent_update")` when agents need peers’ data.
+
+   Minimal loop (recording is automatic):
+
+   ```python
+   session = Session.from_config(config)
+   env = session.wrap_env(my_env)
+   agents = session.create_agents(agent_configs, goal="explore")
+   observations = env.reset(seed=42)
+   for round_id in range(1, rounds + 1):
+       actions = {aid: agents[aid].decide(observations[aid], round_id)["action"] for aid in agents}
+       observations = env.step(actions)["observations"]
+   ```
+   After: `session.inspect("agent_update")`, etc. For file-backed runs, run [Analysis](#analysis) with `session.run_id`.
+
+5. **Analysis** — After a persisted run, use `doagent.analysis` with `run_id` and `output_base` (see [Analysis](#analysis) below).
+
+Reference implementations: `examples/gridworld_demo`, `examples/push_demo`.
 
 ## DOA principles
 
