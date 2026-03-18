@@ -6,21 +6,21 @@ DOAgent is a Python library for building multi-agent systems where **shared data
 
 ## Why DOAgent?
 
-Agentic systems often lack visibility into *why* decisions were made, *who* contributed what, and *how* state evolved. DOAgent makes **data** the first-class citizen:
+Agentic systems often lack visibility into *why* decisions were made, *who* contributed what, and *how* state evolved. DOAgent addresses this problem by enabling:
 
 - **Shared data model** — agents communicate through records, not hidden channels  
-- **Automatic recording** — wrap environment and agents once; full logs at the verbosity you choose  
-- **Decentralisation** — centralised, peer-to-peer, or federated visibility of records  
-- **Openness** — optional participation registry when agents join or leave  
+- **Automatic recording** — wrap environment and agents once, full logs at the configured verbosity
+- **Decentralisation** — centralised, peer-to-peer, or federated agents communication
+- **Openness** — optional participation registry when agents join or leave environments 
 - **Analysis** — provenance, trace graphs, causal attribution from stored runs
 
 ## DOA principles
 
-DOAgent follows three ideas:
+DOAgent follows three principles:
 
-1. **Shared data** — One record store; logging levels control depth (outcomes → trace → provenance).  
-2. **Decentralisation** — Topology decides which records each agent may read (`visible_peer` / federated hub).  
-3. **Openness** — Optional registry: register when an agent joins, deregister when they leave.
+1. **Data as a first class citizen** — Agents communicate through a shared data model that records the system state by design.
+2. **Decentralisation** — Agents are autonomous and communicate with others using different topologies.  
+3. **Openness** — Agents can join or leave the environment at any time.
 
 Each principle is spelled out with **code snippets** here: **[guides/doa-principles.md](guides/doa-principles.md)**
 
