@@ -12,7 +12,17 @@ Agentic systems often lack visibility into *why* decisions were made, *who* cont
 - **Automatic recording** — wrap environment and agents once; full logs at the verbosity you choose  
 - **Decentralisation** — centralised, peer-to-peer, or federated visibility of records  
 - **Openness** — optional participation registry when agents join or leave  
-- **Analysis** — provenance, trace graphs, causal attribution from stored runs  
+- **Analysis** — provenance, trace graphs, causal attribution from stored runs
+
+## DOA principles
+
+DOAgent follows three ideas:
+
+1. **Shared data** — One record store; logging levels control depth (outcomes → trace → provenance).  
+2. **Decentralisation** — Topology decides which records each agent may read (`visible_peer` / federated hub).  
+3. **Openness** — Optional registry: register when an agent joins, deregister when they leave.
+
+Each principle is spelled out with **code snippets** here: **[guides/doa-principles.md](guides/doa-principles.md)**
 
 ## Install
 
@@ -95,16 +105,6 @@ Extra options (topology, mongo, participation): [`examples/README.md`](examples/
 5. **Analysis** — After a persisted run, use `doagent.analysis` with `run_id` and `output_base` (see [Analysis](#analysis) below).
 
 Reference implementations: `examples/gridworld_demo`, `examples/push_demo`.
-
-## DOA principles
-
-DOAgent follows three ideas:
-
-1. **Shared data** — One record store; logging levels control depth (outcomes → trace → provenance).  
-2. **Decentralisation** — Topology decides which records each agent may read (`visible_peer` / federated hub).  
-3. **Openness** — Optional registry: register when an agent joins, deregister when they leave.
-
-Each principle is spelled out with **code snippets** here: **[guides/doa-principles.md](guides/doa-principles.md)**
 
 ## Analysis
 
