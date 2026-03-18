@@ -139,8 +139,6 @@ Gridworld demo runs all four; push demo runs provenance, traceability, interpret
 
 ## Project layout
 
-High level: library code in `doagent/`, runnable demos in `examples/`, Colab in `notebooks/`, deeper contributor notes in `docs/`.
-
 **Directory tree + public API table → [guides/layout-and-api.md](guides/layout-and-api.md)**
 
 ## Project management
