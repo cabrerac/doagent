@@ -8,10 +8,10 @@ DOAgent is a Python library for building multi-agent systems where **shared data
 
 Agentic systems often lack visibility into *why* decisions were made, *who* contributed what, and *how* state evolved. DOAgent addresses this problem by enabling:
 
-- **Shared data model** — agents communicate through records, not hidden channels  
+- **Shared data model** — agents communicate through records, not hidden channels
 - **Automatic recording** — wrap environment and agents once, full logs at the configured verbosity
-- **Decentralisation** — centralised, peer-to-peer, or federated agents communication
-- **Openness** — optional participation registry when agents join or leave environments 
+- **Decentralisation** — centralised, peer-to-peer, or federated communication topologies
+- **Openness** — optional participation registry when agents join or leave environments
 - **Analysis** — provenance, trace graphs, causal attribution from stored runs
 
 ## DOA principles
@@ -19,7 +19,7 @@ Agentic systems often lack visibility into *why* decisions were made, *who* cont
 DOAgent follows three principles:
 
 1. **Data as a first class citizen** — Agents communicate through a shared data model that records the system state by design.
-2. **Decentralisation** — Agents are autonomous and communicate with others using different topologies.  
+2. **Decentralisation** — Agents are autonomous and communicate with others using different topologies.
 3. **Openness** — Agents can join or leave the environment at any time.
 
 Each principle is spelled out with **code snippets** here: **[guides/doa-principles.md](guides/doa-principles.md)**
@@ -51,9 +51,9 @@ from doagent.analysis import provenance, traceability, accountability, interpret
 
 Demos are **in the repository**, not inside the pip package. They use file (or mongo) as the shared data model, then write analysis under `output/<run_id>/analysis/`.
 
-- **Grid-world** — Four agents, shared map, optional participation. Config: `examples/gridworld_demo/gridworld_demo_config.yaml`. Mongo: set `storage: "mongo"` under `scenario` (server must be running).  
+- **Grid-world** — Four agents, shared map, optional participation. Config: `examples/gridworld_demo/gridworld_demo_config.yaml`. Mongo: set `storage: "mongo"` under `scenario` (server must be running).
   Local: `python -m examples.gridworld_demo.gridworld_demo`
-- **Push** — Two agents, PettingZoo MPE. Extra deps: `pip install pettingzoo[mpe] mpe2 pygame`.  
+- **Push** — Two agents, PettingZoo MPE. Extra deps: `pip install pettingzoo[mpe] mpe2 pygame`.
   Local: `python -m examples.push_demo.push_demo`
 
 ### Notebooks (Google Colab)
