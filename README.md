@@ -2,7 +2,7 @@
 
 Data-Oriented Agents for accountable and interpretable multi-agent systems.
 
-DOAgent is a Python library for building multi-agent systems where **shared data is the primary interface** between **decentralised agents** that cooperate in **open environments**. Every decision, state transition, and contribution can be recorded transparently so you get interpretability, traceability, and accountability without ad-hoc logging [1].
+DOAgent is a Python library for building multi-agent systems where **shared data is the primary interface** between **decentralised agents** that cooperate in **open environments**. Every decision, state transition, and contribution can be recorded transparently so the library provides interpretability, traceability, and accountability out of the box [1].
 
 ## Why DOAgent?
 
