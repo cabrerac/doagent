@@ -1,12 +1,12 @@
 # DOA principles in DOAgent
 
-Three pillars: **shared data**, **decentralisation**, **openness**. Each section has a short idea and a minimal code snippet.
+Three pillars: **data first**, **decentralisation**, **openness**. Each section has a short idea and a minimal code snippet.
 
 ---
 
-## 1. Shared data as a first-class citizen
+## 1. Data as a first-class citizen
 
-Agents coordinate through **records** in one store (not hidden channels). You choose how much is logged; the library writes outcomes, traces, and optional provenance/accountability.
+Agents coordinate through **records** in one shared data model (not hidden channels). You choose how much is logged; the library writes outcomes, traces, and optional provenance/accountability.
 
 **Logging level** (in `run_config`):
 
@@ -37,7 +37,7 @@ session = Session.from_config(config)
 
 ## 2. Decentralisation
 
-Who sees which records is controlled by **topology**: everyone sees everything (centralised), or each agent sees only listed peers (peer-to-peer), or a hub aggregates (federated).
+Agents are autonomous and communicate with others based on their topology, whic controls who sees which records: everyone sees everything (centralised), or each agent sees only listed peers (peer-to-peer), or a hub aggregates (federated).
 
 **Snippet — centralised vs peer-to-peer**
 
@@ -74,7 +74,7 @@ YAML examples for gridworld: [`examples/README.md`](../examples/README.md).
 
 ## 3. Openness
 
-Participants can **join and leave**; you tell the session via a **participation registry** so the library knows who is in.
+Agents can **join and leave**. They tell the session via a **participation registry** so the library knows who is in.
 
 **Snippet — enable registry and register/deregister**
 
