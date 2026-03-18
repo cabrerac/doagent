@@ -1,51 +1,103 @@
-# DOA principles: shared data, decentralisation, openness
+# DOA principles in DOAgent
 
-These are the three pillars of the Data-Oriented Agents (DOA) perspective as embodied in DOAgent.
+Three pillars: **shared data**, **decentralisation**, **openness**. Each section has a short idea and a minimal code snippet.
 
-## Shared data as a first-class citizen
+---
 
-Agents coordinate through **records** in a shared store—not through hidden side channels. Every decision and state transition can be logged at a chosen verbosity. That is what makes traceability, provenance, and accountability possible without instrumenting each agent by hand.
+## 1. Shared data as a first-class citizen
 
-DOAgent records three kinds of data at configurable verbosity:
+Agents coordinate through **records** in one store (not hidden channels). You choose how much is logged; the library writes outcomes, traces, and optional provenance/accountability.
 
-| Logging level | Records                           | Use case                                               |
-| ------------- | --------------------------------- | ------------------------------------------------------ |
-| **0**         | `agent_update` + `outcome`        | Lightweight: just decisions and states                 |
-| **1**         | + `trace` + `explanation`         | Linked state transitions with decision rationale       |
-| **2**         | + `provenance` + `accountability` | Full attribution: who created what, from which sources |
+**Logging level** (in `run_config`):
 
-Records are stored via the adapter selected in config (`shared_data.type`):
+| Level | What is recorded |
+| ----- | ---------------- |
+| 0 | `agent_update`, `outcome` |
+| 1 | + `trace`, `explanation` |
+| 2 | + `provenance`, `accountability` |
 
-- `"memory"` — in-memory, single-run, good for tests and experiments
-- `"file"` — persists to a directory (JSONL per record kind)
-- `"mongo"` — persists to MongoDB (one collection per record kind); default URI `mongodb://localhost:27017`. With `scenario_name`, the library creates `output_base/<run_id>/` and `metadata.json` so run_id-based analysis works. Requires `pymongo` and a running MongoDB server.
-- `"noop"` — no persistence (e.g. for dry runs)
-
-## Decentralisation
-
-Not every agent needs to see every record. **Topology** controls visibility: centralised (all see all), peer-to-peer (each agent sees only listed peers), or federated (hub aggregates and redistributes).
+**Snippet — config and storage type**
 
 ```python
 config = {
-    "shared_data": {"type": "memory"},
-    "run_config": {"logging_level": 1},
-    "topology": {"mode": "centralised"},  # all agents see all records
+    "shared_data": {"type": "file"},
+    "scenario_name": "my_run",
+    "output_base": "output",
+    "run_config": {"logging_level": 2},
+    "topology": {"mode": "centralised"},
+    "policies": {"my_policy": policy_factory},
 }
-# Or: "topology": {"mode": "peer_to_peer", "visibility": {"agent_0": ["agent_1"], ...}}
-# Or: "topology": {"mode": "federated", "hub_id": "hub"}
 session = Session.from_config(config)
+# session.run_id → folder output/<run_id>/ with records/ + metadata.json
 ```
 
-Within the run loop, `session.visible_records(agent_id, kind="agent_update")` returns only the records that agent is allowed to see.
+`shared_data.type`: `"memory"` (single process), `"file"` (JSONL per kind), `"mongo"` (needs server), `"noop"` (no persist).
 
-YAML examples: [`examples/README.md`](../examples/README.md) (topology section).
+---
 
-## Openness
+## 2. Decentralisation
 
-The participant set is not fixed: agents can join or leave over time, and the system still attributes only the contributions that actually occurred.
+Who sees which records is controlled by **topology**: everyone sees everything (centralised), or each agent sees only listed peers (peer-to-peer), or a hub aggregates (federated).
 
-Enable a **participation registry** with `participation: True` in config (or pass a `participation_registry` instance). Then `session.participation_registry` supports `register(record)` and `deregister(agent_id)` so the library knows who is currently participating.
+**Snippet — centralised vs peer-to-peer**
 
-The gridworld demo uses this with an optional energy model: agents leave when energy is depleted and rejoin when recharged; the run loop updates the registry on each leave/rejoin. See the gridworld notebook and `examples/gridworld_demo`.
+```python
+# All agents see all agent_update records
+config = {
+    "shared_data": {"type": "memory"},
+    "run_config": {"logging_level": 1},
+    "topology": {"mode": "centralised"},
+    "policies": {...},
+}
 
-Next: [Analysis](analysis.md)
+# agent_0 only sees records from agent_1 and agent_2
+config = {
+    "shared_data": {"type": "memory"},
+    "topology": {
+        "mode": "peer_to_peer",
+        "visibility": {
+            "agent_0": ["agent_1", "agent_2"],
+            "agent_1": ["agent_0"],
+        },
+    },
+    "policies": {...},
+}
+session = Session.from_config(config)
+
+# In the loop: only records this agent may see
+records = session.visible_records("agent_0", kind="agent_update")
+```
+
+YAML examples for gridworld: [`examples/README.md`](../examples/README.md).
+
+---
+
+## 3. Openness
+
+Participants can **join and leave**; you tell the session via a **participation registry** so the library knows who is in.
+
+**Snippet — enable registry and register/deregister**
+
+```python
+from doagent.core import ParticipationRecord
+
+config = {
+    "shared_data": {"type": "file"},
+    "scenario_name": "gridworld",
+    "output_base": "output",
+    "run_config": {"logging_level": 2},
+    "topology": {"mode": "peer_to_peer", "visibility": {...}},
+    "policies": {...},
+    "participation": True,  # session gets an in-memory registry
+}
+session = Session.from_config(config)
+reg = session.participation_registry
+
+reg.register(ParticipationRecord(agent_id="agent_0", capabilities=["map"]))
+# ... agent leaves ...
+reg.deregister("agent_0")
+# ... agent rejoins ...
+reg.register(ParticipationRecord(agent_id="agent_0", capabilities=["map"]))
+```
+
+Working example: `examples/gridworld_demo` (energy model + registry), gridworld Colab notebook.

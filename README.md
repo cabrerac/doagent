@@ -2,115 +2,124 @@
 
 Data-Oriented Agents for accountable and interpretable multi-agent systems.
 
-DOAgent is a Python library for building multi-agent systems where **shared data is the primary interface** between **decentralised agents** that cooperate in **open environments**. Every decision, state transition, and contribution is recorded transparently, providing interpretability, traceability, and accountability out of the box [1].
-
-**Guides:** [Getting started](guides/getting-started.md) · [Implement your environment](guides/implement-your-environment.md) · [DOA principles](guides/doa-principles.md) · [Analysis](guides/analysis.md) · [API & layout](guides/reference.md) · [Examples config](examples/README.md) · [Notebooks](notebooks/README.md)
+DOAgent is a Python library for building multi-agent systems where **shared data is the primary interface** between **decentralised agents** that cooperate in **open environments**. Every decision, state transition, and contribution can be recorded transparently so you get interpretability, traceability, and accountability without ad-hoc logging [1].
 
 ## Why DOAgent?
 
-Agentic systems often lack visibility into *why* decisions were made, *who* contributed what, and *how* state evolved. DOAgent addresses this by making data the first-class citizen:
+Agentic systems often lack visibility into *why* decisions were made, *who* contributed what, and *how* state evolved. DOAgent makes **data** the first-class citizen:
 
-- **Shared data model**: agents communicate through records, not hidden channels
-- **Automatic recording**: wrap your environment and agents once, get full decision and state logs for free
-- **Configurable decentralisation**: centralised, peer-to-peer, or federated topology
-- **Open environments**: agents can dynamically join or leave; participation can be tracked via the session registry
-- **Built-in analysis**: trace graphs, provenance chains, and causal attribution from recorded data
+- **Shared data model** — agents communicate through records, not hidden channels  
+- **Automatic recording** — wrap environment and agents once; full logs at the verbosity you choose  
+- **Decentralisation** — centralised, peer-to-peer, or federated visibility of records  
+- **Openness** — optional participation registry when agents join or leave  
+- **Analysis** — provenance, trace graphs, causal attribution from stored runs  
 
 ## Install
+
+Install from GitHub (recommended):
 
 ```bash
 pip install git+https://github.com/cabrerac/doagent.git
 ```
 
-Development from a clone: `pip install -e /path/to/doagent`. Dependencies include `pyyaml`, `matplotlib`, `networkx`, `pymongo` (MongoDB optional; default URI `mongodb://localhost:27017`).
+From a local clone (development):
 
-**More:** [Install & dependencies](guides/getting-started.md#install)
+```bash
+pip install -e /path/to/doagent
+```
+
+**Dependencies:** `pyyaml`, `matplotlib`, `networkx`, `pymongo`. Using **MongoDB** as storage requires a running server (default URI `mongodb://localhost:27017`).
+
+In your project:
+
+```python
+from doagent import Session, make_env, RunReporter
+from doagent.analysis import provenance, traceability, accountability, interpretability
+```
 
 ## Run the demos
 
-Demos live in the repo (not in the pip package). **Grid-world** (`examples/gridworld_demo`) — four agents, shared map, optional participation registry. **Push** (`examples/push_demo`) — PettingZoo MPE; needs `pettingzoo[mpe]`, `mpe2`, `pygame`. **Colab notebooks** in `notebooks/` — step-by-step, no clone required.
+Demos are **in the repository**, not inside the pip package. They use file (or mongo) as the shared data model, then write analysis under `output/<run_id>/analysis/`.
 
-**More:** [Demos, Colab table, local commands](guides/getting-started.md#run-the-demos) · [`examples/README.md`](examples/README.md) · [`notebooks/README.md`](notebooks/README.md)
+- **Grid-world** — Four agents, shared map, optional participation. Config: `examples/gridworld_demo/gridworld_demo_config.yaml`. Mongo: set `storage: "mongo"` under `scenario` (server must be running).  
+  Local: `python -m examples.gridworld_demo.gridworld_demo`
+- **Push** — Two agents, PettingZoo MPE. Extra deps: `pip install pettingzoo[mpe] mpe2 pygame`.  
+  Local: `python -m examples.push_demo.push_demo`
 
-## Quick start
+### Notebooks (Google Colab)
 
-```python
-from doagent import Session, RunConfig, make_env
+No clone needed: install cell pulls `doagent`, rest is self-contained. Open in Colab, run top to bottom. (New tab: right-click badge → **Open link in new tab**.)
 
-config = {
-    "shared_data": {"type": "memory"},
-    "run_config": {"logging_level": 2},
-    "topology": {"mode": "centralised"},
-    "policies": {"explore": my_policy_callable},
-}
-session = Session.from_config(config)
-env = session.wrap_env(my_env)
-agents = session.create_agents(agent_configs, goal="explore")
+| Notebook | Colab | What it does |
+|----------|-------|--------------|
+| 01_minimal_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/01_minimal_demo.ipynb) | Session + in-memory store, stub env, one step, inspect |
+| 02_push_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/02_push_demo.ipynb) | File store, PettingZoo push, analysis |
+| 03_gridworld_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/03_gridworld_demo.ipynb) | File store, grid + topology + participation, full analysis |
 
-observations = env.reset(seed=42)
-for round_id in range(1, rounds + 1):
-    actions = {aid: agents[aid].decide(observations[aid], round_id)["action"] for aid in agents}
-    step = env.step(actions)
-    observations = step["observations"]
+### Run demos locally (clone)
+
+```bash
+git clone https://github.com/cabrerac/doagent.git
+cd doagent
+pip install -e .
+python -m examples.gridworld_demo.gridworld_demo
+pip install pettingzoo[mpe] mpe2 pygame   # only for push
+python -m examples.push_demo.push_demo
 ```
 
-After the loop: `session.inspect("agent_update")`, `session.inspect("trace")`, etc.
+Extra options (topology, mongo, participation): [`examples/README.md`](examples/README.md). Notebook notes: [`notebooks/README.md`](notebooks/README.md).
 
-**More:** [Full quick start](guides/getting-started.md#quick-start)
+**Next:** [Quick start code + checklist for your own environment →](guides/demos-and-custom-builds.md)
 
-## Implement your own environment
+## DOA principles
 
-Provide an env with `reset` / `step`, build `Session.from_config` with `shared_data`, `topology`, `policies`, wrap with `session.wrap_env`, create agents, run your loop. Use `session.visible_records` when agents need peer context; use `doagent.analysis` after file-backed runs.
+DOAgent follows three ideas:
 
-**More:** [Step-by-step checklist](guides/implement-your-environment.md)
+1. **Shared data** — One record store; logging levels control depth (outcomes → trace → provenance).  
+2. **Decentralisation** — Topology decides which records each agent may read (`visible_peer` / federated hub).  
+3. **Openness** — Optional registry: register when an agent joins, deregister when they leave.
 
-## Shared data as a first-class citizen
-
-Recording is automatic once you wrap the env and agents. Logging levels control how much is stored (outcomes only vs trace, provenance, accountability). Storage backends: memory, file, mongo, noop.
-
-**More:** [Logging levels & adapters](guides/doa-principles.md#shared-data-as-a-first-class-citizen)
-
-## Decentralisation
-
-Topology modes restrict which records each agent sees (centralised, peer-to-peer with visibility map, federated with hub).
-
-**More:** [Topology & `visible_records`](guides/doa-principles.md#decentralisation)
-
-## Openness
-
-Who participates can change. Set `participation: True` (or pass a registry) and use `session.participation_registry.register` / `deregister` when agents join or leave. Gridworld demo shows this with an energy model.
-
-**More:** [Participation registry](guides/doa-principles.md#openness)
+Each principle is spelled out with **code snippets** here: **[guides/doa-principles.md](guides/doa-principles.md)**
 
 ## Analysis
 
-Run tools: provenance, traceability, accountability, interpretability. Writes under `output/<run_id>/analysis/` when `write_output=True`. The implemented tools are examples of the analysis DOAgent enables.
+After a **file-backed** or **mongo-backed** run you have `output_base/<run_id>/metadata.json` (and for file, `records/`). The `doagent.analysis` package reads that run by `run_id` — no access to agent internals. With `write_output=True`, artefacts go to `output_base/<run_id>/analysis/<category>/` (PNG, PDF, JSON).
 
-**More:** [When to use each tool + code](guides/analysis.md)
+Pick tools that match your scenario:
 
-## API reference
+| Tool | Use when |
+|------|----------|
+| **Provenance** | You want the chain of records that led to an outcome (“why this state?”). |
+| **Traceability** | You want how state evolved (“transition graph”). |
+| **Accountability** | You have discovery/contribution semantics (e.g. who found which cells). Skip for push-like games without that. |
+| **Interpretability** | You want explanations linked to outcomes (needs logging level ≥ 1 for explanations). |
 
-| Import | Purpose |
-|--------|---------|
-| `doagent.Session` | `Session.from_config`, wrap env, create agents, inspect |
-| `doagent.RunConfig` | Logging level (part of config) |
-| `doagent.make_env` | Config-driven env factory |
-| `doagent.RunReporter` | Optional run progress / summary |
+Example after a file run:
 
-**More:** [Full API table & ParticipationRecord](guides/reference.md#primary-api)
+```python
+from doagent.analysis import provenance, traceability, accountability, interpretability
+
+run_id = session.run_id
+output_base = "output"
+
+effective_id = provenance.render_chain_tree("last", run_id, output_base=output_base, write_output=True)
+traceability.build_trace_graph(run_id, output_base=output_base, write_output=True)
+accountability.causal_attribution(run_id, output_base=output_base, write_output=True)  # if discovery scenario
+interpretability.get_explanations_for(effective_id or "last", run_id, output_base=output_base, write_output=True)
+```
+
+Gridworld demo runs all four; push demo runs provenance, traceability, interpretability only. Comparisons / baselines: `experiments/` (see `examples/README.md`).
 
 ## Project layout
 
-Library under `doagent/`; examples under `examples/`; user guides under `guides/`; architecture notes under `docs/`; experiments under `experiments/`.
+High level: library code in `doagent/`, runnable demos in `examples/`, Colab in `notebooks/`, deeper contributor notes in `docs/`.
 
-**More:** [Directory tree](guides/reference.md#project-layout)
-
----
+**Directory tree + public API table → [guides/layout-and-api.md](guides/layout-and-api.md)**
 
 ## Project management
 
-DOAgent uses [VibeSafe](https://github.com/lawrennd/vibesafe): `tenets/`, `requirements/`, `cip/`, `backlog/`. Run `./whats-next` for status.
+[VibeSafe](https://github.com/lawrennd/vibesafe): `tenets/`, `requirements/`, `cip/`, `backlog/`. Status: `./whats-next`.
 
 ## References
 
-[1] Christian Cabrera, Andrei Paleyes, Pierre Thodoroff, and Neil D. Lawrence. 2025. Machine Learning Systems: A Survey from a Data-Oriented Perspective. ACM Computing Surveys. [Available online](https://dl.acm.org/doi/10.1145/3769292)
+[1] Christian Cabrera, Andrei Paleyes, Pierre Thodoroff, and Neil D. Lawrence. 2025. *Machine Learning Systems: A Survey from a Data-Oriented Perspective.* ACM Computing Surveys. [ACM](https://dl.acm.org/doi/10.1145/3769292)

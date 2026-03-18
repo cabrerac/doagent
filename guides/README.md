@@ -1,13 +1,9 @@
-# DOAgent guides
+# Guides (detail beyond the main README)
 
-User-facing documentation beyond the [main README](../README.md).
+| File | Contents |
+|------|----------|
+| [demos-and-custom-builds.md](demos-and-custom-builds.md) | Quick start session code + checklist to implement your own env |
+| [doa-principles.md](doa-principles.md) | Shared data, decentralisation, openness — each with code snippets |
+| [layout-and-api.md](layout-and-api.md) | Repo layout + what to import |
 
-| Guide | Contents |
-|-------|----------|
-| [Getting started](getting-started.md) | Install, run demos (Colab + local), quick start code |
-| [Implement your own environment](implement-your-environment.md) | Step-by-step checklist for a custom scenario |
-| [DOA principles](doa-principles.md) | Shared data as first-class citizen, decentralisation, openness |
-| [Analysis](analysis.md) | Provenance, traceability, accountability, interpretability |
-| [API reference & layout](reference.md) | Public imports, repository layout |
-
-Contributor-oriented material (adapter contracts, data model spec) lives under [`docs/`](../docs/).
+Main entry: [README.md](../README.md).

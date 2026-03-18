@@ -22,7 +22,7 @@ Each demo uses the **public API** only: `Session`, `RunConfig`, `make_env`, `Run
 | **minimal_usage**  | Smallest Session-based run (in-memory as shared data model) for quick sanity checks. |
 
 
-When the session uses file as the shared data model, output lives under `output/<run_id>/`: `records/`, `metadata.json`, and `analysis/<category>/` for artefacts. The demos call analysis with `write_output=True`, so the library writes PNG, PDF, and JSON into each category folder. **Use only the analysis tools that fit your scenario** (see [guides/analysis.md](../guides/analysis.md) and `doagent.analysis` package docstring).
+When the session uses file as the shared data model, output lives under `output/<run_id>/`: `records/`, `metadata.json`, and `analysis/<category>/` for artefacts. The demos call analysis with `write_output=True`, so the library writes PNG, PDF, and JSON into each category folder. **Use only the analysis tools that fit your scenario** (see main README [Analysis](../README.md#analysis) and `doagent.analysis` package docstring).
 
 ## Config alternatives
 
