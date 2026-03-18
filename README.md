@@ -81,6 +81,8 @@ Extra options (topology, mongo, participation): [`examples/README.md`](examples/
 
 ## Your own environment (checklist)
 
+To implement your environment, please follow the instructions below:
+
 1. **Environment** — Object (or factory via `make_env`) with `reset(seed)` → per-agent observations, `step(actions)` → observations, rewards, terminations/done.
 
 2. **Config** — `shared_data` (`memory`, or `file` + `scenario_name` + `output_base`, or `mongo`), `run_config.logging_level`, `topology`, `policies`. Optional: `participation: True`.
