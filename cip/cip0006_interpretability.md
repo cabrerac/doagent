@@ -2,8 +2,8 @@
 author: "Christian Cabrera"
 created: "2026-02-04"
 id: "0006"
-last_updated: "2026-03-19"
-status: "In Progress"
+last_updated: "2026-01-28"
+status: "Implemented"
 compressed: false
 related_requirements:
 - "0006"
@@ -24,11 +24,13 @@ title: "Interpretability Records"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [x] In Progress - Actively being implemented
-- [ ] Implemented - Work complete, awaiting verification
+- [ ] In Progress - Actively being implemented
+- [x] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
 - [ ] Deferred - Postponed (use blocked_by field to indicate blocker)
+
+**Note:** **Implemented** here means the **scoped deliverables below (iterations 1–2) are in the codebase**. Remaining interpretability ideas (narrative summaries, joint graph+text views, Q/A bundles, export naming improvements, etc.) are **explicitly out of scope** for this CIP; they are tracked as **future iterations** in `backlog/features/2026-03-19_explanations-storage-doc.md` and may become a **new CIP or CIP-0006 iteration 3** when requirements are written. That is normal: a CIP closes its agreed scope; follow-ons get their own backlog/CIP entries.
 
 ## Summary
 Add interpretability records that attach human-readable explanations to decision records via the shared data model.
@@ -77,10 +79,20 @@ This CIP addresses the following requirements:
 - REQ-0006: Interpretability of Agent Decisions
 
 ## Implementation Status
+
+### Iteration 1 (shared-data explanation records)
 - [x] Define explanation payload structure
 - [x] Add creation helper
 - [x] Update examples and tests
 - [x] Document usage
+
+### Iteration 2 (`doagent.analysis.interpretability`)
+- [x] `build_atomic_explanations(record_id, run_id, output_base=None)` with Level 1/2 units
+- [x] `render_atomic_explanation_text` for stable human-readable lines
+- [x] Tests (`tests/test_analysis_interpretability.py`) and user docs (`guides/interpreting-analysis.md`, README, demos/notebooks)
+
+### Deferred (future iterations — does not block Implemented)
+- Advanced interpretability artefacts and presentation upgrades: see **Advanced interpretability artefacts (deferred)** in `backlog/features/2026-03-19_explanations-storage-doc.md`.
 
 ## Iteration 2 Plan: doagent.analysis.interpretability
 
@@ -120,7 +132,9 @@ These questions should be answerable without assuming a specific environment or 
 Iteration 2 plan added: `doagent.analysis.interpretability` submodule. See Iteration 2 Plan section.
 
 ### 2026-01-28
-Analysis demo delivered: provenance_walker.py and causal_attribution.py demonstrate external interpretability from recorded data (no agent internals). Provenance chain walker answers "why did this state happen?"; causal attribution answers "who contributed what?" from trace edges. Validates iteration 1 design; iteration 2 artefacts (summarisation, aggregation) can build on this.
+Moved CIP to **Implemented**: iterations 1–2 deliverables are complete (`explanation` records + `doagent.analysis.interpretability` atomic units). Backlog `2026-03-04_analysis-module-library` is **Completed**. Follow-on interpretability work remains documented as **deferred** in `2026-03-19_explanations-storage-doc.md` (not part of this CIP’s scope). **Closed** (verification sign-off) can follow a formal REQ-0006 check if the project requires it.
+
+Early validation (for context): analysis demos (`provenance_walker`, causal attribution) showed external interpretability from recorded data before the library module landed; iteration 2 consolidated interpretability under `doagent.analysis`.
 
 ## References
 - None yet

@@ -1,10 +1,10 @@
 ---
 id: "2026-03-04_analysis-module-library"
 title: "Implement doagent.analysis module with property-based submodules"
-status: "In Progress"
+status: "Completed"
 priority: "High"
 created: "2026-03-04"
-last_updated: "2026-03-19"
+last_updated: "2026-01-28"
 category: "features"
 related_cips:
 - "0006"
@@ -96,30 +96,30 @@ The **library** writes a single metadata file per run. The **analysis module** r
 ## Acceptance Criteria
 
 ### Provenance submodule (`doagent.analysis.provenance`)
-- [ ] `walk_chain(record_id, run_id, max_depth, output_base=None)` — resolve run_id via metadata, then walk derived_from chain backwards, return structured chain
-- [ ] `render_chain_tree(record_id, run_id, output_path, output_base=None)` — resolve run_id, produce tree diagram (PNG/PDF)
-- [ ] Resolution: analysis reads run metadata from output folder (e.g. output_base/run_id), opens the appropriate access point, uses `inspect()` to get records
+- [x] `walk_chain(record_id, run_id, max_depth, output_base=None)` — resolve run_id via metadata, then walk derived_from chain backwards, return structured chain
+- [x] `render_chain_tree(record_id, run_id, output_path, output_base=None)` — resolve run_id, produce tree diagram (PNG/PDF)
+- [x] Resolution: analysis reads run metadata from output folder (e.g. output_base/run_id), opens the appropriate access point, uses `inspect()` to get records (`doagent/analysis/_resolve.py`)
 
 ### Traceability submodule (`doagent.analysis.traceability`)
-- [ ] `build_trace_graph(run_id, output_base=None)` — resolve run_id, return networkx MultiDiGraph from trace/outcome/agent_update records
-- [ ] `get_traces_to(record_id, run_id, output_base=None)` / `get_traces_from(record_id, run_id, output_base=None)` — retrieval helpers
-- [ ] `render_trace_graph(graph, output_path)` — export PNG/PDF/DOT (no run_id; operates on graph)
-- [ ] Graph layout handles chain-like and branching structures
+- [x] `build_trace_graph(run_id, output_base=None)` — resolve run_id, return networkx MultiDiGraph from trace/outcome/agent_update records
+- [x] `get_traces_to(record_id, run_id, output_base=None)` / `get_traces_from(record_id, run_id, output_base=None)` — retrieval helpers
+- [x] `render_trace_graph(graph, output_path)` — export PNG/PDF/DOT (no run_id; operates on graph)
+- [x] Graph layout handles chain-like and branching structures
 
 ### Accountability submodule (`doagent.analysis.accountability`)
-- [ ] `causal_attribution(run_id, output_base=None)` — resolve run_id, per-agent contribution from trace edges, return structured dict
-- [ ] `render_attribution_charts(attribution, output_path)` — line chart, bar chart, effectiveness chart (no run_id)
-- [ ] Attribution logic uses agent-specific observations (not first-agent-wins)
+- [x] `causal_attribution(run_id, output_base=None)` — resolve run_id, per-agent contribution from trace edges, return structured dict
+- [x] `render_attribution_charts(attribution, output_path)` — line chart, bar chart, effectiveness chart (no run_id)
+- [x] Attribution logic uses agent-specific observations (not first-agent-wins)
 
 ### Interpretability submodule (`doagent.analysis.interpretability`)
-- [ ] `build_atomic_explanations(record_id, run_id, output_base=None)` — resolve run_id, build transition-level atomic explanations for a record
-- [ ] Minimal initially; extensible for summarisation, aggregation in future
+- [x] `build_atomic_explanations(record_id, run_id, output_base=None)` — resolve run_id, build transition-level atomic explanations for a record
+- [x] Minimal initially; extensible for summarisation, aggregation in future (`render_atomic_explanation_text`, Level 1/2 units)
 
 ### Module structure
-- [ ] `doagent.analysis` package with `__init__.py` re-exporting submodules
-- [ ] Examples in `examples/analysis/` updated to use library (thin wrappers or CLI)
-- [ ] README and API docs updated
-- [ ] Unit tests for each submodule
+- [x] `doagent.analysis` package with `__init__.py` re-exporting submodules
+- [x] Demos call the library directly (`examples/gridworld_demo`, `examples/push_demo`); no separate `examples/analysis/` tree — original “thin wrapper” idea superseded by integrated demos + notebooks
+- [x] README and API docs updated (`doagent/analysis/__init__.py` docstring, main README, `guides/interpreting-analysis.md`)
+- [x] Unit tests for each submodule (`tests/test_analysis_*.py`)
 
 ## Implementation Notes
 
@@ -148,3 +148,6 @@ Status set to In Progress. Proceeding per 5-stage workflow: implementation in sm
 
 ### 2026-03-19
 Interpretability API updated: replaced linked-record retrieval entry with `build_atomic_explanations(record_id, run_id, output_base=None)` as the user-facing method. Examples/notebooks/docs aligned to atomic explanations artefact output.
+
+### 2026-01-28
+Verified implementation against acceptance criteria: all four submodules + `_resolve` + tests present. Marked task **Completed**. Follow-on interpretability/storage improvements remain in `2026-03-19_explanations-storage-doc.md` (gaps/deferred artefacts). Optional next backlog: per-record atomic export filename, batch export, or HTML/Markdown report artefact.

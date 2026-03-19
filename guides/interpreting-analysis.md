@@ -2,7 +2,7 @@
 
 After a persisted run, `doagent.analysis` can write analysis artefacts under:
 
-`output_base/<run_id>/analysis/<category>/` 
+`output_base/<run_id>/analysis/<category>/`
 
 This guide matches the **current** rendering in `doagent/analysis/*.py`. The current set of analysis tools is an **expandable demonstration** of the analysis DOAgent enables, not a closed list. Use this guide together with the [README Analysis section](../README.md#analysis) and the demo notebooks.
 
@@ -104,8 +104,8 @@ Current levels:
 - **Level 2 (explicit rationale):** decision linkage exists and rationale text is present.
   - Example: `System was at state S14. Agent agent_2 made decision move_east because "I moved east to explore unseen cells near the boundary." As a result, the system ended at state S15.`
 
-For the ongoing storage/retrieval/presentation roadmap, see:
-`backlog/features/2026-03-19_explanations-storage-doc.md`.
+For the storage/retrieval/presentation model, forward-looking improvements, known gaps/target direction, and **deferred** advanced interpretability artefacts (summaries, joint graph+text, Q/A bundles), see:
+`backlog/features/2026-03-19_explanations-storage-doc.md` (status: Completed; content remains the reference for follow-on work).
 
 ### Atomic explanations export (`atomic_explanations_for_last.json`)
 

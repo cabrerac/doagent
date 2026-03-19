@@ -51,7 +51,7 @@ from doagent.analysis import provenance, traceability, accountability, interpret
 
 Demos are **in the repository**, not inside the pip package. They use file (or mongo) as the shared data model, then write analysis under `output/<run_id>/analysis/`.
 
-- **Grid-world** — Four agents, shared map, optional participation. Config: `examples/gridworld_demo/gridworld_demo_config.yaml`. Mongo: set `storage: "mongo"` under `scenario` (server must be running).
+- **Grid-world** — Four agents, shared map, optional participation. Config: `examples/gridworld_demo/gridworld_demo_config.yaml` (per-agent `metadata.explanation` demonstrates interpretability Level 2 alongside Level 1). Mongo: set `storage: "mongo"` under `scenario` (server must be running).
   Local: `python -m examples.gridworld_demo.gridworld_demo`
 - **Push** — Two agents, PettingZoo MPE. Extra deps: `pip install pettingzoo[mpe] mpe2 pygame`.
   Local: `python -m examples.push_demo.push_demo`
@@ -113,7 +113,7 @@ Reference implementations: `examples/gridworld_demo`, `examples/push_demo`.
 After a **file-backed** or **mongo-backed** run you have `output_base/<run_id>/metadata.json` (and for file, `records/`). The `doagent.analysis` package reads that run by `run_id` — no access to agent internals. With `write_output=True`, analysis artefacts go to `output_base/<run_id>/analysis/<category>/`.
 
 **How to read analysis artefacts:** [guides/interpreting-analysis.md](guides/interpreting-analysis.md) (provenance tree, trace graph, causal attribution, interpretability export).
-**Interpretability roadmap (atomic explanations, Level 1/2):** `backlog/features/2026-03-19_explanations-storage-doc.md`.
+**Interpretability model (atomic explanations, Level 1/2, gaps & follow-ons):** `backlog/features/2026-03-19_explanations-storage-doc.md`.
 
 The current analysis modules are an **expandable demonstration set** of what DOAgent analysis enables. Extend them or add new modules to fit your scenario.
 

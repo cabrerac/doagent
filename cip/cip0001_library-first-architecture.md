@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-01-23"
 id: "0001"
-last_updated: "2026-03-09"
+last_updated: "2026-03-19"
 status: "Implemented"
 compressed: false
 related_requirements:
@@ -29,6 +29,14 @@ title: "Library First Architecture"
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
 - [ ] Deferred - Postponed (use blocked_by field to indicate blocker)
+
+**Implemented (current scope)** — The checklist and iterations through config-driven API / Session-first surface are satisfied for now. **This does not mean “ignore forever.”** The **library definition** (what is public, what stays internal, how we package and document adoption) should be **consciously conserved** as DOAgent grows: revisit when adding exports, new subsystems, or moving code between `doagent`, `doagent.core`, and examples. See **Ongoing review** below.
+
+## Ongoing review (conserving the library definition)
+
+- **Living docs:** [`docs/library-boundaries.md`](../docs/library-boundaries.md), README sections on the public API, and `AGENTS.md` / packaging notes.
+- **When to re-open discussion:** new `doagent` exports; optional extras; splitting or merging packages; any pattern that pulls `doagent.core` / `doagent.records` into user-facing paths.
+- **Process:** substantive boundary changes are better as an **explicit CIP update, amendment, or new CIP** than silent drift.
 
 ## Summary
 Define the library-first architecture so DOAgent can be embedded as a dependency, with modular adoption of principles (shared data, decentralisation, openness) and optional system-level conveniences.
@@ -163,6 +171,9 @@ Config-driven API completed: session.inspect, policy resolution, examples migrat
 - Internal types (InMemorySharedData, FileSharedData, TopologyConfig, PolicyRegistry, SimpleRecord) are never imported by examples or user code.
 - The same entry-point resolution mechanism powers both `make_env` (environments) and policy registration (policies) -- consistent and learnable.
 - Library internal runners (run_push_validation, run_gridworld_validation) and their tests still use the programmatic API, which is appropriate for infrastructure testing.
+
+### 2026-01-28
+**Status note:** CIP-0001 is **complete for the current iteration**; **`Implemented`** remains appropriate. The team should **keep thinking in terms of this CIP** whenever the **library definition** might change — conservation of boundaries is ongoing, not a one-time gate. See **Ongoing review (conserving the library definition)** above.
 
 ## References
 - [Library Boundaries](../docs/library-boundaries.md)

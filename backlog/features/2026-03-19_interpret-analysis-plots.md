@@ -1,7 +1,7 @@
 ---
 id: "2026-03-19_interpret-analysis-plots"
 title: "Document how to interpret analysis artefacts"
-status: "Done"
+status: "Completed"
 priority: "Medium"
 created: "2026-03-19"
 last_updated: "2026-03-19"
@@ -83,7 +83,7 @@ Task created from previous session handoff item: "Interpret the results (plots)"
 
 ### 2026-03-19
 
-Implemented `guides/interpreting-analysis.md`; README Analysis links; `guides/README.md` index row; Step 8 pointers in `notebooks/02_push_demo.ipynb` and `03_gridworld_demo.ipynb`. Marked task Done.
+Implemented `guides/interpreting-analysis.md`; README Analysis links; `guides/README.md` index row; Step 8 pointers in `notebooks/02_push_demo.ipynb` and `03_gridworld_demo.ipynb`. Marked task Completed.
 
 ### 2026-03-19 (interpretability follow-up)
 

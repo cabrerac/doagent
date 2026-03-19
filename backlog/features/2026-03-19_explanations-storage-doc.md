@@ -1,10 +1,10 @@
 ---
 id: "2026-03-19_explanations-storage-doc"
 title: "Document interpretability storage, retrieval, and presentation model"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-03-19"
-last_updated: "2026-03-19"
+last_updated: "2026-01-28"
 category: "features"
 related_cips:
 - "0006"
@@ -171,6 +171,38 @@ Document and prioritise richer artefacts as follow-ons, such as narrative summar
 
 **Rationale:** Improves maintainability and user understanding, reduces ambiguity for future contributors.
 
+## Proposed improvements (forward-looking)
+
+**When explicit explanations are absent (Level 1):**
+
+- Prefer **atomic units + `rendered_text`** over raw record dumps (implemented in `build_atomic_explanations` and demos/notebooks).
+- Optional next steps: highlight transitions missing rationale in a summary line; link each unit to trace-graph edge ids in UI tooling.
+
+**When explicit rationale is present (Level 2):**
+
+- Keep **canonical `rationale_text`** and **sentence `rendered_text`** side by side (implemented).
+- Optional next steps: HTML/Markdown report artefact; side-by-side with provenance/trace figures; export bundles for LLM Q&A with citation ids.
+
+## Gaps and target direction (schema / storage / presentation)
+
+**Current state:** Rationale for Level 2 can come from `kind="explanation"` records (`decision_id`) and/or **Session metadata**-injected text on the decision response (`agent_update` payload). Atomic JSON is stable for tooling.
+
+**Residual gaps (not blocking Iteration 1):**
+
+- Filename `atomic_explanations_for_last.json` is fixed regardless of `record_id`; a future improvement is `atomic_explanations_for_<record_id>.json` or a single manifest index.
+- Multi-outcome runs may want batch export of atomic units for all outcomes in one pass.
+
+**Rationale for incremental change:** Avoid breaking stored runs; evolve export naming and batch APIs behind new functions or optional flags.
+
+## Advanced interpretability artefacts (deferred)
+
+Explicitly **out of scope** for this backlog item; track in a follow-on task or CIP iteration:
+
+- Narrative summaries (episode- or phase-level) built from atomic units.
+- Joint graph+text views (click trace edge → atomic explanation).
+- Q/A-ready bundles (curated JSON + citation policy for LLMs).
+- Counterfactual or heuristic “what-if” layers (clearly labelled as inferred).
+
 ## Acceptance Criteria
 
 - [x] Current interpretability record shapes and retrieval logic are documented in user-facing docs.
@@ -178,11 +210,11 @@ Document and prioritise richer artefacts as follow-ons, such as narrative summar
 - [x] Documentation explicitly defines Level 1 vs Level 2 interpretability behaviour.
 - [x] Atomic explanation unit is documented (machine representation + human-readable rendering template).
 - [x] Current examples include explanation-emitting agent behaviour to demonstrate Level 2 alongside Level 1.
-- [ ] Proposed improvements are documented for:
+- [x] Proposed improvements are documented for:
   - stronger tooling when explicit explanations are absent
   - clearer presentation when explicit explanations are present
-- [ ] If gaps exist, a proposed target schema/storage/presentation approach is documented with rationale.
-- [ ] Advanced interpretability artefacts beyond atomic explanations are listed and deferred to subsequent iterations.
+- [x] If gaps exist, a proposed target schema/storage/presentation approach is documented with rationale.
+- [x] Advanced interpretability artefacts beyond atomic explanations are listed and deferred to subsequent iterations.
 - [x] Links to this doc are added from README analysis section and/or interpretability docs.
 
 ## Implementation Notes
@@ -205,10 +237,16 @@ Scope clarified: this is the primary backlog task to discuss interpretability ga
 
 Roadmap updated: this iteration prioritises atomic explanations and level-aware presentation (Level 1 and Level 2), plus example updates to demonstrate both levels. More sophisticated interpretability artefacts are explicitly deferred to later iterations.
 
-Updated examples for level demonstration: `examples/push_demo/push_demo.py` uses Session metadata-injected decision rationale text in `agent_update` records (Level 2) while staying within the Session API boundary; gridworld remains decision-link-only by default (Level 1). Updated `examples/README.md` to document this distinction.
+Updated examples for level demonstration: **push** and **gridworld** use `metadata.explanation` on agent configs so Session injects rationale into decisions; `examples/gridworld_demo/gridworld_demo_config.yaml` and notebooks include the same pattern. Runs can still produce Level 1 units for transitions without rationale. `examples/README.md` documents push vs gridworld interpretability behaviour.
 
 Added user-facing links to this backlog task from `guides/interpreting-analysis.md` and `README.md` Analysis section, with concrete Level 1/Level 2 atomic explanation examples in the interpretability guide.
 
 Documented the current retrieval contract for `interpretability.build_atomic_explanations` (record kinds loaded, link resolution order, de-duplication, sorting, output path, and valid Level 1/Level 2 outcomes).
 
 Implemented `interpretability.build_atomic_explanations(...)` with level-aware units and human-readable sentence rendering, plus `write_output` support to `analysis/interpretability/atomic_explanations_for_last.json`. Added tests for Level 1 and Level 2 cases and updated README/guide docs accordingly.
+
+Removed legacy `get_explanations_for` in favour of atomic units; local examples and notebooks print the same interpretability summary (levels + `rendered_text` preview).
+
+### 2026-03-19 (docs closure)
+
+Documented proposed improvements, gap/target direction, and deferred advanced artefacts; marked acceptance criteria complete and task **Completed**.
