@@ -38,18 +38,26 @@ agents:
     policy:
       name: "grid_frontier"
       params: {}
+    metadata:
+      explanation: "Frontier policy: move toward nearest unknown cells."
   - id: "agent_1"
     policy:
       name: "grid_random"
       params:
         seed: 1
+    metadata:
+      explanation: "Random exploration with local unknown-cell preference."
   - id: "agent_2"
     policy:
       name: "grid_auction_frontier"
       params:
         seed: 2
+    metadata:
+      explanation: "Auction-frontier policy: prioritize frontier cells with highest bid."
   - id: "agent_3"
     policy:
       name: "grid_random"
       params:
         seed: 3
+    metadata:
+      explanation: "Random exploration with local unknown-cell preference."

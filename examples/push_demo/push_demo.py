@@ -5,6 +5,7 @@ Demonstrates config-driven library usage with a PettingZoo environment.
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 import random
 from typing import Any, Dict
@@ -186,6 +187,11 @@ def main() -> None:
             last_id = effective_id or "last"
             units = interpretability.build_atomic_explanations(last_id, run_id, output_base=output_base, write_output=True)
             print(f"Interpretability: wrote analysis/interpretability/ ({len(units)} atomic explanation units)")
+            if units:
+                levels = Counter(u.get("level") for u in units)
+                print(f"  Levels: {dict(levels)}")
+                for idx, unit in enumerate(units[:5], start=1):
+                    print(f"  {idx:02d}. {unit.get('rendered_text', '(missing rendered_text)')}")
         except Exception as e:
             print(f"  Interpretability: {e}")
     print(f"\nRun output: {run_path} (run_id={run_id})")
