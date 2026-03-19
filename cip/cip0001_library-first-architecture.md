@@ -175,6 +175,7 @@ Config-driven API completed: session.inspect, policy resolution, examples migrat
 ### 2026-03-19
 **Status note:** CIP-0001 is **complete for the current iteration**; **`Implemented`** remains appropriate. The team should **keep thinking in terms of this CIP** whenever the **library definition** might change — conservation of boundaries is ongoing, not a one-time gate. See **Ongoing review (conserving the library definition)** above.
 
+
 ## References
 - [Library Boundaries](../docs/library-boundaries.md)
 - [Data Model Specification](../docs/data-model-spec.md)

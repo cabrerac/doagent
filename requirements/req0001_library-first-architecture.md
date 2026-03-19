@@ -52,3 +52,4 @@ Iteration 2 complete. CIP-0001 moved to Implemented. Session API is the primary 
 
 ### 2026-01-28
 Public API restricted to Session, RunConfig, and make_env only. Tests, demos, and experiments that define or validate the library use this surface; adapter/topology/record types are internal (doagent.core). Documentation (README, library-boundaries, AGENTS.md) updated accordingly.
+
