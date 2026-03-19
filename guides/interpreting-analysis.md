@@ -61,7 +61,7 @@ Push-style demos often skip **accountability** (no meaningful “cells discovere
 - **Node size:** Grows slightly with high in-degree so convergence nodes stand out.
 - **Edge colours:** Match the **legend** — `agent_0`…`agent_3` use fixed palette colours; other agent names use grey (`#999999`). Curved edges separate multiple parallel transitions between the same nodes.
 
-**Practical tips:** Use this view to see **branching**, **reconvergence**, and **who moved** between which states. For “why this state,” pair with the provenance tree or `interpretability.get_explanations_for`.
+**Practical tips:** Use this view to see **branching**, **reconvergence**, and **who moved** between which states. For “why this state,” pair with the provenance tree or `interpretability.build_atomic_explanations`.
 
 ---
 

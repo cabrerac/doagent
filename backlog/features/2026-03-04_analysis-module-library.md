@@ -4,7 +4,7 @@ title: "Implement doagent.analysis module with property-based submodules"
 status: "In Progress"
 priority: "High"
 created: "2026-03-04"
-last_updated: "2026-03-15"
+last_updated: "2026-03-19"
 category: "features"
 related_cips:
 - "0006"
@@ -145,3 +145,6 @@ Design decision recorded: analysis keyed by run_id; library writes run metadata;
 
 ### 2026-03-15
 Status set to In Progress. Proceeding per 5-stage workflow: implementation in small, reviewable slices; explain before acting, no unapproved changes.
+
+### 2026-03-19
+Interpretability API updated: replaced linked-record retrieval entry with `build_atomic_explanations(record_id, run_id, output_base=None)` as the user-facing method. Examples/notebooks/docs aligned to atomic explanations artefact output.

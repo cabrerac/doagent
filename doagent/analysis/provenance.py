@@ -298,7 +298,7 @@ def render_chain_tree(
         output_path: Path for a single output file when write_output is False.
         output_base: Base directory for run folders; default "./output".
         write_output: If True, write PNG and PDF to output_base/run_id/analysis/provenance/
-            and return the effective record_id (for use with get_explanations_for).
+            and return the effective record_id (for use with build_atomic_explanations).
 
     Returns:
         When write_output is True, the effective record_id (e.g. last outcome id);
