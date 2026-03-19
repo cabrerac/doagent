@@ -12,7 +12,7 @@ Agentic systems often lack visibility into *why* decisions were made, *who* cont
 - **Automatic recording** — wrap environment and agents once, full logs at the configured verbosity
 - **Decentralisation** — centralised, peer-to-peer, or federated communication topologies
 - **Openness** — optional participation registry when agents join or leave environments
-- **Analysis** — provenance, trace graphs, causal attribution from stored runs
+- **Analysis** — provenance, traceability, accountability, and interpretability
 
 ## DOA principles
 
