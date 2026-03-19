@@ -58,7 +58,7 @@ Demos are **in the repository**, not inside the pip package. They use file (or m
 
 ### Notebooks (Google Colab)
 
-No clone needed: install cell pulls `doagent`, rest is self-contained. Open in Colab, run top to bottom. (New tab: right-click badge → **Open link in new tab**.)
+The demos can be open in Colab, run top to bottom.
 
 | Notebook | Colab | What it does |
 |----------|-------|--------------|
