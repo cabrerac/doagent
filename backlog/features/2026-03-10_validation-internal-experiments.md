@@ -4,7 +4,7 @@ title: "Validation internal: remove from public API, structure for research/expe
 status: "Completed"
 priority: "High"
 created: "2026-03-10"
-last_updated: "2026-01-28"
+last_updated: "2026-03-19"
 category: "features"
 related_cips:
 - "0001"

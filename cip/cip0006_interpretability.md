@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-02-04"
 id: "0006"
-last_updated: "2026-01-28"
+last_updated: "2026-03-19"
 status: "Implemented"
 compressed: false
 related_requirements:
@@ -131,7 +131,7 @@ These questions should be answerable without assuming a specific environment or 
 ### 2026-03-04
 Iteration 2 plan added: `doagent.analysis.interpretability` submodule. See Iteration 2 Plan section.
 
-### 2026-01-28
+### 2026-03-19
 Moved CIP to **Implemented**: iterations 1–2 deliverables are complete (`explanation` records + `doagent.analysis.interpretability` atomic units). Backlog `2026-03-04_analysis-module-library` is **Completed**. Follow-on interpretability work remains documented as **deferred** in `2026-03-19_explanations-storage-doc.md` (not part of this CIP’s scope). **Closed** (verification sign-off) can follow a formal REQ-0006 check if the project requires it.
 
 Early validation (for context): analysis demos (`provenance_walker`, causal attribution) showed external interpretability from recorded data before the library module landed; iteration 2 consolidated interpretability under `doagent.analysis`.

@@ -172,7 +172,7 @@ Config-driven API completed: session.inspect, policy resolution, examples migrat
 - The same entry-point resolution mechanism powers both `make_env` (environments) and policy registration (policies) -- consistent and learnable.
 - Library internal runners (run_push_validation, run_gridworld_validation) and their tests still use the programmatic API, which is appropriate for infrastructure testing.
 
-### 2026-01-28
+### 2026-03-19
 **Status note:** CIP-0001 is **complete for the current iteration**; **`Implemented`** remains appropriate. The team should **keep thinking in terms of this CIP** whenever the **library definition** might change — conservation of boundaries is ongoing, not a one-time gate. See **Ongoing review (conserving the library definition)** above.
 
 ## References

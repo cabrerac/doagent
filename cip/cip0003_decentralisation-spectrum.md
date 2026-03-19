@@ -2,8 +2,8 @@
 author: "Christian Cabrera"
 created: "2026-02-03"
 id: "0003"
-last_updated: "2025-03-13"
-status: "In Progress"
+last_updated: "2026-03-19"
+status: "Implemented"
 compressed: false
 related_requirements:
 - "0003"
@@ -24,11 +24,13 @@ title: "Decentralisation Spectrum and Topology"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [x] In Progress - Actively being implemented
-- [ ] Implemented - Work complete, awaiting verification
+- [ ] In Progress - Actively being implemented
+- [x] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
 - [ ] Deferred - Postponed (use blocked_by field to indicate blocker)
+
+**Implemented** for this CIP means **iteration 1** (topology model, configuration, coordination hook stub, tests/examples) is delivered and **REQ-0003**’s current criteria are met. **Further decentralisation work** remains explicitly listed under **Discussion items / Future iteration** and as **unchecked** items in **Implementation Status** below—plus future backlog/CIP slices. Marking Implemented does **not** block those follow-ons.
 
 ## Summary
 Define a configurable decentralisation spectrum so systems can choose centralised, federated, or peer-to-peer coordination without rewriting agents.
@@ -113,6 +115,9 @@ Gaps and follow-on needs:
 
 ### 2026-02-06
 Iteration 2 discussion item: The current simple_push validation example does not exercise decentralisation modes. Iteration 2 should include a scenario that demonstrates centralised vs federated vs peer-to-peer coordination choices.
+
+### 2026-03-19
+CIP marked **Implemented** for current scoped delivery; future items unchanged (distributed store, mechanisms, dynamic topology, federation—see Discussion items).
 
 ### 2025-03-13
 Added **alignment with DOA and the agentic reasoning paper** to Motivation: decentralisation as the "communication mechanisms" pillar (how shared memory is accessed); communication as part of collective reasoning (topology/visibility define reasoning context, not just message delivery). References reading guide §3.

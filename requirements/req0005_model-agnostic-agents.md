@@ -1,10 +1,10 @@
 ---
 id: "0005"
 title: "Model Agnostic Agent Core"
-status: "In Progress"
+status: "Implemented"
 priority: "Medium"
 created: "2026-01-22"
-last_updated: "2026-02-21"
+last_updated: "2026-03-19"
 related_tenets:
 - "model-agnostic-core"
 stakeholders:
@@ -34,11 +34,18 @@ This requirement keeps the framework flexible for diverse agent implementations.
 ## Notes (Optional)
 Adapter patterns and model integration guides are described in CIPs.
 
+## Status and future iterations
+
+**Implemented** means the **acceptance criteria above** are satisfied for the current interfaces. **Further agent-protocol work** (sensors/effectors, streaming decisions, richer schemas, etc.) continues through **CIP-0005** (Progress Updates, future discussion) and **backlog** tasks.
+
 ## References
 - **Related Tenets**: model-agnostic-core
 - **External Links**: None
 
 ## Progress Updates
+
+### 2026-03-19
+Status set to **Implemented**; future interface evolution remains tracked on **CIP-0005**.
 
 ### 2026-01-22
 Requirement drafted.

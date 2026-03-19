@@ -4,7 +4,7 @@ title: "Document interpretability storage, retrieval, and presentation model"
 status: "Completed"
 priority: "Medium"
 created: "2026-03-19"
-last_updated: "2026-01-28"
+last_updated: "2026-03-19"
 category: "features"
 related_cips:
 - "0006"

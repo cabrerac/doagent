@@ -4,7 +4,7 @@ title: "Interpretability of Agent Decisions"
 status: "Implemented"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-01-28"
+last_updated: "2026-03-19"
 related_tenets:
 - "interpretability-and-traceability"
 stakeholders:
@@ -50,5 +50,5 @@ CIP-0006 iteration 1 complete (4/4 items). `ExplanationPayload`, `ExplanationRec
 ### 2026-01-28
 Analysis demo: provenance_walker.py and causal_attribution.py demonstrate external interpretability from recorded data. Provenance chain answers "why did this state happen?"; causal attribution answers "who contributed what?" from trace edges. No agent internals required.
 
-### 2026-01-28 (CIP-0006 Implemented)
+### 2026-03-19 (CIP-0006 Implemented)
 CIP-0006 moved to **Implemented**: `doagent.analysis.interpretability` delivers transition-level atomic explanations from shared data (`build_atomic_explanations`, Level 1/2). **REQ-0006 acceptance criteria are satisfied** for the stated requirement (interpret decisions from shared data without agent access). **Advanced** interpretability products (episode narratives, joint graph+text, Q/A bundles, etc.) are **not** required by this REQ; track as future requirements/CIPs when scoped. See `backlog/features/2026-03-19_explanations-storage-doc.md` (deferred section).

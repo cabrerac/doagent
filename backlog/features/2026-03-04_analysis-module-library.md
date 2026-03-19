@@ -4,7 +4,7 @@ title: "Implement doagent.analysis module with property-based submodules"
 status: "Completed"
 priority: "High"
 created: "2026-03-04"
-last_updated: "2026-01-28"
+last_updated: "2026-03-19"
 category: "features"
 related_cips:
 - "0006"
@@ -147,7 +147,4 @@ Design decision recorded: analysis keyed by run_id; library writes run metadata;
 Status set to In Progress. Proceeding per 5-stage workflow: implementation in small, reviewable slices; explain before acting, no unapproved changes.
 
 ### 2026-03-19
-Interpretability API updated: replaced linked-record retrieval entry with `build_atomic_explanations(record_id, run_id, output_base=None)` as the user-facing method. Examples/notebooks/docs aligned to atomic explanations artefact output.
-
-### 2026-01-28
-Verified implementation against acceptance criteria: all four submodules + `_resolve` + tests present. Marked task **Completed**. Follow-on interpretability/storage improvements remain in `2026-03-19_explanations-storage-doc.md` (gaps/deferred artefacts). Optional next backlog: per-record atomic export filename, batch export, or HTML/Markdown report artefact.
+Interpretability API updated: replaced linked-record retrieval entry with `build_atomic_explanations(record_id, run_id, output_base=None)` as the user-facing method. Examples/notebooks/docs aligned to atomic explanations artefact output. Verified implementation against acceptance criteria: all four submodules + `_resolve` + tests present; marked task **Completed**. Follow-on interpretability/storage improvements remain in `2026-03-19_explanations-storage-doc.md` (gaps/deferred artefacts). Optional next backlog: per-record atomic export filename, batch export, or HTML/Markdown report artefact.

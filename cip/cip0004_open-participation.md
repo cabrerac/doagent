@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-02-03"
 id: "0004"
-last_updated: "2026-03-17"
+last_updated: "2026-03-19"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -29,6 +29,8 @@ title: "Open Participation Registry"
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
 - [ ] Deferred - Postponed (use blocked_by field to indicate blocker)
+
+**In Progress** while **REQ-0004** still has **open acceptance criteria** (e.g. transparent capability/resource advertisement) and while **unchecked** items remain in **Implementation Status** (persistence, distributed discovery, etc.). **Future participation work** is already listed under **Discussion items / Future iteration**. Moving to **Implemented** later will **not** prevent more openness iterations—those become new tasks or a new CIP slice.
 
 ## Summary
 Define participation records and a registry interface so agents can join, leave, and advertise capabilities in an open system.
@@ -128,6 +130,9 @@ Added **alignment with DOA and the agentic reasoning paper** to Motivation: open
 
 ### 2026-03-13
 Added **Discussion items / Future iteration**: (1) Registry vs store / chunk ownership — registry may describe data placement or chunk ownership when shared data is distributed. (2) Admission and policy enforcement — keep as explicit discussion topic (already in gaps). (3) Discovery across domains — participant discovery across registries (federated directory) and data/resource discovery (where is chunk X). Implementation Status updated with unchecked items for these.
+
+### 2026-03-19
+Clarified **Status** note: **In Progress** is compatible with a long-running openness roadmap; **Implemented** (when reached) still allows further CIP/backlog iterations.
 
 ### 2026-03-17
 Participation registry exposed through Session: config keys `participation: True` (creates in-memory registry) and `participation_registry` (user-supplied); property `session.participation_registry`. Gridworld example and notebook updated to register/deregister on leave/rejoin; push notebook notes that openness is demonstrated in gridworld. **Persistence:** For future iteration we may persist participation to file or Mongo depending on the shared data model in use; currently the registry is in-memory only. Added Discussion item "Persistence of participation" and Implementation Status item for persist participation (file/Mongo).

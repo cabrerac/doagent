@@ -1,10 +1,10 @@
 ---
 id: "0007"
 title: "Traceability of Decision Chains"
-status: "In Progress"
+status: "Implemented"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-01-28"
+last_updated: "2026-03-19"
 related_tenets:
 - "interpretability-and-traceability"
 - "provenance-and-accountability"
@@ -36,6 +36,10 @@ This requirement focuses on navigation and lineage rather than explanation.
 ## Notes (Optional)
 Lineage representation and storage strategies are defined in CIPs.
 
+## Status and future iterations
+
+**Implemented** means the **acceptance criteria above** are met (record-level traceability plus posterior analysis via `doagent.analysis.traceability`). **Further traceability work** (richer retrieval, automation, cross-scenario questions in CIP-0007) continues in **CIP-0007** Progress Updates / future iterations and **backlog**.
+
 ## References
 - **Related Tenets**: interpretability-and-traceability, provenance-and-accountability
 - **External Links**: None
@@ -50,3 +54,6 @@ CIP-0007 iteration 1 complete (4/4 items). Trace records (`from_id`, `to_id`, `e
 
 ### 2026-01-28
 Analysis demo: trace_graph.py, provenance_walker.py, causal_attribution.py, topology_comparison.py. Trace records form directed graph; scripts visualise state transitions, walk provenance chains, attribute causal contribution per agent, compare topologies. Demonstrates traceability value end-to-end.
+
+### 2026-03-19
+Requirement marked **Implemented**; ongoing trace/analysis enhancements remain on **CIP-0007** (*Status and future iterations*).

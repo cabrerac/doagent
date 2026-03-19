@@ -1,10 +1,10 @@
 ---
 id: "0003"
 title: "Configurable Decentralisation Spectrum"
-status: "In Progress"
+status: "Implemented"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-02-21"
+last_updated: "2026-03-19"
 related_tenets:
 - "decentralised-by-design"
 stakeholders:
@@ -34,11 +34,18 @@ This requirement ensures that decentralisation is a first class capability and c
 ## Notes (Optional)
 Specific protocols and orchestration mechanisms are defined in CIPs.
 
+## Status and future iterations
+
+**Implemented** means the **acceptance criteria above** are satisfied for the current product. **Further decentralisation work** (distributed stores, dynamic topology, mechanism design, etc.) continues through **CIP-0003** (*Discussion items / Future iteration*, unchecked Implementation Status lines) and **backlog** tasks. You may **add or refine criteria** later if the WHAT expands—this is normal, not a contradiction.
+
 ## References
 - **Related Tenets**: decentralised-by-design
 - **External Links**: None
 
 ## Progress Updates
+
+### 2026-03-19
+Status set to **Implemented** while keeping **CIP-0003** as the home for future iterations (see *Status and future iterations* above).
 
 ### 2026-01-22
 Requirement drafted.

@@ -1,10 +1,10 @@
 ---
 id: "0008"
 title: "System Wide Provenance"
-status: "In Progress"
+status: "Implemented"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-01-28"
+last_updated: "2026-03-19"
 related_tenets:
 - "provenance-and-accountability"
 - "data-first-shared-model"
@@ -50,3 +50,6 @@ CIP-0008 iteration 1 complete (4/4 items). Flat provenance attribution (`created
 
 ### 2026-01-28
 Analysis demo: provenance_walker.py walks derived_from chains backwards from any record. Demonstrates provenance as source of truth for "who created what from what." Full chain reconstruction from stored records validated.
+
+### 2026-03-19
+Requirement marked **Implemented**; follow-on provenance/trace automation remains on **CIP-0008**.

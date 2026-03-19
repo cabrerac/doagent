@@ -2,8 +2,8 @@
 author: "Christian Cabrera"
 created: "2026-02-03"
 id: "0005"
-last_updated: "2026-02-05"
-status: "In Progress"
+last_updated: "2026-03-19"
+status: "Implemented"
 compressed: false
 related_requirements:
 - "0005"
@@ -24,11 +24,13 @@ title: "Model-Agnostic Agent Interfaces"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [x] In Progress - Actively being implemented
-- [ ] Implemented - Work complete, awaiting verification
+- [ ] In Progress - Actively being implemented
+- [x] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
 - [ ] Deferred - Postponed (use blocked_by field to indicate blocker)
+
+**Implemented** means **iteration 1** (DecisionRequest/Response, DecisionAgent, FunctionAgent, tests/examples) is delivered and **REQ-0005**’s current criteria are met. **Further protocol work** is listed under **Discussion items / Future iteration** below and in Progress Updates—not blocked by this status.
 
 ## Summary
 Define model-agnostic decision interfaces so agents can use any decision engine while sharing a consistent request/response contract.
@@ -82,6 +84,11 @@ This CIP addresses the following requirements:
 - [x] Implement FunctionAgent adapter
 - [x] Update examples and tests
 
+### Discussion items / Future iteration
+- [ ] Sensor/effector interfaces and agent lifecycle hooks
+- [ ] Streaming or multi-step decision protocols
+- [ ] Guidance for structured decision payload schemas (conventions, validation)
+
 ## Progress Updates
 
 ### 2026-02-03
@@ -96,6 +103,9 @@ Gaps and follow-on needs:
 
 ### 2026-02-06
 Iteration 2 discussion item: The current policies are too simple. We should implement more sophisticated ones. Unsure if this is part of this cip or the validation cip.
+
+### 2026-03-19
+CIP marked **Implemented** for iteration 1; future items under **Discussion items / Future iteration** (aligned with REQ-0005 *Status and future iterations*).
 
 ## References
 - None yet

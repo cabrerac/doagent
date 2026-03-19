@@ -1,10 +1,10 @@
 ---
 id: "0009"
 title: "System Wide Accountability"
-status: "In Progress"
+status: "Implemented"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-02-21"
+last_updated: "2026-03-19"
 related_tenets:
 - "provenance-and-accountability"
 - "interpretability-and-traceability"
@@ -36,6 +36,10 @@ This requirement focuses on responsibility and governance rather than lineage al
 ## Notes (Optional)
 Attribution formats and governance policies are defined in CIPs.
 
+## Status and future iterations
+
+**Implemented** means the **acceptance criteria above** are met (envelope accountability metadata plus `doagent.analysis.accountability` for contribution-style attribution where the scenario supports it). **Further accountability work** (write-path threading, policy conventions, adversarial settings—see CIP-0009 questions) continues in **CIP-0009** and **backlog**.
+
 ## References
 - **Related Tenets**: provenance-and-accountability, interpretability-and-traceability
 - **External Links**: None
@@ -47,3 +51,6 @@ Requirement drafted.
 
 ### 2026-02-21
 CIP-0009 iteration 1 complete (3/3 items). `Accountability` TypedDict (`owner`, `policy_id`, `responsibility_scope`) on every `SimpleRecord` envelope. `new_accountability()` helper builds metadata. Accountability populated by `RecordWriter` at logging level >= 2. Governance context preserved alongside all shared data records and accessible for auditing.
+
+### 2026-03-19
+Requirement marked **Implemented**; further accountability/attribution ideas remain on **CIP-0009**.
