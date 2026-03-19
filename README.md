@@ -110,7 +110,12 @@ Reference implementations: `examples/gridworld_demo`, `examples/push_demo`.
 
 ## Analysis
 
-After a **file-backed** or **mongo-backed** run you have `output_base/<run_id>/metadata.json` (and for file, `records/`). The `doagent.analysis` package reads that run by `run_id` — no access to agent internals. With `write_output=True`, artefacts go to `output_base/<run_id>/analysis/<category>/` (PNG, PDF, JSON).
+After a **file-backed** or **mongo-backed** run you have `output_base/<run_id>/metadata.json` (and for file, `records/`). The `doagent.analysis` package reads that run by `run_id` — no access to agent internals. With `write_output=True`, analysis artefacts go to `output_base/<run_id>/analysis/<category>/`.
+
+**How to read analysis artefacts:** [guides/interpreting-analysis.md](guides/interpreting-analysis.md) (provenance tree, trace graph, causal attribution, interpretability export).
+**Interpretability roadmap (atomic explanations, Level 1/2):** `backlog/features/2026-03-19_explanations-storage-doc.md`.
+
+The current analysis modules are an **expandable demonstration set** of what DOAgent analysis enables. Extend them or add new modules to fit your scenario.
 
 Pick tools that match your scenario:
 
@@ -119,7 +124,7 @@ Pick tools that match your scenario:
 | **Provenance** | You want the chain of records that led to an outcome (“why this state?”). |
 | **Traceability** | You want how state evolved (“transition graph”). |
 | **Accountability** | You have discovery/contribution semantics (e.g. who found which cells). Skip for push-like games without that. |
-| **Interpretability** | You want explanations linked to outcomes (needs logging level ≥ 1 for explanations). |
+| **Interpretability** | You want explanations linked to outcomes and/or transition-level atomic explanations (logging level ≥ 1 recommended). |
 
 Example after a file run:
 
@@ -132,7 +137,7 @@ output_base = "output"
 effective_id = provenance.render_chain_tree("last", run_id, output_base=output_base, write_output=True)
 traceability.build_trace_graph(run_id, output_base=output_base, write_output=True)
 accountability.causal_attribution(run_id, output_base=output_base, write_output=True)  # if discovery scenario
-interpretability.get_explanations_for(effective_id or "last", run_id, output_base=output_base, write_output=True)
+interpretability.build_atomic_explanations(effective_id or "last", run_id, output_base=output_base, write_output=True)
 ```
 
 Gridworld demo runs all four; push demo runs provenance, traceability, interpretability only. Comparisons / baselines: `experiments/` (see `examples/README.md`).

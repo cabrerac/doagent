@@ -57,6 +57,29 @@ def _make_registry_and_configs(agent_ids):
 
 
 class TestSession(unittest.TestCase):
+    def test_register_and_deregister_participant_via_session_api(self):
+        session = Session.from_config({
+            "shared_data": {"type": "memory"},
+            "participation": True,
+        })
+        self.assertIsNotNone(session.participation_registry)
+
+        class AgentObj:
+            def __init__(self, agent_id: str):
+                self.agent_id = agent_id
+
+        session.register_participant("agent_str", capabilities=["map"])
+        session.register_participant({"id": "agent_dict"}, capabilities=["map"])
+        session.register_participant(AgentObj("agent_obj"), capabilities=["map"])
+
+        registry = session.participation_registry
+        ids = sorted(r.agent_id for r in registry.list())
+        self.assertEqual(ids, ["agent_dict", "agent_obj", "agent_str"])
+
+        session.deregister_participant("agent_dict")
+        ids_after = sorted(r.agent_id for r in registry.list())
+        self.assertEqual(ids_after, ["agent_obj", "agent_str"])
+
     def test_basic_session_flow(self):
         shared_data = InMemorySharedData()
         session = Session(shared_data)

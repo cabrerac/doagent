@@ -112,7 +112,7 @@ The **library** writes a single metadata file per run. The **analysis module** r
 - [ ] Attribution logic uses agent-specific observations (not first-agent-wins)
 
 ### Interpretability submodule (`doagent.analysis.interpretability`)
-- [ ] `get_explanations_for(record_id, run_id, output_base=None)` — resolve run_id, retrieve explanation/decision records for a record
+- [ ] `build_atomic_explanations(record_id, run_id, output_base=None)` — resolve run_id, build transition-level atomic explanations for a record
 - [ ] Minimal initially; extensible for summarisation, aggregation in future
 
 ### Module structure

@@ -79,8 +79,6 @@ Agents can **join and leave**. They tell the session via a **participation regis
 **Snippet — enable registry and register/deregister**
 
 ```python
-from doagent.core import ParticipationRecord
-
 config = {
     "shared_data": {"type": "file"},
     "scenario_name": "gridworld",
@@ -91,13 +89,12 @@ config = {
     "participation": True,  # session gets an in-memory registry
 }
 session = Session.from_config(config)
-reg = session.participation_registry
 
-reg.register(ParticipationRecord(agent_id="agent_0", capabilities=["map"]))
+session.register_participant("agent_0", capabilities=["map"])
 # ... agent leaves ...
-reg.deregister("agent_0")
+session.deregister_participant("agent_0")
 # ... agent rejoins ...
-reg.register(ParticipationRecord(agent_id="agent_0", capabilities=["map"]))
+session.register_participant("agent_0", capabilities=["map"])
 ```
 
 Working example: `examples/gridworld_demo` (energy model + registry), gridworld Colab notebook.

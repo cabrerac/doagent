@@ -17,12 +17,12 @@ Each demo uses the **public API** only: `Session`, `RunConfig`, `make_env`, `Run
 
 | Example            | Description                                                                                                                                                                                                                |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **gridworld_demo** | Four agents explore a grid; shared data stores discovered cells. Session with file as shared data model and optional **participation registry** (openness: register/deregister when agents leave or rejoin in the energy model). Analysis: provenance, traceability, **causal attribution** (fits discovery), interpretability. |
-| **push_demo**      | Two agents in a PettingZoo MPE push scenario. Session with file as shared data model, then analysis: provenance, traceability, interpretability (no attribution — push has no discovery semantics). Requires `pettingzoo[mpe]`, `mpe2`, `pygame`. |
+| **gridworld_demo** | Four agents explore a grid; shared data stores discovered cells. Session with file as shared data model and optional **participation registry** (openness: register/deregister when agents leave or rejoin in the energy model). Analysis: provenance, traceability, **causal attribution** (fits discovery), interpretability. By default, this demonstrates interpretability Level 1 (decision-link structure without explicit explanation records). |
+| **push_demo**      | Two agents in a PettingZoo MPE push scenario. Session with file as shared data model, then analysis: provenance, traceability, interpretability (no attribution — push has no discovery semantics). Agent metadata injects decision rationale text into `agent_update` records, demonstrating interpretability Level 2 without leaving the Session API boundary. Requires `pettingzoo[mpe]`, `mpe2`, `pygame`. |
 | **minimal_usage**  | Smallest Session-based run (in-memory as shared data model) for quick sanity checks. |
 
 
-When the session uses file as the shared data model, output lives under `output/<run_id>/`: `records/`, `metadata.json`, and `analysis/<category>/` for artefacts. The demos call analysis with `write_output=True`, so the library writes PNG, PDF, and JSON into each category folder. **Use only the analysis tools that fit your scenario** (see main README [Analysis](../README.md#analysis) and `doagent.analysis` package docstring).
+When the session uses file as the shared data model, output lives under `output/<run_id>/`: `records/`, `metadata.json`, and `analysis/<category>/` for analysis artefacts. The demos call analysis with `write_output=True`, so the library writes analysis artefacts into each category folder. **Use only the analysis tools that fit your scenario.** The current modules are an expandable demonstration set of what DOAgent analysis enables (see main README [Analysis](../README.md#analysis) and `doagent.analysis` package docstring).
 
 ## Config alternatives
 
@@ -66,4 +66,4 @@ In `run_config`, set `logging_level` to 0, 1, or 2 to control how much is record
 
 ### Participation (openness)
 
-When your scenario has agents that join or leave (e.g. gridworld energy model), set `participation: True` in the session config so the session gets a **participation registry** (`session.participation_registry`). In the run loop, call `registry.register(ParticipationRecord(agent_id=..., capabilities=[...]))` when an agent joins and `registry.deregister(agent_id)` when they leave. Gridworld demo does this when `scenario.participation.energy_model` is true in the YAML.
+When your scenario has agents that join or leave (e.g. gridworld energy model), set `participation: True` in the session config so the session gets a **participation registry** (`session.participation_registry`). In the run loop, call `session.register_participant(agent_id, capabilities=[...])` when an agent joins and `session.deregister_participant(agent_id)` when they leave. Gridworld demo does this when `scenario.participation.energy_model` is true in the YAML.

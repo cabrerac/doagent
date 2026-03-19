@@ -18,7 +18,7 @@ They do **not** define the only use cases the library supports. Users can build 
 
 ## Paper as reference for benchmarks and application domains
 
-The **agentic reasoning paper** (see `papers/agentic-reasoning-llm-reading-guide.md`) discusses **§6 Applications** and **§7 Benchmarks**: concrete domains and evaluation setups used in the literature (e.g. mathematical reasoning, scientific discovery, code generation, tool use, multi-agent coordination, self-evolving or adaptive systems). We use that discussion as a **reference** when deciding which validation scenarios to implement and how to prioritise them. We do not commit to implementing every benchmark the paper mentions; we use the list to align our validation work with established domains and to justify our choices.
+The **agentic reasoning paper** (see `papers/agentic-reasoning-llm-reading-guide.md`) discusses **§6 Applications** and **§7 Benchmarks**: concrete domains and evaluation setups used in the literature (e.g. mathematical reasoning, scientific discovery, code generation, tool use, multi-agent coordination, self-evolving or adaptive systems). We use that discussion as a **reference** when deciding which validation scenarios to implement and how to prioritise them. We do not commit to implementing every benchmark the paper mentions; we use the list to align our validation work with established domains and to justify our choices. Apart from the paper's alternatives we should explore and do something for the [Denario project](https://github.com/AstroPilot-AI/Denario)
 
 ---
 

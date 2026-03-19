@@ -20,11 +20,11 @@ tests/
 
 | Import | Role |
 |--------|------|
-| `doagent.Session` | `Session.from_config(config)`; `wrap_env`, `create_agents`, `inspect`, `visible_records`, `participation_registry` |
+| `doagent.Session` | `Session.from_config(config)`; `wrap_env`, `create_agents`, `inspect`, `visible_records`, `register_participant`, `deregister_participant` |
 | `doagent.RunConfig` | Logging level; usually embedded in config dict |
 | `doagent.make_env` | `make_env(factory, **kwargs)` for config-driven envs |
 | `doagent.RunReporter` | Optional progress/summary helper in demos |
 
-Config drives `shared_data`, `topology`, `policies`, `participation`. For `ParticipationRecord` only: `from doagent.core import ParticipationRecord`.
+Config drives `shared_data`, `topology`, `policies`, `participation`.
 
-Do not rely on `doagent.core` or `doagent.records` for general app code beyond participation records.
+Do not rely on `doagent.core` or `doagent.records` for app code; use Session-level APIs.

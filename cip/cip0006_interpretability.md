@@ -87,7 +87,7 @@ This CIP addresses the following requirements:
 Promote analysis capabilities into a first-class library module. Iteration 2 adds `doagent.analysis` with property-based submodules; interpretability is one of four.
 
 **Deliverable**: `doagent.analysis.interpretability` submodule
-- `get_explanations_for(record_id, records_source)` — retrieve explanation/decision records for a record
+- `build_atomic_explanations(record_id, run_id, output_base=None)` — build transition-level atomic explanations for a record
 - Minimal initially; extensible for summarisation, aggregation, and evidence conventions
 - Records source: Path, SharedDataAdapter, or dict of record lists
 - Environment-agnostic: works with any DOAgent run output

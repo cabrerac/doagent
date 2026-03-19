@@ -184,8 +184,8 @@ def main() -> None:
         try:
             # Use same outcome id as provenance so explanations refer to the same outcome.
             last_id = effective_id or "last"
-            explanations = interpretability.get_explanations_for(last_id, run_id, output_base=output_base, write_output=True)
-            print(f"Interpretability: wrote analysis/interpretability/ ({len(explanations)} explanation/decision records)")
+            units = interpretability.build_atomic_explanations(last_id, run_id, output_base=output_base, write_output=True)
+            print(f"Interpretability: wrote analysis/interpretability/ ({len(units)} atomic explanation units)")
         except Exception as e:
             print(f"  Interpretability: {e}")
     print(f"\nRun output: {run_path} (run_id={run_id})")

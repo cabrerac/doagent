@@ -343,6 +343,63 @@ class Session:
         """Participation registry for open join/leave (openness principle). None if not configured."""
         return self._participation_registry
 
+    @staticmethod
+    def _resolve_agent_id(agent_or_id: Any) -> str:
+        """Resolve an agent id from a string, mapping, or object."""
+        if isinstance(agent_or_id, str):
+            if not agent_or_id:
+                raise ValueError("agent_id must be a non-empty string")
+            return agent_or_id
+        if isinstance(agent_or_id, dict):
+            agent_id = agent_or_id.get("id") or agent_or_id.get("agent_id")
+            if isinstance(agent_id, str) and agent_id:
+                return agent_id
+        agent_id = getattr(agent_or_id, "agent_id", None)
+        if isinstance(agent_id, str) and agent_id:
+            return agent_id
+        agent_id = getattr(agent_or_id, "id", None)
+        if isinstance(agent_id, str) and agent_id:
+            return agent_id
+        raise ValueError("agent_or_id must be a string or provide 'agent_id'/'id'")
+
+    def register_participant(
+        self,
+        agent_or_id: Any,
+        *,
+        capabilities: Optional[List[str]] = None,
+        resource_limits: Optional[Dict[str, float]] = None,
+        metadata: Optional[Dict[str, str]] = None,
+    ) -> None:
+        """Register a participant using Session-level API.
+
+        Accepts an agent id string, a dict containing ``agent_id``/``id``,
+        or an object exposing ``agent_id``/``id``. The session normalises
+        this into a participation record for the configured registry.
+        """
+        registry = self._participation_registry
+        if registry is None:
+            raise RuntimeError(
+                "Participation registry is not configured. Set participation=True "
+                "or provide participation_registry in Session.from_config()."
+            )
+        record = ParticipationRecord(
+            agent_id=self._resolve_agent_id(agent_or_id),
+            capabilities=list(capabilities or []),
+            resource_limits=dict(resource_limits or {}),
+            metadata=metadata,
+        )
+        registry.register(record)
+
+    def deregister_participant(self, agent_or_id: Any) -> None:
+        """Deregister a participant by agent id or agent-like object."""
+        registry = self._participation_registry
+        if registry is None:
+            raise RuntimeError(
+                "Participation registry is not configured. Set participation=True "
+                "or provide participation_registry in Session.from_config()."
+            )
+        registry.deregister(self._resolve_agent_id(agent_or_id))
+
     def inspect(self, kind: str) -> List[Any]:
         """Inspect records produced during the run, by kind.
 

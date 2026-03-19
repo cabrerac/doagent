@@ -18,7 +18,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 from doagent import Session, RunReporter, make_env
-from doagent.core import ParticipationRecord
 from doagent.analysis import (
     accountability,
     interpretability,
@@ -129,7 +128,7 @@ def run_with_session(
     registry = session.participation_registry
     if registry and energy_model:
         for aid in agent_ids:
-            registry.register(ParticipationRecord(agent_id=aid, capabilities=["map_discovery"]))
+            session.register_participant(aid, capabilities=["map_discovery"])
 
     observations = wrapped_env.reset(seed=seed)
     rng = random.Random(seed)
@@ -170,7 +169,7 @@ def run_with_session(
                 if energy_levels[aid] <= 0:
                     active_agents.remove(aid)
                     if registry:
-                        registry.deregister(aid)
+                        session.deregister_participant(aid)
             for aid in agent_ids:
                 if aid in active_agents:
                     continue
@@ -178,7 +177,7 @@ def run_with_session(
                 if energy_levels[aid] > energy_leave_threshold:
                     active_agents.add(aid)
                     if registry:
-                        registry.register(ParticipationRecord(agent_id=aid, capabilities=["map_discovery"]))
+                        session.register_participant(aid, capabilities=["map_discovery"])
 
         active_ids = sorted(active_agents)
         actions: Dict[str, Any] = {}
@@ -419,8 +418,8 @@ def main() -> None:
         try:
             # Use same outcome id as provenance so explanations refer to the same outcome.
             last_id = effective_id or "last"
-            explanations = interpretability.get_explanations_for(last_id, run_id, output_base=output_base, write_output=True)
-            print(f"Interpretability: wrote analysis/interpretability/ ({len(explanations)} explanation/decision records)")
+            units = interpretability.build_atomic_explanations(last_id, run_id, output_base=output_base, write_output=True)
+            print(f"Interpretability: wrote analysis/interpretability/ ({len(units)} atomic explanation units)")
         except Exception as e:
             print(f"  Interpretability: {e}")
     print(f"\nRun output: {run_path} (run_id={run_id})")
