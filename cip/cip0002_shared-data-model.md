@@ -3,7 +3,7 @@
 author: "Christian Cabrera"
 created: "2026-02-02"
 id: "0002"
-last_updated: "2025-03-13"
+last_updated: "2026-03-27"
 status: "Implemented"
 compressed: false
 related_requirements:
@@ -242,7 +242,11 @@ Documented **reasoning-centric memory** as a future iteration theme. Added subse
 
 Added **self-evolving state (S_k)** to that scope: S_k is not a separate feature but part of the search features we provide (e.g. `session.search(from, to)` or time/episode-scoped queries). When the substrate persists across runs, search over a range naturally surfaces evolvable memories (reflections, tool registries) and makes meta-updates observable. Table and "Search and memory loop" bullet updated accordingly.
 
-**Meta-update as record kind:** Noted that U(S_k, F_k) can be modeled as a new record kind (e.g. `meta_update` or `evolvable_state_update`), same pattern as policy factorization — make the transition first-class and traceable. To be discussed in a future iteration alongside other new record kinds.
+**Meta-update as record kind:** Noted that U(S_k, F_k) can be modeled as a new record kind (e.g. `meta_update` or `evolvable_state_update`), same pattern as policy factorization — make the transition first-class and traceable. To be discussed in a future iteration alongside other record kinds.
+
+### 2026-03-27
+
+**Talk-driven iteration (deliberation paused; work tracked in backlog).** Goal: **library-level** support for **policy factorization** (separate observable **reasoning** Z-like step vs **external action** A) aligned with **`papers/agentic-reasoning-llm.md`**, and an **explicit "I don't know" / abstention** path inspired by **`papers/consistent-reasoning-paradox-llm.md`** (demonstration and inspection -- **not** a claim to implement the full formal **IDK function** from the CRP). Slides + **`notebooks/`** for live demo; existing scenarios (push/gridworld) or a minimal toy env to be chosen at implementation time. Primary demo: **one LLM agent** (reliability); optional short **multi-agent** segment for **topology as reasoning context** (**CIP-0003**). Captured as backlog task **`2026-03-27_talk-policy-factorization-idk-library`**.
 
 ## References
 
