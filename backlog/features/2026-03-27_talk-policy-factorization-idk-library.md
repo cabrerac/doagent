@@ -1,10 +1,10 @@
 ---
 id: "2026-03-27_talk-policy-factorization-idk-library"
 title: "Library support for policy factorization and IDK (talk + demos)"
-status: "Proposed"
+status: "Ready"
 priority: "High"
 created: "2026-03-27"
-last_updated: "2026-03-27"
+last_updated: "2026-03-28"
 category: "features"
 related_cips:
 - "0002"
@@ -72,3 +72,16 @@ Enable the **DOAgent library** (not only user-space wrappers) to support a **tal
 ### 2026-03-27
 
 Task created from implementation-session deliberation (paused). Discussion captured in CIP-0002 progress update. Awaiting Stage 3 (design alternatives) and user authorization before code changes.
+
+### 2026-03-28
+
+Status changed from **Proposed** to **Ready**. All design decisions resolved (see CIP-0002 progress update 2026-03-28). Six sub-tasks created under `backlog/features/2026-03-28_*`:
+
+1. `policy-return-shape-and-decide` — foundational (no deps)
+2. `reasoning-field-in-payload` — depends on 1
+3. `update-heuristic-policies-examples` — depends on 1; parallel with 2, 4
+4. `update-data-model-spec` — depends on 1 + 2; parallel with 3
+5. `pluggable-llm-policy` — depends on 1 + 2; parallel with 3, 4
+6. `update-notebooks-factorization-idk` — depends on 3 + 5
+
+Critical path: 1 → 2 → 5 → 6. Ready for Stage 3 (per-task design alternatives) and implementation.

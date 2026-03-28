@@ -248,6 +248,37 @@ Added **self-evolving state (S_k)** to that scope: S_k is not a separate feature
 
 **Talk-driven iteration (deliberation paused; work tracked in backlog).** Goal: **library-level** support for **policy factorization** (separate observable **reasoning** Z-like step vs **external action** A) aligned with **`papers/agentic-reasoning-llm.md`**, and an **explicit "I don't know" / abstention** path inspired by **`papers/consistent-reasoning-paradox-llm.md`** (demonstration and inspection -- **not** a claim to implement the full formal **IDK function** from the CRP). Slides + **`notebooks/`** for live demo; existing scenarios (push/gridworld) or a minimal toy env to be chosen at implementation time. Primary demo: **one LLM agent** (reliability); optional short **multi-agent** segment for **topology as reasoning context** (**CIP-0003**). Captured as backlog task **`2026-03-27_talk-policy-factorization-idk-library`**.
 
+### 2026-03-28
+
+**Design decisions for policy factorization, IDK, and record format (Stage 2 complete).**
+
+Resolved the following design questions through deliberative discussion:
+
+1. **Record format — `choice` replaces inner `decision`:** The inner commit object moves from `response.decision` to **`response.choice`** containing `status` (`"act"` | `"abstain"` | `"error"`) and `action` (env primitive or `null`). This avoids the `decision.decision` naming collision. The outer `payload.decision` (request/response bundle) is unchanged. Optional `choice.error` for failure details.
+
+2. **Factorization mechanism — Option B (structured field):** Reasoning trace (Z) is recorded as an optional **`response.reasoning`** field inside the existing `agent_update` record, not as a separate record kind. Rationale: inspecting reasoning only makes sense alongside the decision it produced; keeps one `agent_update` per agent per step.
+
+3. **Policy return shape — explicit, no compat shim:** Policies return `{"choice": {status, action}, "reasoning": {...}, "explanation": "..."}`. Old policies and examples will be updated to the new contract rather than maintaining backward compatibility.
+
+4. **Session API — single `decide()` call:** `SessionAgent.decide()` stays as one call. Returns `{"action": response["choice"]["action"], "response": response}`. Callers check `response["choice"]["status"]` to distinguish act/abstain/error. No two-phase `reason()` + `act()` API for this iteration.
+
+5. **Env handling of abstain — library-agnostic:** The library passes `None` as the action when `status != "act"`. The environment itself should understand `None` (or a sentinel) as a valid "no-op / IDK" action. Scenario loops handle it explicitly.
+
+6. **Demo strategy — extend existing notebooks:** No new notebook. Extend `01_minimal_demo` (new choice shape + abstain cell), `02_push_demo` or `03_gridworld_demo` (LLM policy section with factorization + IDK). LLM policy is model-agnostic (pluggable via env var / config).
+
+7. **Record kind name:** `agent_update` stays (not renamed to `decision`) because `record_update()` writes non-decision agent messages (e.g. hub summaries) using the same kind.
+
+**Implementation order (6 sub-tasks, backlog `2026-03-28_*`):**
+
+1. Policy return shape + `decide()` (foundational)
+2. Optional `reasoning` field in payload (depends on 1)
+3. Update heuristic policies/examples (depends on 1; parallel with 2, 4)
+4. Update `data-model-spec.md` (depends on 1 + 2; parallel with 3)
+5. Pluggable LLM policy (depends on 1 + 2; parallel with 3, 4)
+6. Update notebooks (depends on 3 + 5)
+
+Critical path: 1 → 2 → 5 → 6.
+
 ## References
 
 - [Data Model Specification](../docs/data-model-spec.md) — Record kinds, roles, relationships, provenance/accountability, trace schema, logging levels.
