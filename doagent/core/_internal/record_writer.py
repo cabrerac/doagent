@@ -45,6 +45,8 @@ def default_state_hash(payload: Dict[str, Any]) -> str:
 def _serializable(value: Any) -> Any:
     if hasattr(value, "tolist"):
         return value.tolist()
+    if callable(value) and not isinstance(value, (bool, type)):
+        return f"<callable:{getattr(value, '__name__', type(value).__name__)}>"
     if isinstance(value, dict):
         return {k: _serializable(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
@@ -107,8 +109,8 @@ class RecordWriter:
         accountability = new_accountability(owner=agent_id) if should_include_provenance_accountability(level) else {}
         record = new_agent_update_record(
             actor=agent_id,
-            local_knowledge=local_knowledge,
-            decision=decision,
+            local_knowledge=_serializable(local_knowledge),
+            decision=_serializable(decision),
             payload_type=payload_type,
             provenance=provenance,
             accountability=accountability,
