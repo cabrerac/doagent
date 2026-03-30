@@ -58,7 +58,7 @@ agents:
     policy:
       name: "grid_llm"
       params:
-        model: "gpt-4o"
+        model: "gemini-2.5-flash"
         confidence_threshold: 0.3
     metadata:
       explanation: "LLM-based exploration: uses an LLM to reason about the best action."

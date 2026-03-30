@@ -15,13 +15,13 @@ Usage with ``create_llm_tool``::
 
     from examples.llm_policy import create_llm_tool, llm_decide_factory
 
-    llm_tool = create_llm_tool()  # reads OPENAI_API_KEY from env
+    llm_tool = create_llm_tool()  # reads GEMINI_API_KEY from env (default)
 
     configs = [
         {
             "id": "agent_0",
             "policy": {"name": "llm_decide", "params": {
-                "model": "gpt-4o",
+                "model": "gemini-2.5-flash",
                 "action_space": {0: "stay", 1: "left", 2: "right", 3: "up", 4: "down"},
                 "confidence_threshold": 0.4,
             }},
@@ -60,31 +60,78 @@ from typing import Any, Callable, Dict, Optional
 def create_llm_tool(
     *,
     api_key: Optional[str] = None,
-    provider: str = "openai",
+    provider: str = "gemini",
 ) -> Callable[..., Any]:
     """Create an LLM callable from environment configuration.
 
-    Reads ``OPENAI_API_KEY`` (or ``DOAGENT_OPENAI_API_KEY``) if *api_key*
-    is not provided.  Returns a callable with signature
-    ``(*, model, messages) -> str`` that proxies to the provider SDK.
+    Supported providers:
+      - ``"gemini"`` (default): reads ``GEMINI_API_KEY`` or
+        ``DOAGENT_GEMINI_API_KEY``.  SDK: ``google-genai``.
+      - ``"openai"``: reads ``OPENAI_API_KEY`` or
+        ``DOAGENT_OPENAI_API_KEY``.  SDK: ``openai``.
+
+    Returns a callable with signature ``(*, model, messages) -> str``
+    that proxies to the provider SDK.  *messages* follows the OpenAI
+    chat format (list of ``{"role": ..., "content": ...}`` dicts); the
+    Gemini adapter converts internally.
 
     Raises *RuntimeError* when the API key is missing or the SDK is not
-    installed.  The caller decides whether to catch this or let it
-    propagate (local runners: let it fail; notebooks: catch and skip).
+    installed.
     """
-    key = api_key or os.environ.get("DOAGENT_OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
-    if not key:
-        raise RuntimeError(
-            "No API key found.  Set the OPENAI_API_KEY (or DOAGENT_OPENAI_API_KEY) "
-            "environment variable to use LLM-based policies."
+    if provider == "gemini":
+        key = (
+            api_key
+            or os.environ.get("DOAGENT_GEMINI_API_KEY")
+            or os.environ.get("GEMINI_API_KEY")
         )
+        if not key:
+            raise RuntimeError(
+                "No Gemini API key found.  Set the GEMINI_API_KEY (or "
+                "DOAGENT_GEMINI_API_KEY) environment variable, or get a free "
+                "key at https://aistudio.google.com/apikey"
+            )
+        try:
+            from google import genai  # type: ignore[import-untyped]
+            from google.genai import types  # type: ignore[import-untyped]
+        except ImportError as exc:
+            raise RuntimeError(
+                "The google-genai SDK is required for the Gemini provider.  "
+                "Install it with:  pip install google-genai"
+            ) from exc
+
+        client = genai.Client(api_key=key)
+
+        def _gemini_call(*, model: str, messages: list) -> str:
+            system_parts = [m["content"] for m in messages if m["role"] == "system"]
+            user_parts = [m["content"] for m in messages if m["role"] != "system"]
+            config = types.GenerateContentConfig(
+                system_instruction="\n".join(system_parts) if system_parts else None,
+            )
+            response = client.models.generate_content(
+                model=model,
+                contents="\n".join(user_parts),
+                config=config,
+            )
+            return response.text or ""
+
+        return _gemini_call
 
     if provider == "openai":
+        key = (
+            api_key
+            or os.environ.get("DOAGENT_OPENAI_API_KEY")
+            or os.environ.get("OPENAI_API_KEY")
+        )
+        if not key:
+            raise RuntimeError(
+                "No OpenAI API key found.  Set the OPENAI_API_KEY (or "
+                "DOAGENT_OPENAI_API_KEY) environment variable."
+            )
         try:
             from openai import OpenAI  # type: ignore[import-untyped]
         except ImportError as exc:
             raise RuntimeError(
-                "The OpenAI SDK is required for LLM policies.  "
+                "The OpenAI SDK is required for the openai provider.  "
                 "Install it with:  pip install openai"
             ) from exc
 
@@ -155,7 +202,7 @@ def llm_decide_factory(params: Dict[str, Any]) -> Any:
     """Policy factory: returns a decide callable that uses an LLM tool.
 
     Params:
-        model: Model identifier passed to the LLM callable (default "gpt-4o").
+        model: Model identifier passed to the LLM callable (default "gemini-2.5-flash").
         action_space: Dict mapping action integers to descriptions.
         confidence_threshold: Below this confidence, the agent abstains (default 0.3).
         system_prompt: Optional override for the system prompt.
@@ -163,7 +210,7 @@ def llm_decide_factory(params: Dict[str, Any]) -> Any:
             that builds the user message.  When omitted the default prompt
             template is used.
     """
-    model = params.get("model", "gpt-4o")
+    model = params.get("model", "gemini-2.5-flash")
     action_space: Dict[int, str] = params.get("action_space", {0: "noop"})
     threshold = float(params.get("confidence_threshold", 0.3))
     system_prompt = params.get("system_prompt", _SYSTEM_PROMPT)
