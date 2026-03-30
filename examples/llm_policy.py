@@ -15,13 +15,13 @@ Usage with ``create_llm_tool``::
 
     from examples.llm_policy import create_llm_tool, llm_decide_factory
 
-    llm_tool = create_llm_tool()  # reads GEMINI_API_KEY from env (default)
+    llm_tool = create_llm_tool()  # reads OPENAI_API_KEY from env (default)
 
     configs = [
         {
             "id": "agent_0",
             "policy": {"name": "llm_decide", "params": {
-                "model": "gemini-3.1-flash-lite-preview",
+                "model": "gpt-4o",
                 "action_space": {0: "stay", 1: "left", 2: "right", 3: "up", 4: "down"},
                 "confidence_threshold": 0.4,
             }},
@@ -60,15 +60,15 @@ from typing import Any, Callable, Dict, Optional
 def create_llm_tool(
     *,
     api_key: Optional[str] = None,
-    provider: str = "gemini",
+    provider: str = "openai",
 ) -> Callable[..., Any]:
     """Create an LLM callable from environment configuration.
 
     Supported providers:
-      - ``"gemini"`` (default): reads ``GEMINI_API_KEY`` or
-        ``DOAGENT_GEMINI_API_KEY``.  SDK: ``google-genai``.
-      - ``"openai"``: reads ``OPENAI_API_KEY`` or
+      - ``"openai"`` (default): reads ``OPENAI_API_KEY`` or
         ``DOAGENT_OPENAI_API_KEY``.  SDK: ``openai``.
+      - ``"gemini"``: reads ``GEMINI_API_KEY`` or
+        ``DOAGENT_GEMINI_API_KEY``.  SDK: ``google-genai``.
 
     Returns a callable with signature ``(*, model, messages) -> str``
     that proxies to the provider SDK.  *messages* follows the OpenAI
@@ -78,6 +78,35 @@ def create_llm_tool(
     Raises *RuntimeError* when the API key is missing or the SDK is not
     installed.
     """
+    if provider == "openai":
+        key = (
+            api_key
+            or os.environ.get("DOAGENT_OPENAI_API_KEY")
+            or os.environ.get("OPENAI_API_KEY")
+        )
+        if not key:
+            raise RuntimeError(
+                "No OpenAI API key found.  Set the OPENAI_API_KEY (or "
+                "DOAGENT_OPENAI_API_KEY) environment variable."
+            )
+        try:
+            from openai import OpenAI  # type: ignore[import-untyped]
+        except ImportError as exc:
+            raise RuntimeError(
+                "The OpenAI SDK is required for the openai provider.  "
+                "Install it with:  pip install openai"
+            ) from exc
+
+        client = OpenAI(api_key=key)
+
+        def _openai_call(*, model: str, messages: list) -> str:
+            response = client.chat.completions.create(
+                model=model, messages=messages,
+            )
+            return response.choices[0].message.content or ""
+
+        return _openai_call
+
     if provider == "gemini":
         key = (
             api_key
@@ -115,35 +144,6 @@ def create_llm_tool(
             return response.text or ""
 
         return _gemini_call
-
-    if provider == "openai":
-        key = (
-            api_key
-            or os.environ.get("DOAGENT_OPENAI_API_KEY")
-            or os.environ.get("OPENAI_API_KEY")
-        )
-        if not key:
-            raise RuntimeError(
-                "No OpenAI API key found.  Set the OPENAI_API_KEY (or "
-                "DOAGENT_OPENAI_API_KEY) environment variable."
-            )
-        try:
-            from openai import OpenAI  # type: ignore[import-untyped]
-        except ImportError as exc:
-            raise RuntimeError(
-                "The OpenAI SDK is required for the openai provider.  "
-                "Install it with:  pip install openai"
-            ) from exc
-
-        client = OpenAI(api_key=key)
-
-        def _openai_call(*, model: str, messages: list) -> str:
-            response = client.chat.completions.create(
-                model=model, messages=messages,
-            )
-            return response.choices[0].message.content or ""
-
-        return _openai_call
 
     raise ValueError(f"Unsupported LLM provider: {provider!r}")
 
@@ -202,7 +202,7 @@ def llm_decide_factory(params: Dict[str, Any]) -> Any:
     """Policy factory: returns a decide callable that uses an LLM tool.
 
     Params:
-        model: Model identifier passed to the LLM callable (default "gemini-3.1-flash-lite-preview").
+        model: Model identifier passed to the LLM callable (default "gpt-4o").
         action_space: Dict mapping action integers to descriptions.
         confidence_threshold: Below this confidence, the agent abstains (default 0.3).
         system_prompt: Optional override for the system prompt.
@@ -210,7 +210,7 @@ def llm_decide_factory(params: Dict[str, Any]) -> Any:
             that builds the user message.  When omitted the default prompt
             template is used.
     """
-    model = params.get("model", "gemini-3.1-flash-lite-preview")
+    model = params.get("model", "gpt-4o")
     action_space: Dict[int, str] = params.get("action_space", {0: "noop"})
     threshold = float(params.get("confidence_threshold", 0.3))
     system_prompt = params.get("system_prompt", _SYSTEM_PROMPT)

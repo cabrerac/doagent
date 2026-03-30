@@ -41,10 +41,10 @@ class TestTraceCollector(unittest.TestCase):
         fn = lambda *, model, messages: {"content": "hello"}
         traced = collector.wrap("llm", fn)
 
-        result = traced(model="gemini-3.1-flash-lite-preview", messages=[{"role": "user", "content": "hi"}])
+        result = traced(model="gpt-4o", messages=[{"role": "user", "content": "hi"}])
         self.assertEqual(result, {"content": "hello"})
         step = collector.steps[0]
-        self.assertEqual(step["inputs"]["kwargs"]["model"], "gemini-3.1-flash-lite-preview")
+        self.assertEqual(step["inputs"]["kwargs"]["model"], "gpt-4o")
 
     def test_wrap_captures_error(self):
         collector = _TraceCollector()
