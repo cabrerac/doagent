@@ -48,7 +48,7 @@ def test_build_trace_graph_returns_graph_with_nodes_and_edges():
             "timestamp": "2026-03-15T12:00:00Z",
             "actor": "a",
             "kind": "agent_update",
-            "payload": {"decision": {"response": {"decision": {"action": 0}}}},
+            "payload": {"decision": {"response": {"choice": {"status": "act", "action": 0}}}},
             "provenance": {},
             "accountability": {},
         }

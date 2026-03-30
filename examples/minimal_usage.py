@@ -15,7 +15,7 @@ def main() -> None:
         "run_config": {"logging_level": 2},
         "topology": {"mode": "centralised"},
         "policies": {
-            "noop": lambda params: lambda req: {"decision": {"action": 0}},
+            "noop": lambda params: lambda req: {"choice": {"status": "act", "action": 0}},
         },
     })
 

@@ -1,7 +1,7 @@
 ---
 id: "2026-03-28_update-heuristic-policies-examples"
 title: "Update existing heuristic policies and examples to new choice shape"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-03-28"
 last_updated: "2026-03-28"
@@ -46,10 +46,10 @@ Heuristic policies always return `status: "act"` with no `reasoning` field.
 
 ## Acceptance Criteria
 
-- [ ] All existing policies return `response.choice.{status, action}`.
-- [ ] All examples run successfully end-to-end.
-- [ ] Full test suite passes (`python -m pytest`).
-- [ ] No references to old `response.decision.action` pattern remain in policy code.
+- [x] All existing policies return `response.choice.{status, action}`.
+- [x] All examples run successfully end-to-end.
+- [x] Full test suite passes (`python -m pytest`).
+- [x] No references to old `response.decision.action` pattern remain in policy code.
 
 ## Implementation Notes
 
@@ -67,3 +67,7 @@ Heuristic policies always return `status: "act"` with no `reasoning` field.
 ### 2026-03-28
 
 Task created as sub-task 3 of 6. Clean migration (no compat shim) per design decision.
+
+### 2026-03-28 (completed)
+
+Work absorbed into Task 1 (policy-return-shape-and-decide): all policies in `push_demo.py`, `gridworld_demo/policies.py`, `minimal_usage.py`, and test fixtures were migrated during the core `choice` implementation. Grep confirms no old `response.decision.action` patterns remain in any `.py` file. 95/95 tests pass.

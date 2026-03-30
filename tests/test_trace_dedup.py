@@ -47,7 +47,7 @@ def _make_registry_and_configs(agent_ids):
 
     def fixed_policy(params):
         def decide(request):
-            return {"decision": {"action": 0}}
+            return {"choice": {"status": "act", "action": 0}}
         return decide
 
     registry.register("fixed", fixed_policy)

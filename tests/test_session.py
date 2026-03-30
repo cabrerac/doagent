@@ -43,7 +43,7 @@ def _make_registry_and_configs(agent_ids):
         action = params.get("action", 0)
         def decide(request):
             return {
-                "decision": {"action": action},
+                "choice": {"status": "act", "action": action},
                 "explanation": "test explanation",
             }
         return decide
@@ -187,7 +187,7 @@ class TestSession(unittest.TestCase):
         env = session.wrap_env(StubEnv(["a"]), env_actor="test_env")
 
         observations = env.reset(seed=1)
-        external_response = {"decision": {"action": 42}}
+        external_response = {"choice": {"status": "act", "action": 42}}
         session.record_decision("a", observations["a"], external_response, 1)
         env.step({"a": 42})
 

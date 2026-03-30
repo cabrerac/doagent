@@ -51,7 +51,7 @@ def test_build_atomic_explanations_level_1_from_trace_and_decision():
             "timestamp": "2026-03-19T12:00:00Z",
             "actor": "a",
             "kind": "agent_update",
-            "payload": {"decision": {"request": {"context": {"round": 1}}, "response": {"decision": {"action": 2}}}},
+            "payload": {"decision": {"request": {"context": {"round": 1}}, "response": {"choice": {"status": "act", "action": 2}}}},
             "provenance": {},
             "accountability": {},
         }
@@ -87,7 +87,7 @@ def test_build_atomic_explanations_level_2_with_explanation_record():
             "timestamp": "2026-03-19T12:00:00Z",
             "actor": "a",
             "kind": "agent_update",
-            "payload": {"decision": {"request": {"context": {"round": 1}}, "response": {"decision": {"action": 4}}}},
+            "payload": {"decision": {"request": {"context": {"round": 1}}, "response": {"choice": {"status": "act", "action": 4}}}},
             "provenance": {},
             "accountability": {},
         }

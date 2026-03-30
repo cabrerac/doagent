@@ -26,9 +26,10 @@ class RunConfig:
     """Configuration for a validation run.
 
     Attributes:
-        logging_level: 0 = agent_update + outcome (no trace, no explanation);
-            1 = + trace + decision.explanation; 2 = + provenance + accountability
-            on envelope. Default: 2.
+        logging_level: 0 = agent_update + outcome (no trace, no provenance,
+            no explanation); 1 = + trace + provenance + accountability on
+            envelope; 2 = + decision.explanation + decision.response.reasoning.
+            Default: 2.
     """
 
     logging_level: LoggingLevel = DEFAULT_LOGGING_LEVEL
@@ -47,11 +48,16 @@ def should_write_trace(logging_level: int) -> bool:
     return logging_level >= 1
 
 
-def should_include_explanation(logging_level: int) -> bool:
-    """Return True if decision.explanation should be populated (Level 1+)."""
+def should_include_provenance_accountability(logging_level: int) -> bool:
+    """Return True if provenance and accountability belong on envelope (Level 1+)."""
     return logging_level >= 1
 
 
-def should_include_provenance_accountability(logging_level: int) -> bool:
-    """Return True if provenance and accountability belong on envelope (Level 2)."""
+def should_include_explanation(logging_level: int) -> bool:
+    """Return True if decision.explanation should be populated (Level 2)."""
+    return logging_level >= 2
+
+
+def should_include_reasoning(logging_level: int) -> bool:
+    """Return True if decision.response.reasoning should be kept (Level 2)."""
     return logging_level >= 2

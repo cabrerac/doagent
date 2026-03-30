@@ -1,7 +1,7 @@
 ---
 id: "2026-03-28_reasoning-field-in-payload"
 title: "Add optional reasoning field to agent_update payload"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-03-28"
 last_updated: "2026-03-28"
@@ -49,15 +49,15 @@ Reasoning stays inside `decision.response` (no duplication to a top-level payloa
 
 ## Acceptance Criteria
 
-- [ ] `RecordWriter.on_agent_decide()` passes through `reasoning` from the policy response into the recorded `decision.response`.
-- [ ] Records with `reasoning` present are correctly written and readable via `inspect("agent_update")`.
-- [ ] Records without `reasoning` (heuristic policies) are unchanged and valid.
-- [ ] Tests cover: record with reasoning, record without reasoning, reasoning content is queryable from inspect output.
+- [x] `RecordWriter.on_agent_decide()` passes through `reasoning` from the policy response into the recorded `decision.response`.
+- [x] Records with `reasoning` present are correctly written and readable via `inspect("agent_update")`.
+- [x] Records without `reasoning` (heuristic policies) are unchanged and valid.
+- [x] Tests cover: record with reasoning, record without reasoning, reasoning content is queryable from inspect output.
 
 ## Implementation Notes
 
 - The `reasoning` field is whatever the policy returns — the library does not prescribe its internal structure (could be chain-of-thought string, list of steps, tool call log, etc.).
-- Logging level may control whether reasoning is included (similar to how `explanation` is controlled). To discuss during Stage 3 for this task.
+- Logging levels were **swapped** during this task's implementation: Level 1 now gates provenance + accountability; Level 2 gates explanation + reasoning. `reasoning` is stripped from `decision.response` below Level 2 by `RecordWriter`.
 
 ## Related
 
@@ -70,3 +70,14 @@ Reasoning stays inside `decision.response` (no duplication to a top-level payloa
 ### 2026-03-28
 
 Task created as sub-task 2 of 6. Design decision: Option B (structured field on existing agent_update) chosen over Option A (new record kind) because reasoning is only meaningful alongside the decision it produced.
+
+### 2026-03-28 (completed)
+
+Implemented reasoning gating and logging level swap:
+
+- **Logging level swap:** Level 1 now gates provenance + accountability (structural metadata); Level 2 gates explanation + reasoning (interpretability content). This was a deliberate re-ordering to separate structural traceability (Level 1) from content-heavy interpretability (Level 2).
+- **`run_config.py`:** `should_include_provenance_accountability` moved to `>= 1`; `should_include_explanation` moved to `>= 2`; new `should_include_reasoning` at `>= 2`.
+- **`record_writer.py`:** Imports `should_include_reasoning`; strips `reasoning` from `decision.response` below Level 2.
+- **`test_logging_levels.py`:** All three level tests updated to match new semantics; Level 1 now asserts provenance but no explanation; Level 2 asserts both.
+- **`data-model-spec.md`:** Section 8 table and §3.1 updated to document new level semantics and `reasoning` field.
+- All 95 tests pass (3 skipped: push_demo env dependency).

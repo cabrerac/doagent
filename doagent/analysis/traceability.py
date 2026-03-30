@@ -98,7 +98,7 @@ def build_trace_graph(
         action = None
         if enabled_by and update_by_id.get(enabled_by):
             dec = update_by_id[enabled_by].payload.get("decision", {})
-            action = dec.get("response", {}).get("decision", {}).get("action")
+            action = dec.get("response", {}).get("choice", {}).get("action")
         G.add_edge(
             from_id, to_id,
             agent=agent,

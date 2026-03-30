@@ -16,6 +16,7 @@ from ..run_config import (
     RunConfig,
     should_include_explanation,
     should_include_provenance_accountability,
+    should_include_reasoning,
     should_write_trace,
 )
 from .record_helpers import new_agent_update_record, new_record, new_trace_record
@@ -97,6 +98,11 @@ class RecordWriter:
         if should_include_explanation(level) and "explanation" in response:
             decision = dict(decision)
             decision["explanation"] = response["explanation"]
+        if not should_include_reasoning(level) and "response" in decision:
+            resp = decision.get("response")
+            if isinstance(resp, dict) and "reasoning" in resp:
+                decision = dict(decision)
+                decision["response"] = {k: v for k, v in resp.items() if k != "reasoning"}
         provenance = new_provenance(agent=agent_id, sources=[]) if should_include_provenance_accountability(level) else {}
         accountability = new_accountability(owner=agent_id) if should_include_provenance_accountability(level) else {}
         record = new_agent_update_record(

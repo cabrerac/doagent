@@ -12,7 +12,7 @@ class TestFunctionAgent(unittest.TestCase):
     def test_decide_persists_decision_record(self) -> None:
         """Ensure decisions are persisted to shared data."""
         def decide_fn(request: dict) -> dict:
-            return {"decision": {"action": "approve"}, "notes": "ok"}
+            return {"choice": {"status": "act", "action": "approve"}, "notes": "ok"}
 
         agent = FunctionAgent("agent-1", self.shared_data, decide_fn)
         response = agent.decide(
@@ -33,7 +33,7 @@ class TestFunctionAgent(unittest.TestCase):
         record = records[0]
         self.assertEqual(record.payload["request"]["id"], "req-1")
         self.assertEqual(record.payload["response"]["id"], response["id"])
-        self.assertEqual(record.payload["response"]["decision"]["action"], "approve")
+        self.assertEqual(record.payload["response"]["choice"]["action"], "approve")
 
 
 if __name__ == "__main__":

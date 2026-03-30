@@ -1,7 +1,7 @@
 ---
 id: "2026-03-27_talk-policy-factorization-idk-library"
 title: "Library support for policy factorization and IDK (talk + demos)"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-03-27"
 last_updated: "2026-03-28"
@@ -85,3 +85,35 @@ Status changed from **Proposed** to **Ready**. All design decisions resolved (se
 6. `update-notebooks-factorization-idk` — depends on 3 + 5
 
 Critical path: 1 → 2 → 5 → 6. Ready for Stage 3 (per-task design alternatives) and implementation.
+
+### 2026-03-28 (implementation)
+
+Sub-task **`2026-03-28_policy-return-shape-and-decide`** completed (Stages 3–5). Policy `choice` contract is live in code, tests, examples, and `docs/data-model-spec.md` §3.1.
+
+### 2026-03-28 (tasks 2–5 completed)
+
+- **Task 2 (`reasoning-field-in-payload`):** Completed with logging level swap — L1 = provenance/accountability, L2 = explanation/reasoning. `RecordWriter` strips `reasoning` below Level 2.
+- **Task 3 (`update-heuristic-policies-examples`):** Closed — work absorbed into Task 1.
+- **Task 4 (`update-data-model-spec`):** Closed — work absorbed into Tasks 1 and 2.
+- **Task 5 (`pluggable-llm-policy`):** Completed with expanded scope. Library-level tool-tracing in `SessionAgent.decide()` via `_TraceCollector` + per-agent `tools` config. LLM policy example with zero dependencies. Hybrid merge of tool traces + policy reasoning.
+
+**5 of 6 sub-tasks complete.** Remaining: **Task 6 (`update-notebooks-factorization-idk`)**. 114 tests pass.
+
+### 2026-03-28 (all sub-tasks completed)
+
+**Task 6 (`update-notebooks-factorization-idk`):** Completed. All three notebooks updated to new `choice` shape. `01_minimal_demo` includes a new abstain example (Step 8). Experiment runners verified. LLM integration section in notebooks deferred to a follow-up (the `examples/llm_policy.py` module is ready for users).
+
+**All 6 of 6 sub-tasks complete.** Full test suite: 115 passed, 3 skipped. The parent task is now **Completed**.
+
+### 2026-03-28 (follow-up: notebook restructuring)
+
+After review, the notebook flow needed revision — the abstain section in `01_minimal_demo` felt bolted on. Deliberation led to a restructuring plan:
+
+- **01_minimal_demo**: Remove abstain section; pure hello-world only.
+- **02_push_demo**: Add LLM comparison section after analysis (heuristic vs LLM records).
+- **03_gridworld_demo**: Replace agent_3 with an LLM-based policy from the start (4 agents, 4 distinct policies).
+- **All LLM policies use actual clients** (OpenAI SDK via env var), not mocks.
+
+Also created the Sorrento talk source (`sorrento-doagent.md` in `cabrerac.github.io`) with updated `_snippets/doagent.md` (current Session API, choice shape, reasoning, tools) and new talk-specific snippets for MAS bridge, policies progression, factorisation/IDK, and conclusions.
+
+**New follow-up task**: `2026-03-28_notebook-restructuring-llm-integration`.

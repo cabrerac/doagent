@@ -65,8 +65,8 @@ def _summary_agent_update(rec: Dict[str, Any]) -> str:
     """Short summary line for an agent_update record."""
     actor = rec.get("actor", "?")
     decision = rec.get("payload", {}).get("decision", {})
-    response = decision.get("response", {}).get("decision", {})
-    action = response.get("action", "?")
+    choice = decision.get("response", {}).get("choice", {})
+    action = choice.get("action", "?")
     goal = decision.get("request", {}).get("goal", "?")
     return f"agent_update by {actor}  action={action}  goal={goal}"
 
@@ -252,7 +252,7 @@ def _collect_nodes_edges(
             _collect_nodes_edges(t["id"], index, max_depth, depth + 1, visited, nodes, edges)
     elif kind == "agent_update":
         actor = rec.get("actor", "?")
-        action = rec.get("payload", {}).get("decision", {}).get("response", {}).get("decision", {}).get("action", "?")
+        action = rec.get("payload", {}).get("decision", {}).get("response", {}).get("choice", {}).get("action", "?")
         label = f"{actor}\naction={action}"
         nodes.append((record_id, label, depth))
     elif kind == "trace":

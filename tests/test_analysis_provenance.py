@@ -72,7 +72,7 @@ def test_walk_chain_returns_structured_tree():
             "timestamp": "2026-03-15T12:00:00Z",
             "actor": "a",
             "kind": "agent_update",
-            "payload": {"decision": {"response": {"decision": {"action": 0}}, "request": {"goal": "test"}}},
+            "payload": {"decision": {"response": {"choice": {"status": "act", "action": 0}}, "request": {"goal": "test"}}},
             "provenance": {},
             "accountability": {},
         }

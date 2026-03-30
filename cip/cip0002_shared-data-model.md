@@ -279,6 +279,16 @@ Resolved the following design questions through deliberative discussion:
 
 Critical path: 1 → 2 → 5 → 6.
 
+**Implementation (2026-03-28):** Sub-task **policy-return-shape-and-decide** completed: policies return `response.choice` (`status`, `action`); `SessionAgent.decide()` and analysis readers updated; `docs/data-model-spec.md` §3.1 documents the contract. Optional `reasoning` field and fuller IDK narrative remain for follow-on backlog tasks.
+
+**Implementation (2026-03-28):** Sub-task **reasoning-field-in-payload** completed with a **logging level swap**. New semantics: Level 0 = bare communication; Level 1 = + trace + provenance + accountability (structural metadata); Level 2 = + explanation + reasoning (interpretability content). `RecordWriter` strips `reasoning` from `decision.response` below Level 2. All 95 tests pass.
+
+**Implementation (2026-03-28):** Sub-tasks **update-heuristic-policies-examples** and **update-data-model-spec** closed — work absorbed into Tasks 1 and 2. Sub-task **pluggable-llm-policy** completed with **expanded scope**: library-level tool-tracing mechanism added to `SessionAgent.decide()`. Per-agent tools are wrapped by `_TraceCollector` to capture I/O as reasoning steps; `merge_reasoning()` combines tool traces with policy-provided reasoning (hybrid approach). LLM policy example in `examples/llm_policy.py` has zero framework dependencies — user provides any LLM callable. All 114 tests pass.
+
+**Implementation (2026-03-28):** Sub-task **update-notebooks-factorization-idk** completed. All three notebooks (`01_minimal_demo`, `02_push_demo`, `03_gridworld_demo`) updated to new `choice` policy shape. `01_minimal_demo` extended with abstain example (Step 8). Experiment runners verified. LLM integration section in notebooks deferred to follow-up (the `examples/llm_policy.py` module with `build_prompt` customization is available). **All 6/6 sub-tasks for the policy factorization / IDK parent task are now complete.** 115 tests pass.
+
+**Follow-up (2026-03-28):** Notebook restructuring planned — the abstain section in `01_minimal_demo` didn't feel natural. Agreed design: minimal demo stays pure hello-world; push demo gets LLM comparison section; gridworld demo integrates an LLM agent (grid_llm) as a first-class participant from the start. All LLM policies use actual clients (OpenAI SDK via env var). Sorrento talk source and updated shared snippets created in `cabrerac.github.io`. See backlog task `2026-03-28_notebook-restructuring-llm-integration`.
+
 ## References
 
 - [Data Model Specification](../docs/data-model-spec.md) — Record kinds, roles, relationships, provenance/accountability, trace schema, logging levels.

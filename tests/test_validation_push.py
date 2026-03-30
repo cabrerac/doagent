@@ -20,7 +20,7 @@ def _fixed_policy(params):
     action = params.get("action", 0)
 
     def decide(request):
-        return {"decision": {"action": action}}
+        return {"choice": {"status": "act", "action": action}}
 
     return decide
 

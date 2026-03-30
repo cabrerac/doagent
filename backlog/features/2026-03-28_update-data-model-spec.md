@@ -1,7 +1,7 @@
 ---
 id: "2026-03-28_update-data-model-spec"
 title: "Update data-model-spec.md for choice, reasoning, and IDK"
-status: "Ready"
+status: "Completed"
 priority: "Medium"
 created: "2026-03-28"
 last_updated: "2026-03-28"
@@ -34,11 +34,11 @@ Update `docs/data-model-spec.md` to reflect the new record shapes:
 
 ## Acceptance Criteria
 
-- [ ] Section 3.1 accurately describes the new `response.choice` shape.
-- [ ] `choice.status` enum values are documented with semantics.
-- [ ] Optional `reasoning` field is documented.
-- [ ] Abstain and error handling guidance is included.
-- [ ] Spec is consistent with implemented code (tasks 1 and 2).
+- [x] Section 3.1 accurately describes the new `response.choice` shape.
+- [x] `choice.status` enum values are documented with semantics.
+- [x] Optional `reasoning` field is documented.
+- [x] Abstain and error handling guidance is included.
+- [x] Spec is consistent with implemented code (tasks 1 and 2).
 
 ## Implementation Notes
 
@@ -56,3 +56,7 @@ Update `docs/data-model-spec.md` to reflect the new record shapes:
 ### 2026-03-28
 
 Task created as sub-task 4 of 6.
+
+### 2026-03-28 (completed)
+
+Work absorbed into Tasks 1 and 2: §3.1 updated with `response.choice` contract (Task 1 Stage 5), `reasoning` field documented and Section 8 logging level table rewritten (Task 2). All acceptance criteria met. Spec is consistent with implemented code.

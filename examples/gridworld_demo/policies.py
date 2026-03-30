@@ -1,13 +1,16 @@
 """Grid-world policy factories for the gridworld demo.
 
 This is example code, not part of the doagent library. It contains
-heuristic policies for the grid-world mapping scenario.
+heuristic and LLM-based policies for the grid-world mapping scenario.
 """
 
 from __future__ import annotations
 
+import json
 import random
 from typing import Any, Dict, Iterable, Tuple
+
+from examples.llm_policy import llm_decide_factory
 
 
 def _move_towards(src: Tuple[int, int], dst: Tuple[int, int]) -> int:
@@ -73,7 +76,7 @@ def random_explore_policy(params: Dict[str, Any]):
             action = rng.choice(valid_actions)
         else:
             action = 0
-        return {"decision": {"action": action}}
+        return {"choice": {"status": "act", "action": action}}
 
     return decide
 
@@ -91,7 +94,7 @@ def frontier_explore_policy(params: Dict[str, Any]):
         width, height = _grid_bounds(obs)
         known = _known_cells(shared_map)
         if width == 0 or height == 0:
-            return {"decision": {"action": 0}}
+            return {"choice": {"status": "act", "action": 0}}
         unknown_cells = [
             (ux, uy)
             for ux in range(width)
@@ -99,7 +102,7 @@ def frontier_explore_policy(params: Dict[str, Any]):
             if (ux, uy) not in known
         ]
         if not unknown_cells:
-            return {"decision": {"action": 0}}
+            return {"choice": {"status": "act", "action": 0}}
         nearest = min(
             unknown_cells,
             key=lambda cell: abs(cell[0] - x) + abs(cell[1] - y),
@@ -107,7 +110,7 @@ def frontier_explore_policy(params: Dict[str, Any]):
         action = _move_towards((x, y), nearest)
         if action == 0:
             action = rng.choice([1, 2, 3, 4])
-        return {"decision": {"action": action}}
+        return {"choice": {"status": "act", "action": action}}
 
     return decide
 
@@ -131,7 +134,7 @@ def auction_frontier_policy(params: Dict[str, Any]):
             if (ux, uy) not in known
         ]
         if not unknown_cells:
-            return {"decision": {"action": 0, "bid": 0.0}}
+            return {"choice": {"status": "act", "action": 0, "bid": 0.0}}
         nearest = min(
             unknown_cells,
             key=lambda cell: abs(cell[0] - x) + abs(cell[1] - y),
@@ -141,9 +144,63 @@ def auction_frontier_policy(params: Dict[str, Any]):
         if action == 0:
             action = rng.choice([1, 2, 3, 4])
         bid = 1.0 / (distance + 1.0)
-        return {"decision": {"action": action, "bid": bid}}
+        return {"choice": {"status": "act", "action": action, "bid": bid}}
 
     return decide
+
+
+def _build_gridworld_prompt(
+    observation: Any,
+    action_space: Dict[int, str],
+    goal: str,
+) -> str:
+    """Build a gridworld-specific user prompt for the LLM."""
+    pos = observation.get("position", {})
+    cells = observation.get("cells", [])
+    w = observation.get("width", "?")
+    h = observation.get("height", "?")
+    shared_map = observation.get("shared_map", {})
+    known_count = len(shared_map.get("cells", []))
+
+    actions_desc = "\n".join(f"  {k}: {v}" for k, v in sorted(action_space.items()))
+
+    visible_summary = []
+    for c in cells:
+        tag = " (landmark)" if c.get("value") == "landmark" else ""
+        visible_summary.append(f"({c.get('x')},{c.get('y')}){tag}")
+
+    return (
+        f"Goal: {goal}\n\n"
+        f"You are at position ({pos.get('x')}, {pos.get('y')}) "
+        f"on a {w}x{h} grid.\n"
+        f"Visible cells: {', '.join(visible_summary)}.\n"
+        f"Known cells from shared map: {known_count}.\n\n"
+        f"Available actions:\n{actions_desc}\n\n"
+        "Choose the action that best helps discover unknown cells. "
+        "Respond with JSON only."
+    )
+
+
+_GRIDWORLD_ACTION_SPACE: Dict[int, str] = {
+    0: "stay",
+    1: "left",
+    2: "right",
+    3: "up",
+    4: "down",
+}
+
+
+def llm_explore_policy(params: Dict[str, Any]):
+    """LLM-based exploration policy for the grid-world."""
+    merged_params = {
+        "action_space": _GRIDWORLD_ACTION_SPACE,
+        "confidence_threshold": float(params.get("confidence_threshold", 0.3)),
+        "build_prompt": _build_gridworld_prompt,
+        **params,
+    }
+    if "action_space" not in params:
+        merged_params["action_space"] = _GRIDWORLD_ACTION_SPACE
+    return llm_decide_factory(merged_params)
 
 
 def register_gridworld_policies(registry) -> None:
@@ -151,3 +208,4 @@ def register_gridworld_policies(registry) -> None:
     registry.register("grid_random", random_explore_policy)
     registry.register("grid_frontier", frontier_explore_policy)
     registry.register("grid_auction_frontier", auction_frontier_policy)
+    registry.register("grid_llm", llm_explore_policy)

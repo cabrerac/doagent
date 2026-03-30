@@ -16,7 +16,7 @@ class TestInterpretabilityRecords(unittest.TestCase):
             local_knowledge={},
             decision={
                 "request": {},
-                "response": {"decision": {"action": "approve"}},
+                "response": {"choice": {"status": "act", "action": "approve"}},
                 "explanation": "Approved due to policy compliance.",
                 "evidence": ["policy-1"],
             },

@@ -1,7 +1,7 @@
 ---
 id: "2026-03-28_policy-return-shape-and-decide"
 title: "Update policy return shape to choice and update SessionAgent.decide()"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-03-28"
 last_updated: "2026-03-28"
@@ -52,11 +52,11 @@ response = {
 
 ## Acceptance Criteria
 
-- [ ] Policy callable contract documented: must return `response` with `choice: {status, action}`.
-- [ ] `SessionAgent.decide()` reads from `response["choice"]`.
-- [ ] `Session.record_decision()` updated consistently.
-- [ ] `RecordWriter.on_agent_decide()` records contain `response.choice` (not `response.decision`).
-- [ ] Existing tests updated to use new shape; full suite passes (`python -m pytest`).
+- [x] Policy callable contract documented: must return `response` with `choice: {status, action}` (`docs/data-model-spec.md` §3.1).
+- [x] `SessionAgent.decide()` reads from `response["choice"]`.
+- [x] `Session.record_decision()` updated consistently (passes through external `response`; callers supply `choice` shape; no code change required).
+- [x] `RecordWriter.on_agent_decide()` records contain `response.choice` (writer passes policy response through unchanged; no `decision` key assembly).
+- [x] Existing tests updated to use new shape; full suite passes (`python -m pytest`).
 
 ## Implementation Notes
 
@@ -74,3 +74,7 @@ response = {
 ### 2026-03-28
 
 Task created as sub-task 1 of 6 for policy factorization and IDK implementation. Design decisions captured in CIP-0002 progress update (2026-03-28).
+
+### 2026-03-28 (implementation)
+
+**Completed.** Inside-out implementation: `SessionAgent.decide()` reads `response["choice"]["action"]`; analysis modules (`interpretability`, `provenance`, `traceability`) read `payload.decision.response.choice.action` from stored records; examples (`push_demo`, `gridworld` policies, `minimal_usage`) and tests updated to return/assert `choice` with `status: "act"`. `RecordWriter.on_agent_decide` unchanged (payload mirrors policy response). `pytest`: 95 passed, 3 skipped (push validation; PettingZoo not installed). Data model spec §3.1 documents the policy `choice` contract. Follow-on: task `2026-03-28_reasoning-field-in-payload` next on critical path.

@@ -56,8 +56,9 @@ agents:
       explanation: "Auction-frontier policy: prioritize frontier cells with highest bid."
   - id: "agent_3"
     policy:
-      name: "grid_random"
+      name: "grid_llm"
       params:
-        seed: 3
+        model: "gpt-4o"
+        confidence_threshold: 0.3
     metadata:
-      explanation: "Random exploration with local unknown-cell preference."
+      explanation: "LLM-based exploration: uses an LLM to reason about the best action."

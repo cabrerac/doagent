@@ -21,6 +21,7 @@ from uuid import uuid4
 from ..interface.shared_data import SharedDataAdapter
 from ..records import INITIAL_STATE_ID, DecisionRequest, SimpleRecord
 from ._internal.record_writer import RecordWriter, StateHashFn, default_state_hash, _serializable
+from ._internal.trace_collector import _TraceCollector, merge_reasoning
 from .participation import InMemoryParticipationRegistry, ParticipationRecord
 from .run_config import RunConfig
 from .topology import Topology, TopologyConfig
@@ -187,6 +188,7 @@ class SessionAgent:
         *,
         goal: str = "default",
         payload_type: Optional[str] = None,
+        tools: Optional[Dict[str, Callable[..., Any]]] = None,
     ) -> None:
         self._agent_id = agent_id
         self._policy = policy
@@ -194,6 +196,7 @@ class SessionAgent:
         self._env = wrapped_env
         self._goal = goal
         self._payload_type = payload_type
+        self._tools: Dict[str, Callable[..., Any]] = tools or {}
 
     @property
     def agent_id(self) -> str:
@@ -225,7 +228,22 @@ class SessionAgent:
             "context": {"round": round_id},
             "inputs": request_inputs,
         }
+
+        collector: Optional[_TraceCollector] = None
+        if self._tools:
+            collector = _TraceCollector()
+            request["tools"] = {
+                name: collector.wrap(name, fn)
+                for name, fn in self._tools.items()
+            }
+
         response = dict(self._policy(request))
+
+        if collector and collector.steps:
+            policy_reasoning = response.get("reasoning")
+            merged = merge_reasoning(policy_reasoning, collector.to_dict())
+            if merged is not None:
+                response["reasoning"] = merged
 
         response_clean = {
             k: v for k, v in response.items()
@@ -243,7 +261,7 @@ class SessionAgent:
         )
         self._env._register_agent_update(self._agent_id, record_id)
 
-        action = response.get("decision", {}).get("action")
+        action = response.get("choice", {}).get("action")
         return {"action": action, "response": response}
 
 
@@ -610,6 +628,7 @@ class Session:
             metadata = config.get("metadata", {})
             if metadata:
                 policy = _wrap_policy_with_metadata(policy, metadata)
+            agent_tools = config.get("tools") or {}
             agents[agent_id] = SessionAgent(
                 agent_id=agent_id,
                 policy=policy,
@@ -617,6 +636,7 @@ class Session:
                 wrapped_env=self._wrapped_env,
                 goal=goal,
                 payload_type=payload_type,
+                tools=agent_tools,
             )
         return agents
 

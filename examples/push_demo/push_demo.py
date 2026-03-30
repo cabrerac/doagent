@@ -5,6 +5,7 @@ Demonstrates config-driven library usage with a PettingZoo environment.
 
 from __future__ import annotations
 
+import argparse
 from collections import Counter
 from pathlib import Path
 import random
@@ -13,6 +14,7 @@ from typing import Any, Dict
 from doagent import Session, RunReporter, make_env
 from doagent.analysis import interpretability, provenance, traceability
 from examples.push_demo.env import create_push_env
+from examples.llm_policy import create_llm_tool, llm_decide_factory
 
 
 # ---------------------------------------------------------------------------
@@ -37,7 +39,7 @@ def heuristic_goal_seek(params: Dict[str, Any]) -> Any:
     def decide(request: Dict[str, Any]) -> Dict[str, Any]:
         obs = request.get("inputs", {}).get("observation", [])
         dx, dy = (float(obs[2]), float(obs[3])) if len(obs) >= 4 else (0.0, 0.0)
-        return {"decision": {"action": _epsilon_greedy(_action_from_vector(dx, dy), epsilon, rng)}}
+        return {"choice": {"status": "act", "action": _epsilon_greedy(_action_from_vector(dx, dy), epsilon, rng)}}
     return decide
 
 
@@ -47,7 +49,7 @@ def heuristic_push_block(params: Dict[str, Any]) -> Any:
     def decide(request: Dict[str, Any]) -> Dict[str, Any]:
         obs = request.get("inputs", {}).get("observation", [])
         dx, dy = (float(obs[6]), float(obs[7])) if len(obs) >= 8 else (0.0, 0.0)
-        return {"decision": {"action": _epsilon_greedy(_action_from_vector(dx, dy), epsilon, rng)}}
+        return {"choice": {"status": "act", "action": _epsilon_greedy(_action_from_vector(dx, dy), epsilon, rng)}}
     return decide
 
 
@@ -100,7 +102,8 @@ def run_with_session(
         actions: Dict[str, Any] = {}
         for agent_id, agent in agents.items():
             result = agent.decide(observations.get(agent_id, {}), round_id)
-            actions[agent_id] = result["action"]
+            action = result["action"]
+            actions[agent_id] = action if action is not None else 0
 
         step = wrapped_env.step(actions)
         if reporter is not None:
@@ -117,10 +120,25 @@ def run_with_session(
 # Main
 # ---------------------------------------------------------------------------
 
+def _push_llm_policy_factory(params: Dict[str, Any]) -> Any:
+    """LLM policy factory specialised for the push environment."""
+    merged = {
+        "action_space": {0: "noop", 1: "left", 2: "right", 3: "down", 4: "up"},
+        "confidence_threshold": 0.3,
+        **params,
+    }
+    return llm_decide_factory(merged)
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Push demo")
+    parser.add_argument("--llm", action="store_true", help="Run an additional LLM comparison after the heuristic run.")
+    parser.add_argument("--no-render", action="store_true", help="Disable environment rendering.")
+    args = parser.parse_args()
+
     rounds = 100
     seed = 123
-    render_demo = True
+    render_demo = not args.no_render
     print_every = 10
 
     try:
@@ -195,6 +213,51 @@ def main() -> None:
         except Exception as e:
             print(f"  Interpretability: {e}")
     print(f"\nRun output: {run_path} (run_id={run_id})")
+
+    # -- Optional LLM comparison run --
+    if args.llm:
+        print("\n=== LLM comparison run ===")
+        try:
+            llm_tool = create_llm_tool()
+        except RuntimeError as exc:
+            print(f"Skipping LLM run: {exc}")
+            return
+
+        llm_env = make_env(create_push_env, max_cycles=rounds, continuous_actions=False, dynamic_rescaling=False)
+        llm_session = Session.from_config({
+            "shared_data": {"type": "file"},
+            "scenario_name": "push_llm",
+            "output_base": output_base,
+            "run_config": {"logging_level": 2},
+            "policies": {
+                "heuristic_push_block": heuristic_push_block,
+                "push_llm": _push_llm_policy_factory,
+            },
+        })
+        llm_configs = [
+            {
+                "id": "adversary_0",
+                "policy": {"name": "heuristic_push_block", "params": {"epsilon": 0.2, "seed": 1}},
+                "metadata": {"explanation": "Heuristic push/block with epsilon-greedy exploration."},
+            },
+            {
+                "id": "agent_0",
+                "policy": {"name": "push_llm", "params": {"model": "gpt-4o", "confidence_threshold": 0.3}},
+                "tools": {"llm": llm_tool},
+                "metadata": {"explanation": "LLM-based goal-seek policy."},
+            },
+        ]
+        llm_outcomes = run_with_session(
+            llm_session, llm_env, llm_configs, rounds, seed,
+            render=False,
+        )
+        llm_updates = llm_session.inspect("agent_update")
+        abstain_count = sum(
+            1 for r in llm_updates
+            if r.payload.get("decision", {}).get("response", {}).get("choice", {}).get("status") == "abstain"
+        )
+        print(f"LLM run completed ({llm_outcomes} rounds, {abstain_count} abstentions).")
+        print(f"LLM run id: {llm_session.run_id}")
 
 
 if __name__ == "__main__":

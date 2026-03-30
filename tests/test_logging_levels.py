@@ -55,8 +55,8 @@ class TestLoggingLevels(unittest.TestCase):
             seed=7,
         )
 
-    def test_level_0_no_trace_no_explanation(self):
-        """Level 0: agent_update and outcome; no trace; no decision.explanation."""
+    def test_level_0_no_trace_no_provenance_no_explanation(self):
+        """Level 0: agent_update and outcome; no trace; no provenance; no explanation."""
         config = _session_config(0)
         session = Session.from_config(config)
         env = self._make_env()
@@ -81,12 +81,12 @@ class TestLoggingLevels(unittest.TestCase):
             self.assertIn("decision", record.payload)
             self.assertNotIn("explanation", record.payload["decision"])
             self.assertIn("local_knowledge", record.payload)
-        for record in outcomes:
+        for record in agent_updates + outcomes:
             self.assertEqual(record.provenance, {})
             self.assertEqual(record.accountability, {})
 
-    def test_level_1_trace_and_explanation(self):
-        """Level 1: adds trace and decision.explanation."""
+    def test_level_1_trace_and_provenance(self):
+        """Level 1: adds trace + provenance + accountability; no explanation yet."""
         config = _session_config(1)
         session = Session.from_config(config)
         env = self._make_env()
@@ -109,13 +109,21 @@ class TestLoggingLevels(unittest.TestCase):
 
         for record in agent_updates:
             self.assertIn("decision", record.payload)
-            self.assertIn("explanation", record.payload["decision"])
-        for record in outcomes:
-            self.assertEqual(record.provenance, {})
-            self.assertEqual(record.accountability, {})
+            self.assertNotIn("explanation", record.payload["decision"])
+        for record in agent_updates + outcomes:
+            self.assertGreater(
+                len(record.provenance),
+                0,
+                f"Record {record.id} should have provenance at level 1",
+            )
+            self.assertGreater(
+                len(record.accountability),
+                0,
+                f"Record {record.id} should have accountability at level 1",
+            )
 
-    def test_level_2_provenance_and_accountability(self):
-        """Level 2: adds provenance and accountability on envelope."""
+    def test_level_2_adds_explanation_and_reasoning(self):
+        """Level 2: adds explanation (and reasoning when present) on top of level 1."""
         config = _session_config(2)
         session = Session.from_config(config)
         env = self._make_env()
@@ -136,6 +144,8 @@ class TestLoggingLevels(unittest.TestCase):
         self.assertEqual(len(outcomes), 2)
         self.assertEqual(len(traces), 4)
 
+        for record in agent_updates:
+            self.assertIn("explanation", record.payload["decision"])
         for record in agent_updates + outcomes:
             self.assertGreater(
                 len(record.provenance),

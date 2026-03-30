@@ -29,7 +29,7 @@ All records share a common envelope:
 | `provenance` | dict | No* | Authorship: who produced this record (see §6) |
 | `accountability` | dict | No* | Responsibility: who answers for this record (see §6) |
 
-\* At Level 2, provenance and accountability are populated on all records. At Levels 0 and 1, they may be omitted or minimal.
+\* At Level 1+, provenance and accountability are populated on all records. At Level 0, they may be omitted or minimal.
 
 ---
 
@@ -43,12 +43,20 @@ All records share a common envelope:
 - `local_knowledge` (required): What the agent knows at update time. Scenario-specific structure (e.g. gridworld cells, push observations). Temporal snapshot. May be empty for scenarios without agent-to-agent messaging.
 - `decision` (required): The agent's choice. Contains:
   - `request`: Input to the decision (actor, goal, context, inputs)
-  - `response`: Output (actor, decision, request_id, notes)
-  - `explanation` (optional, by level): Human-readable rationale. Populated at Level 1+. Like provenance/accountability on the envelope, explanation is an optional attribute controlled by the logging level.
+  - `response`: Policy output (cleaned of envelope-only provenance/accountability). **Policy contract:** the callable must include **`choice`**, a structured commit to the environment:
+    - `choice.status`: `"act"` | `"abstain"` | `"error"`
+    - `choice.action`: env primitive when `status == "act"`; otherwise `null` or omitted
+    - `choice.error` (optional): details when `status == "error"`
+    Other keys may appear on `response` (e.g. `id`, `request_id`, `actor`, `explanation`). `SessionAgent.decide()` returns `action` from `response["choice"]["action"]` for the scenario loop; callers use `response["choice"]["status"]` to distinguish act / abstain / error.
+  - `explanation` (optional, by level): Human-readable rationale. Populated at Level 2. Like provenance/accountability on the envelope, explanation is an optional attribute controlled by the logging level.
+  - `reasoning` (optional, by level): Structured reasoning trace. Populated at Level 2. Two sources, merged transparently by the library:
+    - **Tool traces (automatic):** When the agent config includes `tools`, `SessionAgent.decide()` wraps each callable and captures its inputs, output, and timing as structured steps: `{"steps": [{"kind": "tool", "name": "...", "inputs": {...}, "output": ..., "elapsed_s": ...}]}`.
+    - **Policy-provided:** The policy may include its own `reasoning` value (e.g. LLM chain-of-thought, native reasoning tokens). When both sources exist, the library merges them (policy reasoning + `tool_steps`).
+    The library does not prescribe the internal structure beyond the tool-step schema above.
 - `type`: Message type when applicable (e.g. `map_update`, `map_summary` for gridworld)
 - Other scenario-defined fields
 
-**Optional envelope fields (by level):** provenance, accountability at Level 2. No provenance or accountability inside the payload.
+**Optional envelope fields (by level):** provenance, accountability at Level 1+. No provenance or accountability inside the payload.
 
 ---
 
@@ -142,10 +150,10 @@ The first environment outcome (before any agent acts) uses the fixed id `"initia
 | Level | Purpose | What is stored |
 |-------|---------|----------------|
 | **0** | Communication | agent_update (with local_knowledge, decision), environment_outcome |
-| **1** | Traceability, interpretability | Level 0 + trace and `decision.explanation` populated |
-| **2** | Accountability, provenance | Level 1 + provenance and accountability on envelope |
+| **1** | Traceability, accountability | Level 0 + trace + provenance and accountability on envelope |
+| **2** | Interpretability | Level 1 + `decision.explanation` + `decision.response.reasoning` populated |
 
-At Level 0: agent_update has local_knowledge and decision (no explanation). At Level 1: traces are stored and decision also includes explanation. At Level 2: envelope has provenance and accountability.
+At Level 0: agent_update has local_knowledge and decision (no explanation, no reasoning, no provenance). At Level 1: traces are stored and envelope has provenance and accountability (structural metadata). At Level 2: decision also includes explanation and reasoning (interpretability content).
 
 ---
 

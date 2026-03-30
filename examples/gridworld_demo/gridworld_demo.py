@@ -30,7 +30,9 @@ from examples.gridworld_demo.policies import (
     random_explore_policy,
     frontier_explore_policy,
     auction_frontier_policy,
+    llm_explore_policy,
 )
+from examples.llm_policy import create_llm_tool
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +94,7 @@ GRIDWORLD_POLICIES = {
     "grid_random": random_explore_policy,
     "grid_frontier": frontier_explore_policy,
     "grid_auction_frontier": auction_frontier_policy,
+    "grid_llm": llm_explore_policy,
 }
 
 
@@ -339,6 +342,14 @@ def main() -> None:
     agent_ids = [c["id"] for c in agent_configs]
     topology_mode, visibility = parse_topology(config)
     hub_id = "hub"
+
+    needs_llm = any(c["policy"]["name"] == "grid_llm" for c in agent_configs)
+    llm_tool = None
+    if needs_llm:
+        llm_tool = create_llm_tool()
+        for c in agent_configs:
+            if c["policy"]["name"] == "grid_llm":
+                c.setdefault("tools", {})["llm"] = llm_tool
 
     env = make_env(
         create_gridworld_env,

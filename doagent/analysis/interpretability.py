@@ -16,7 +16,7 @@ def _decision_action(agent_update: Any) -> Any:
     response = decision.get("response", {})
     if not isinstance(response, dict):
         return None
-    return (response.get("decision") or {}).get("action")
+    return (response.get("choice") or {}).get("action")
 
 
 def _decision_round(agent_update: Any) -> Any:
