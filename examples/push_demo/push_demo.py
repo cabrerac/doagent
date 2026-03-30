@@ -242,7 +242,7 @@ def main() -> None:
             },
             {
                 "id": "agent_0",
-                "policy": {"name": "push_llm", "params": {"model": "gemini-2.5-flash", "confidence_threshold": 0.3}},
+                "policy": {"name": "push_llm", "params": {"model": "gemini-3.1-flash-lite-preview", "confidence_threshold": 0.3}},
                 "tools": {"llm": llm_tool},
                 "metadata": {"explanation": "LLM-based goal-seek policy."},
             },

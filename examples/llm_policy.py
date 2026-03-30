@@ -21,7 +21,7 @@ Usage with ``create_llm_tool``::
         {
             "id": "agent_0",
             "policy": {"name": "llm_decide", "params": {
-                "model": "gemini-2.5-flash",
+                "model": "gemini-3.1-flash-lite-preview",
                 "action_space": {0: "stay", 1: "left", 2: "right", 3: "up", 4: "down"},
                 "confidence_threshold": 0.4,
             }},
@@ -202,7 +202,7 @@ def llm_decide_factory(params: Dict[str, Any]) -> Any:
     """Policy factory: returns a decide callable that uses an LLM tool.
 
     Params:
-        model: Model identifier passed to the LLM callable (default "gemini-2.5-flash").
+        model: Model identifier passed to the LLM callable (default "gemini-3.1-flash-lite-preview").
         action_space: Dict mapping action integers to descriptions.
         confidence_threshold: Below this confidence, the agent abstains (default 0.3).
         system_prompt: Optional override for the system prompt.
@@ -210,7 +210,7 @@ def llm_decide_factory(params: Dict[str, Any]) -> Any:
             that builds the user message.  When omitted the default prompt
             template is used.
     """
-    model = params.get("model", "gemini-2.5-flash")
+    model = params.get("model", "gemini-3.1-flash-lite-preview")
     action_space: Dict[int, str] = params.get("action_space", {0: "noop"})
     threshold = float(params.get("confidence_threshold", 0.3))
     system_prompt = params.get("system_prompt", _SYSTEM_PROMPT)

@@ -61,10 +61,10 @@ The restructuring was motivated by the observation that the abstain section in `
 
 ### Shared LLM infrastructure (example code, not library)
 
-- **`examples/llm_policy.py`**: Add a `create_llm_tool()` helper that reads `OPENAI_API_KEY` (or `DOAGENT_OPENAI_API_KEY`) from env and creates the LLM callable using the OpenAI SDK.
-- **OpenAI SDK** is an optional dependency for examples only — users running heuristic-only demos don't need it.
+- **`examples/llm_policy.py`**: Add a `create_llm_tool()` helper that reads `GEMINI_API_KEY` (or `DOAGENT_GEMINI_API_KEY`) from env and creates the LLM callable using the Google Gemini SDK (`google-genai`). Also supports OpenAI as an alternative provider.
+- **google-genai SDK** is an optional dependency for examples only — users running heuristic-only demos don't need it. Default model: `gemini-3.1-flash-lite-preview` (free tier).
 - **Error handling**:
-  - Local runners: clear error ("Set OPENAI_API_KEY to run the LLM agent").
+  - Local runners: clear error ("Set GEMINI_API_KEY to run the LLM agent").
   - Notebooks: graceful skip with a printed message so the rest of the notebook still runs.
 
 ### Files to change
