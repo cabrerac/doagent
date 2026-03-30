@@ -228,9 +228,9 @@ def llm_decide_factory(params: Dict[str, Any]) -> Any:
                 },
             }
 
-        obs = request.get("inputs", {}).get("observation", {})
+        inputs = request.get("inputs", {})
         goal = request.get("goal", "act optimally")
-        user_prompt = build_prompt(obs, action_space, goal)
+        user_prompt = build_prompt(inputs, action_space, goal)
 
         try:
             raw_response = llm(

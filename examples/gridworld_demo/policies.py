@@ -150,43 +150,109 @@ def auction_frontier_policy(params: Dict[str, Any]):
 
 
 def _build_gridworld_prompt(
-    observation: Any,
+    inputs: Any,
     action_space: Dict[int, str],
     goal: str,
 ) -> str:
-    """Build a gridworld-specific user prompt for the LLM."""
-    pos = observation.get("position", {})
-    cells = observation.get("cells", [])
-    w = observation.get("width", "?")
-    h = observation.get("height", "?")
-    shared_map = observation.get("shared_map", {})
-    known_count = len(shared_map.get("cells", []))
+    """Build a gridworld-specific user prompt for the LLM.
 
-    actions_desc = "\n".join(f"  {k}: {v}" for k, v in sorted(action_space.items()))
+    ``inputs`` is the full request inputs dict, typically containing
+    ``observation`` (from env) and ``shared_map`` (aggregated from records).
+    """
+    observation = inputs.get("observation", inputs)
+    shared_map = inputs.get("shared_map", {})
+
+    pos = observation.get("position", {})
+    x, y = int(pos.get("x", 0)), int(pos.get("y", 0))
+    cells = observation.get("cells", [])
+    w = int(observation.get("width", 0))
+    h = int(observation.get("height", 0))
+
+    known: set = set()
+    for c in shared_map.get("cells", []):
+        cx, cy = c.get("x"), c.get("y")
+        if cx is not None and cy is not None:
+            known.add((int(cx), int(cy)))
+    for c in cells:
+        cx, cy = c.get("x"), c.get("y")
+        if cx is not None and cy is not None:
+            known.add((int(cx), int(cy)))
+
+    total_cells = w * h if w and h else 0
+    known_count = len(known)
+    remaining = total_cells - known_count if total_cells else "?"
+
+    wall_info = []
+    if x <= 0:
+        wall_info.append("left (wall)")
+    if x >= w - 1:
+        wall_info.append("right (wall)")
+    if y <= 0:
+        wall_info.append("up (wall)")
+    if y >= h - 1:
+        wall_info.append("down (wall)")
+
+    neighbors = [
+        ("left",  x - 1, y),
+        ("right", x + 1, y),
+        ("down",  x, y + 1),
+        ("up",    x, y - 1),
+    ]
+    unexplored_dirs = []
+    explored_dirs = []
+    blocked_dirs = []
+    for name, nx, ny in neighbors:
+        if nx < 0 or ny < 0 or (w and nx >= w) or (h and ny >= h):
+            blocked_dirs.append(name)
+        elif (nx, ny) not in known:
+            unexplored_dirs.append(name)
+        else:
+            explored_dirs.append(name)
 
     visible_summary = []
     for c in cells:
-        tag = " (landmark)" if c.get("value") == "landmark" else ""
-        visible_summary.append(f"({c.get('x')},{c.get('y')}){tag}")
+        tag = " LANDMARK" if c.get("value") == "landmark" else ""
+        visible_summary.append(f"({c.get('x')},{c.get('y')}{tag})")
 
-    return (
-        f"Goal: {goal}\n\n"
-        f"You are at position ({pos.get('x')}, {pos.get('y')}) "
-        f"on a {w}x{h} grid.\n"
-        f"Visible cells: {', '.join(visible_summary)}.\n"
-        f"Known cells from shared map: {known_count}.\n\n"
-        f"Available actions:\n{actions_desc}\n\n"
-        "Choose the action that best helps discover unknown cells. "
-        "Respond with JSON only."
-    )
+    actions_desc = "\n".join(f"  {k}: {v}" for k, v in sorted(action_space.items()))
+
+    parts = [
+        f"Goal: {goal}",
+        "",
+        f"Grid size: {w} x {h} (coordinates 0..{w-1} horizontal, 0..{h-1} vertical).",
+        f"Your position: ({x}, {y}).",
+        f"Cells visible now: {', '.join(visible_summary)}.",
+        f"Total explored by all agents: {known_count}/{total_cells} — {remaining} cells left.",
+    ]
+
+    if wall_info:
+        parts.append(f"Walls adjacent: {', '.join(wall_info)}.")
+    if blocked_dirs:
+        parts.append(f"Blocked directions (wall): {', '.join(blocked_dirs)}.")
+    if unexplored_dirs:
+        parts.append(f"Unexplored neighbor directions: {', '.join(unexplored_dirs)} — prefer these!")
+    if explored_dirs:
+        parts.append(f"Already explored directions: {', '.join(explored_dirs)}.")
+
+    parts += [
+        "",
+        f"Available actions:\n{actions_desc}",
+        "",
+        "Strategy: move toward unexplored areas. Avoid walls and already-explored "
+        "directions when possible. If all neighbors are explored, pick the direction "
+        "most likely to lead to distant unexplored cells.",
+        "Respond with JSON only.",
+    ]
+
+    return "\n".join(parts)
 
 
 _GRIDWORLD_ACTION_SPACE: Dict[int, str] = {
     0: "stay",
     1: "left",
     2: "right",
-    3: "up",
-    4: "down",
+    3: "down",
+    4: "up",
 }
 
 

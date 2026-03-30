@@ -2,6 +2,7 @@
 pettingzoo[mpe]
 mpe2
 pygame
+openai
 
 # Visualization and analysis dependencies
 matplotlib
