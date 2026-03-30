@@ -249,7 +249,8 @@ class SessionAgent:
             k: v for k, v in response.items()
             if k not in ("provenance", "accountability")
         }
-        decision = {"request": dict(request), "response": response_clean}
+        request_clean = {k: v for k, v in request.items() if k != "tools"}
+        decision = {"request": request_clean, "response": response_clean}
         local_knowledge = request_inputs
 
         record_id = self._record_writer.on_agent_decide(
