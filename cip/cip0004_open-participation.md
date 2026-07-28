@@ -32,6 +32,13 @@ title: "Open Participation Registry"
 
 **In Progress** while **REQ-0004** still has **open acceptance criteria** (e.g. transparent capability/resource advertisement) and while **unchecked** items remain in **Implementation Status** (persistence, distributed discovery, etc.). **Future participation work** is already listed under **Discussion items / Future iteration**. Moving to **Implemented** later will **not** prevent more openness iterations—those become new tasks or a new CIP slice.
 
+**Blocking item for Implemented (identified 2026-07-28):** participation is declarable but **not observable**.
+`ParticipationRecord` carries `capabilities` and `resource_limits`, and `Session.register_participant()` accepts both,
+but it writes only to the registry — never to the shared data model. Participation therefore cannot be read back via
+`session.inspect(...)` like every other record. For a data-first library, "advertise capabilities and resource
+constraints in a transparent way" (REQ-0004) means participation must land in the shared data substrate. This is the
+one criterion keeping both this CIP and REQ-0004 open.
+
 ## Summary
 Define participation records and a registry interface so agents can join, leave, and advertise capabilities in an open system.
 
@@ -101,12 +108,21 @@ This CIP addresses the following requirements:
 - [x] Implement in-memory registry
 - [x] **Expose participation registry through Session** — Session accepts `participation: True` or `participation_registry` in config and exposes `session.participation_registry`; examples and notebooks use it on leave/rejoin (2026-03-17).
 - [x] Update examples and tests (gridworld demo and notebook use registry; push notebook notes openness).
+- [ ] **Write participation into the shared data model** so capabilities and resource limits are inspectable like any other record — **the blocking item for Implemented** (see Status note, 2026-07-28).
 - [ ] **Persist participation** (file/Mongo aligned with shared data model) — future iteration; currently in-memory only (see Discussion items).
 - [ ] Registry vs store / chunk ownership (placement in registry when data is distributed) — future iteration; see Discussion items
 - [ ] Admission and policy enforcement hooks — future iteration; already in gaps
 - [ ] Discovery across domains (participant and data/resource discovery) — future iteration; see Discussion items
 
 ## Progress Updates
+
+### 2026-07-28
+Reviewed alongside CIP-0007/0008/0009 (all three promoted to **Implemented**). This CIP **stays In Progress**, and the
+review pinned down why in code rather than by checklist: `Session.register_participant()` builds a
+`ParticipationRecord` with `capabilities` and `resource_limits` and then calls `registry.register(record)` only. The
+registry is in-memory and sits outside the shared data model, so participation is never written as a record and cannot
+be inspected. `test_participation_registry` passes, but it exercises the registry contract, not transparency.
+Recorded as the blocking item in the Status note and Implementation Status above.
 
 ### 2026-02-03
 Iteration 1 complete. Participation record, registry interface, in-memory registry, and tests added. Tests passed. Iteration 2 planned.

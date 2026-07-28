@@ -2,8 +2,8 @@
 author: "Christian Cabrera"
 created: "2026-02-04"
 id: "0007"
-last_updated: "2026-03-04"
-status: "In Progress"
+last_updated: "2026-07-28"
+status: "Implemented"
 compressed: false
 related_requirements:
 - "0007"
@@ -24,11 +24,15 @@ title: "Trace Records and Lineage Links"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [x] In Progress - Actively being implemented
-- [ ] Implemented - Work complete, awaiting verification
+- [ ] In Progress - Actively being implemented
+- [x] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
 - [ ] Deferred - Postponed (use blocked_by field to indicate blocker)
+
+**Implemented** means **iterations 1 and 2** are delivered (trace payload, helper, `doagent.analysis.traceability`)
+and **REQ-0007**'s acceptance criteria are all met. Retention, batching, and configurable tracing granularity remain
+open as future iterations — they are listed under Progress Updates and do not block this status.
 
 ## Summary
 Introduce trace records that link inputs to outputs, enabling decision and message chains to be reconstructed from shared data.
@@ -108,6 +112,13 @@ Promote analysis capabilities into a first-class library module. Iteration 2 add
 **Related backlog**: 2026-03-04_analysis-module-library
 
 ## Progress Updates
+
+### 2026-07-28
+CIP marked **Implemented**. Verified against REQ-0007: all three acceptance criteria are checked and the requirement
+already reads `Implemented`. All Implementation Status items are complete, and the covering tests pass
+(`test_traceability`, `test_analysis_traceability`, `test_trace_dedup`, `test_tool_tracing`) in a run of
+104 passed / 3 skipped. Mongo-backed tests were not exercised in that run (no `pymongo` in the interpreter used),
+so file storage is the verified substrate.
 
 ### 2026-02-04
 Iteration 1 complete. Trace payload, helper, tests, and examples added. Tests passed. Iteration 2 planned. Next iteration should focus on trace retrieval patterns (e.g., graph traversal helpers) and optional provenance links at scale.

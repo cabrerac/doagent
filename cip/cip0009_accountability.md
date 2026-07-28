@@ -2,8 +2,8 @@
 author: "Christian Cabrera"
 created: "2026-02-04"
 id: "0009"
-last_updated: "2026-03-04"
-status: "In Progress"
+last_updated: "2026-07-28"
+status: "Implemented"
 compressed: false
 related_requirements:
 - "0009"
@@ -24,11 +24,16 @@ title: "Accountability on Record Envelope"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [x] In Progress - Actively being implemented
-- [ ] Implemented - Work complete, awaiting verification
+- [ ] In Progress - Actively being implemented
+- [x] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
 - [ ] Deferred - Postponed (use blocked_by field to indicate blocker)
+
+**Implemented** means **iterations 1 and 2** are delivered (accountability envelope field, `new_accountability`
+helper, `doagent.analysis.accountability`) and **REQ-0009**'s acceptance criteria are all met. Threading
+accountability through the agent write path and conventions for `policy_id` / `responsibility_scope` remain future
+iterations — they are listed under Progress Updates and do not block this status.
 
 ## Summary
 Add an optional accountability field to the record envelope so decisions are attributable to owner, policy, and responsibility scope without a separate record type.
@@ -98,6 +103,12 @@ Promote analysis capabilities into a first-class library module. Iteration 2 add
 **Related backlog**: 2026-03-04_analysis-module-library
 
 ## Progress Updates
+
+### 2026-07-28
+CIP marked **Implemented**. Verified against REQ-0009: all three acceptance criteria are checked and the requirement
+already reads `Implemented`. All Implementation Status items are complete, and the covering tests pass
+(`test_accountability`, `test_analysis_accountability`) in a run of 104 passed / 3 skipped. Mongo-backed tests were
+not exercised in that run (no `pymongo` in the interpreter used), so file storage is the verified substrate.
 
 ### 2026-02-05
 Iteration 1 complete. Accountability TypedDict, optional envelope field, `new_accountability` helper, file-adapter backward compatibility, tests, example, and README added. Tests passed. Iteration 2 planned.

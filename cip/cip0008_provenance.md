@@ -2,8 +2,8 @@
 author: "Christian Cabrera"
 created: "2026-02-04"
 id: "0008"
-last_updated: "2026-03-04"
-status: "In Progress"
+last_updated: "2026-07-28"
+status: "Implemented"
 compressed: false
 related_requirements:
 - "0008"
@@ -24,11 +24,15 @@ title: "Provenance Semantics and Helper"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [x] In Progress - Actively being implemented
-- [ ] Implemented - Work complete, awaiting verification
+- [ ] In Progress - Actively being implemented
+- [x] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
 - [ ] Deferred - Postponed (use blocked_by field to indicate blocker)
+
+**Implemented** means **iterations 1 and 2** are delivered (provenance semantics, `new_provenance` helper,
+`doagent.analysis.provenance`) and **REQ-0008**'s acceptance criteria are all met. Automatic trace sync from
+`derived_from` remains a future iteration — it is listed under Progress Updates and does not block this status.
 
 ## Summary
 Formalise provenance semantics (creation-time attribution, one contribution per agent) and add a helper to build provenance for records. Trace sync from provenance is deferred to a later iteration.
@@ -99,6 +103,12 @@ Promote analysis capabilities into a first-class library module. Iteration 2 add
 **Related backlog**: 2026-03-04_analysis-module-library
 
 ## Progress Updates
+
+### 2026-07-28
+CIP marked **Implemented**. Verified against REQ-0008: all three acceptance criteria are checked and the requirement
+already reads `Implemented`. All Implementation Status items are complete, and the covering tests pass
+(`test_provenance`, `test_analysis_provenance`) in a run of 104 passed / 3 skipped. Mongo-backed tests were not
+exercised in that run (no `pymongo` in the interpreter used), so file storage is the verified substrate.
 
 ### 2026-02-04
 Iteration 1 complete. Provenance semantics documented, helper added, tests and example added. Tests passed. Iteration 2 planned. Trace sync from provenance (one trace per source) deferred to a later iteration.

@@ -14,6 +14,8 @@ This document describes how DOAgent approaches validation and how the agentic re
 
 They do **not** define the only use cases the library supports. Users can build their own environments, benchmarks, and application domains (scientific discovery, code generation, tool use, custom multi-agent games, etc.) on top of the same public API and data model. Validation scenarios are **reference implementations**, not an exhaustive or limiting set.
 
+**Possible external use case (2026-07-13):** ai@cam is developing an AI-policy project that involves simulating social systems in which local and government authorities (and related actors) interact. Jess and Radzim framed this as an opportunity for multi-agent systems architectures. DOAgent is a natural fit: authorities as agents coordinating through a shared data model, with configurable topology, open participation, and traceable decisions. We should treat this as a candidate application domain for demos or collaboration—not a committed validation REQ yet—alongside the paper-aligned scenarios below.
+
 ---
 
 ## Paper as reference for benchmarks and application domains

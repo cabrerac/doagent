@@ -1,10 +1,10 @@
 ---
 id: "2026-03-28_notebook-restructuring-llm-integration"
 title: "Restructure notebooks and local runners with actual LLM integration"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-03-28"
-last_updated: "2026-03-28"
+last_updated: "2026-07-28"
 category: "features"
 related_cips:
 - "0002"
@@ -82,14 +82,14 @@ The restructuring was motivated by the observation that the abstain section in `
 
 ## Acceptance Criteria
 
-- [ ] 01_minimal_demo is a clean hello-world with no abstain section.
-- [ ] 02_push_demo has a working LLM comparison section (with actual LLM client).
-- [ ] 03_gridworld_demo has 4 distinct policies including grid_llm from the start.
-- [ ] Local runners reflect the same changes as the notebooks.
-- [ ] LLM policies use actual clients (OpenAI SDK via env var).
-- [ ] Graceful skip in notebooks when no API key is set.
-- [ ] Clear error in local runners when no API key is set.
-- [ ] Full test suite passes.
+- [x] 01_minimal_demo is a clean hello-world with no abstain section.
+- [x] 02_push_demo has a working LLM comparison section (with actual LLM client).
+- [x] 03_gridworld_demo has 4 distinct policies including grid_llm from the start.
+- [x] Local runners reflect the same changes as the notebooks.
+- [x] LLM policies use actual clients (OpenAI SDK via env var).
+- [x] Graceful skip in notebooks when no API key is set.
+- [x] Clear error in local runners when no API key is set.
+- [x] Full test suite passes.
 
 ## Implementation Notes
 
@@ -113,3 +113,24 @@ Design decisions from deliberation:
 ### 2026-03-28
 
 Task created from deliberation session. All design decisions documented above. Ready for Stage 3 (per-task alternatives) and Stage 4 (implementation).
+
+### 2026-07-28
+
+**Completed.** Verified each acceptance criterion against the working tree: `01_minimal_demo` has no abstain content;
+`02_push_demo` has the LLM comparison section with a real client; `03_gridworld_demo` runs four distinct policies with
+`grid_llm` on `agent_3` from the start; `gridworld_demo.py` registers `grid_llm` and injects the LLM tool, and
+`push_demo.py` mirrors it; `create_llm_tool()` reads keys from env and raises a clear `RuntimeError` when absent, while
+the notebooks fall back to a heuristic policy instead of failing. Test run: 104 passed, 3 skipped (Mongo tests not
+exercised — no `pymongo` in the interpreter used).
+
+Two adoption problems surfaced during verification and are **not** part of this task:
+
+1. **Unbounded LLM latency** — no timeout, retry, or concurrency in the LLM path, and `rounds: 100` with sequential
+   decisions means a slow provider can stall a run indefinitely.
+2. **Split provider/model configuration** — the model comes from YAML (`model: "gpt-4o"`) while the provider is chosen
+   in Python (`create_llm_tool()` defaults to OpenAI), so a Gemini model name in config still builds an OpenAI client.
+   The notebooks also re-implement the LLM tool inline rather than importing `create_llm_tool`, so the setup logic
+   exists in three places.
+
+These will be tracked separately, not here. Home still to be decided — candidates are a further iteration on CIP-0005
+(model-agnostic agent interfaces) for the provider/model contract, and a library-level run-budget slice for latency.
