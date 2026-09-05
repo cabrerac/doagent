@@ -38,6 +38,20 @@ Validation scenarios we implement (e.g. gridworld, push, and future scientific-d
 
 ---
 
+## AAMAS 2027 paper evaluation (2026-09-06)
+
+The paper reports a **current LLM multi-agent** setting, not the in-repo games. Gridworld and push stay **development / fast runs** (logging-level checks, planted who/when, no API cost). Do not use OpenAI multi-agent emergence as the paper env (classic RL, not LLM MAS).
+
+**What goes in the paper**
+
+- A **small subset** of the Who&When / GAIA family: a few agents with tools, a handful of tasks, **known** who/when (annotation or planted error). Not 127 systems and not a clone of CaptainAgent or Magnetic-One.
+- Same attribution questions on (a) an AutoGen-style **conversation log** plus Zhang-style inference, versus (b) **DOAgent records** plus lookup, at more than one logging level.
+- Overhead versus recording off (`NoOp`). Not a task-success bake-off against AutoGen or AgentScope.
+
+Zhang et al. (ICML'25, Who&When) is the comparison that shares the **who/when** question; AutoGen/AgentScope are log formats / platforms, not attribution methods. Confirm details when reading that paper. Full note: `cabrerac.github.io/work-space/doagent/planning/subtasks.md`. Bib: `doagent-paper/references.bib`.
+
+---
+
 ## Candidate evaluation environments
 
 Possible environments to evaluate DOAgent, in addition to the in-repo gridworld and push demos. None of these is a committed validation requirement.
