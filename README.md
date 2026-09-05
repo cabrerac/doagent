@@ -8,19 +8,21 @@ DOAgent is a Python library for building multi-agent systems where **shared data
 
 Agentic systems often lack visibility into *why* decisions were made, *who* contributed what, and *how* state evolved. DOAgent addresses this problem by enabling:
 
-- **Shared data model** — agents communicate through records, not hidden channels
-- **Automatic recording** — wrap environment and agents once, full logs at the configured verbosity
-- **Decentralisation** — centralised, peer-to-peer, or federated communication topologies
-- **Openness** — optional participation registry when agents join or leave environments
-- **Analysis** — provenance, traceability, accountability, and interpretability
+- **Shared data model**: agents communicate through records, not hidden channels
+- **Automatic recording**: wrap environment and agents once, full logs at the configured verbosity
+- **Decentralisation**: centralised, peer-to-peer, or federated communication topologies
+- **Openness**: optional participation registry when agents join or leave environments
+- **Analysis** : provenance, traceability, accountability, and interpretability
+
+
 
 ## DOA principles
 
 DOAgent follows three principles:
 
-1. **Data as a first class citizen** — Agents communicate through a shared data model that records the system state by design.
-2. **Decentralisation** — Agents are autonomous and communicate with others using different topologies.
-3. **Openness** — Agents can join or leave the environment at any time.
+1. **Data as a first class citizen**: Agents communicate through a shared data model that records the system state by design.
+2. **Decentralisation**: Agents are autonomous and communicate with others using different topologies.
+3. **Openness**: Agents can join or leave the environment at any time.
 
 Each principle is spelled out with **code snippets** here: **[guides/doa-principles.md](guides/doa-principles.md)**
 
@@ -47,24 +49,32 @@ from doagent import Session, make_env, RunReporter
 from doagent.analysis import provenance, traceability, accountability, interpretability
 ```
 
+
+
 ## Run the demos
 
 Demos are **in the repository**, not inside the pip package. They use file (or mongo) as the shared data model, then write analysis under `output/<run_id>/analysis/`.
 
 - **Grid-world** — Four agents, shared map, optional participation. Config: `examples/gridworld_demo/gridworld_demo_config.yaml` (per-agent `metadata.explanation` demonstrates interpretability Level 2 alongside Level 1). Mongo: set `storage: "mongo"` under `scenario` (server must be running).
-  Local: `python -m examples.gridworld_demo.gridworld_demo`
+Local: `python -m examples.gridworld_demo.gridworld_demo`
 - **Push** — Two agents, PettingZoo MPE. Extra deps: `pip install pettingzoo[mpe] mpe2 pygame`.
-  Local: `python -m examples.push_demo.push_demo`
+Local: `python -m examples.push_demo.push_demo`
+
+
 
 ### Notebooks (Google Colab)
 
 The demos can be open in Colab, run top to bottom.
 
-| Notebook | Colab | What it does |
-|----------|-------|--------------|
-| 01_minimal_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/01_minimal_demo.ipynb) | Session + in-memory store, stub env, one step, inspect |
-| 02_push_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/02_push_demo.ipynb) | File store, PettingZoo push, analysis |
-| 03_gridworld_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/03_gridworld_demo.ipynb) | File store, grid + topology + participation, full analysis |
+
+| Notebook          | Colab                                                                      | What it does                                               |
+| ----------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| 01_minimal_demo   | ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg) | Session + in-memory store, stub env, one step, inspect     |
+| 02_push_demo      | ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg) | File store, PettingZoo push, analysis                      |
+| 03_gridworld_demo | ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg) | File store, grid + topology + participation, full analysis |
+
+
+
 
 ### Run demos locally (clone)
 
@@ -77,33 +87,18 @@ pip install pettingzoo[mpe] mpe2 pygame   # only for push
 python -m examples.push_demo.push_demo
 ```
 
-Extra options (topology, mongo, participation): [`examples/README.md`](examples/README.md). Notebook notes: [`notebooks/README.md`](notebooks/README.md).
+Extra options (topology, mongo, participation): `[examples/README.md](examples/README.md)`. Notebook notes: `[notebooks/README.md](notebooks/README.md)`.
 
 ## Your own environment (checklist)
 
 To implement your environment, please follow the instructions below:
 
-1. **Environment** — Object (or factory via `make_env`) with `reset(seed)` → per-agent observations, `step(actions)` → observations, rewards, terminations/done.
-
-2. **Config** — `shared_data` (`memory`, or `file` + `scenario_name` + `output_base`, or `mongo`), `run_config.logging_level`, `topology`, `policies`. Optional: `participation: True`.
-
-3. **Session** — `Session.from_config(config)`. File/mongo + `scenario_name` gives `session.run_id` for analysis.
-
-4. **Wrap + agents + loop** — `env = session.wrap_env(your_env, env_actor="…")`, `agents = session.create_agents(agent_configs, goal="…")`. Each round: build `actions` from `agent.decide(obs, round_id, inputs={…})`, then `env.step(actions)`. Use `session.visible_records(agent_id, kind="agent_update")` when agents need peers’ data.
-
-   Minimal loop (recording is automatic):
-
-   ```python
-   session = Session.from_config(config)
-   env = session.wrap_env(my_env)
-   agents = session.create_agents(agent_configs, goal="explore")
-   observations = env.reset(seed=42)
-   for round_id in range(1, rounds + 1):
-       actions = {aid: agents[aid].decide(observations[aid], round_id)["action"] for aid in agents}
-       observations = env.step(actions)["observations"]
-   ```
+1. **Environment**: Object (or factory via `make_env`) with `reset(seed)` → per-agent observations, `step(actions)` → observations, rewards, terminations/done.
+2. **Config**:`shared_data` (`memory`, or `file` + `scenario_name` + `output_base`, or `mongo`), `run_config.logging_level`, `topology`, `policies`. Optional: `participation: True`.
+3. **Session**: `Session.from_config(config)`. File/mongo + `scenario_name` gives `session.run_id` for analysis.
+4. **Wrap + agents + loop**: `env = session.wrap_env(your_env, env_actor="…")`, `agents = session.create_agents(agent_configs, goal="…")`. Each round: build `actions` from `agent.decide(obs, round_id, inputs={…})`, then `env.step(actions)`. For what this agent may **use** (kinds, last N, optional summarise), call `session.decision_context(agent_id, ...)`. For who they may treat as **present**, `session.visible_participants(agent_id)`. Raw records: `session.visible_records(agent_id, kind="agent_update")`. Snippets: [guides/doa-principles.md](guides/doa-principles.md).
+  Minimal loop (recording is automatic):
    After: `session.inspect("agent_update")`, etc. For file-backed runs, run [Analysis](#analysis) with `session.run_id`.
-
 5. **Analysis** — After a persisted run, use `doagent.analysis` with `run_id` and `output_base` (see [Analysis](#analysis) below).
 
 Reference implementations: `examples/gridworld_demo`, `examples/push_demo`.
@@ -119,12 +114,14 @@ The current analysis modules are an **expandable demonstration set** of what DOA
 
 Pick tools that match your scenario:
 
-| Tool | Use when |
-|------|----------|
-| **Provenance** | You want the chain of records that led to an outcome (“why this state?”). |
-| **Traceability** | You want how state evolved (“transition graph”). |
-| **Accountability** | You have discovery/contribution semantics (e.g. who found which cells). Skip for push-like games without that. |
+
+| Tool                 | Use when                                                                                                              |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Provenance**       | You want the chain of records that led to an outcome (“why this state?”).                                             |
+| **Traceability**     | You want how state evolved (“transition graph”).                                                                      |
+| **Accountability**   | You have discovery/contribution semantics (e.g. who found which cells). Skip for push-like games without that.        |
 | **Interpretability** | You want explanations linked to outcomes and/or transition-level atomic explanations (logging level ≥ 1 recommended). |
+
 
 Example after a file run:
 

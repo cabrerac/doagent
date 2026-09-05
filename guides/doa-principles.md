@@ -108,3 +108,60 @@ session.register_participant("agent_0", capabilities=["map"])
 ```
 
 Working example: `examples/gridworld_demo` (energy model + registry), gridworld Colab notebook.
+
+---
+
+## Using these APIs in a run loop
+
+Recording of each `decide()` is automatic (the protocol writes `agent_update` from the loop’s inputs and the policy’s return). What you add in the loop is **reads**: what this agent may use, and who they may treat as present.
+
+```python
+# What this agent may use to decide (same visibility as visible_records)
+shared_map = session.decision_context(
+    aid,
+    kinds="agent_update",          # one kind, or a list of kinds; omit for every kind
+    last_n=20,                     # optional: keep only the last N after the kind filter
+    summarise=build_shared_map,    # optional: your function(records) -> any value
+)
+
+who = session.visible_participants(aid)  # who is in, from this agent's view
+
+result = agents[aid].decide(observation, round_id, inputs={
+    "observation": observation,
+    "shared_map": shared_map,
+    "participants": who,
+})
+```
+
+- Omit `summarise` to get the record list. The library does not invent a text summary.
+- `visible_participants` rebuilds membership from `participation` records under the **same** topology filter. In federated mode, leaves see hub-authored membership (default: a `roster` snapshot).
+- After a file-backed run, `session.inspect("participation")` is the full log (not filtered). Analysis by `run_id` also reads the full log.
+
+**Federated hub in the loop** (gridworld pattern): the hub reads with `decision_context(hub_id, ...)` then `session.record_update(hub_id, summary, payload_type="...")` so leaves can see a hub-authored update.
+
+---
+
+## Topology knobs (one place)
+
+These live under `topology` in the session config. Defaults match the three modes. You only pass extras in **Python** config (YAML cannot hold callables).
+
+| Knob | When it applies | Default |
+|------|-----------------|---------|
+| `mode` | Always | `"centralised"` |
+| `visibility` | Peer-to-peer | Who may see whom (named agents keep these links on join/leave) |
+| `on_membership_change` | Peer-to-peer join/leave | YAML for named agents; mesh only an agent **not** listed in that map |
+| `on_hub_membership` | Federated join/leave | Hub writes one `roster` snapshot so leaves can see who is in |
+
+Built-in replacements (import from `doagent.core.topology`):
+
+```python
+from doagent.core.topology import (
+    mesh_on_membership_change,   # full mesh on every join, including named agents
+    relay_join_leave_as_hub,     # hub repeats join/leave (actor=hub, member_id=agent)
+)
+
+config["topology"]["on_membership_change"] = mesh_on_membership_change
+config["topology"]["on_hub_membership"] = relay_join_leave_as_hub
+```
+
+A custom `on_hub_membership` is a function `(event, agent_id, members, hub_id) -> list of dicts`. Each dict is one extra participation record to write (`event` required; optional `actor`, `member_id`, `members`, …). Return `[]` to write nothing extra. The function only **formats** membership already known to the session. It does not add a new kind of fact.

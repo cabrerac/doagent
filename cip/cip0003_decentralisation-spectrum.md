@@ -114,7 +114,7 @@ This CIP addresses the following requirements:
 - [ ] Mechanism design / incentives (write auth, visibility quotas, contribution rewards) — future iteration; discussion topic
 - [x] Dynamic topology (runtime join/leave, graph changes) — first slice 2026-09-05: P2P map hook (YAML for named agents; mesh strangers); heartbeats/negotiation remain later
 - [ ] Cross-domain / federation boundaries (domain authority, chunk ownership, cross-boundary rules) — future iteration; see Discussion items
-- [ ] Coordination protocols (default + replaceable hook for visibility and relay) — relay first slice 2026-09-05 (`on_hub_membership`); visibility filter still hard-coded
+- [x] Coordination protocols (relay) — `on_hub_membership` (2026-09-05). Read visibility stays the three built-in Session modes (enough for one physical store; no extra swap-in). Physical split store remains the discussion item above.
 
 ## Progress Updates
 
@@ -130,6 +130,14 @@ Gaps and follow-on needs:
 
 ### 2026-02-06
 Iteration 2 discussion item: The current simple_push validation example does not exercise decentralisation modes. Iteration 2 should include a scenario that demonstrates centralised vs federated vs peer-to-peer coordination choices.
+
+### 2026-09-05 (session: logical vs physical; user docs)
+
+**Implemented this slice:** P2P `on_membership_change`, federated `on_hub_membership`, `decision_context`, `visible_participants`. User instructions: `guides/doa-principles.md`, `guides/layout-and-api.md`, README checklist, `examples/README.md`.
+
+**Decisions (not more hooks on the single store):** The three read rules are enough for logically decentralised runs. A swap-in visibility filter is not needed. `write_memory` / per-agent keep is not a DOA feature (see CIP-0002). Physical split store (shards, routing) is later and is **not** required for the AAMAS style paper (one store + topology views + logging levels). Group topology knobs in the guide; do not wrap them in a protocol object until shards exist.
+
+CIP stays **Implemented**.
 
 ### 2026-09-05 (hub membership hook)
 
