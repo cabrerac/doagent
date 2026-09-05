@@ -20,11 +20,11 @@ tests/
 
 | Import | Role |
 |--------|------|
-| `doagent.Session` | `Session.from_config(config)`; `wrap_env`, `create_agents`, `inspect`, `visible_records`, `register_participant`, `deregister_participant` |
+| `doagent.Session` | `Session.from_config(config)`; `wrap_env`, `create_agents`, `inspect`, `visible_records`, `decision_context`, `visible_participants`, `register_participant`, `deregister_participant` |
 | `doagent.RunConfig` | Logging level; usually embedded in config dict |
 | `doagent.make_env` | `make_env(factory, **kwargs)` for config-driven envs |
 | `doagent.RunReporter` | Optional progress/summary helper in demos |
 
-Config drives `shared_data`, `topology`, `policies`, `participation`.
+Config drives `shared_data`, `topology` (optional `on_membership_change` for peer-to-peer join/leave, `on_hub_membership` for federated hub extras), `policies`, `participation`.
 
 Do not rely on `doagent.core` or `doagent.records` for app code; use Session-level APIs.

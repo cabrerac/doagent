@@ -80,6 +80,230 @@ class TestSession(unittest.TestCase):
         ids_after = sorted(r.agent_id for r in registry.list())
         self.assertEqual(ids_after, ["agent_obj", "agent_str"])
 
+        events = session.inspect("participation")
+        self.assertEqual(len(events), 4)
+        self.assertEqual(
+            [r.payload["event"] for r in events],
+            ["join", "join", "join", "leave"],
+        )
+        self.assertEqual(
+            [r.actor for r in events],
+            ["agent_str", "agent_dict", "agent_obj", "agent_dict"],
+        )
+        self.assertEqual(events[0].kind, "participation")
+        self.assertEqual(events[0].payload["capabilities"], ["map"])
+        self.assertEqual(events[-1].payload["event"], "leave")
+        self.assertEqual(events[-1].payload["capabilities"], ["map"])
+        self.assertEqual(events[0].provenance.get("created_by"), "agent_str")
+
+    def test_participation_events_persist_to_file(self):
+        """File adapter stores participation as participation.jsonl like any other kind."""
+        with tempfile.TemporaryDirectory() as tmp:
+            records_dir = Path(tmp)
+            session = Session.from_config({
+                "shared_data": {"type": "file", "path": str(records_dir)},
+                "participation": True,
+            })
+            session.register_participant(
+                "agent_a",
+                capabilities=["map"],
+                resource_limits={"cpu": 1.0},
+            )
+            session.deregister_participant("agent_a")
+
+            path = records_dir / "participation.jsonl"
+            self.assertTrue(path.is_file())
+            events = session.inspect("participation")
+            self.assertEqual(len(events), 2)
+            self.assertEqual([r.payload["event"] for r in events], ["join", "leave"])
+            lines = path.read_text(encoding="utf-8").strip().splitlines()
+            self.assertEqual(len(lines), 2)
+            parsed = [json.loads(line) for line in lines]
+            self.assertEqual(parsed[0]["kind"], "participation")
+            self.assertEqual(parsed[0]["payload"]["event"], "join")
+            self.assertEqual(parsed[1]["payload"]["event"], "leave")
+
+    def test_participation_events_follow_logging_levels(self):
+        """Events are written at every level; envelope provenance starts at level 1."""
+        for level, expect_provenance in ((0, False), (1, True), (2, True)):
+            with self.subTest(logging_level=level):
+                session = Session.from_config({
+                    "shared_data": {"type": "memory"},
+                    "participation": True,
+                    "run_config": {"logging_level": level},
+                })
+                session.register_participant("agent_a", capabilities=["map"])
+                events = session.inspect("participation")
+                self.assertEqual(len(events), 1)
+                self.assertEqual(events[0].payload["event"], "join")
+                if expect_provenance:
+                    self.assertEqual(events[0].provenance.get("created_by"), "agent_a")
+                    self.assertEqual(events[0].accountability.get("owner"), "agent_a")
+                else:
+                    self.assertEqual(events[0].provenance, {})
+                    self.assertEqual(events[0].accountability, {})
+
+    def test_visible_participants_centralised_sees_all_current_members(self):
+        session = Session.from_config({
+            "shared_data": {"type": "memory"},
+            "participation": True,
+            "topology": {"mode": "centralised"},
+        })
+        session.register_participant("a", capabilities=["map"])
+        session.register_participant("b", capabilities=["map"])
+        session.register_participant("c", capabilities=["search"])
+        session.deregister_participant("c")
+        ids = sorted(p["agent_id"] for p in session.visible_participants("a"))
+        self.assertEqual(ids, ["a", "b"])
+
+    def test_visible_participants_peer_to_peer_meshes_unlisted_only(self):
+        """YAML holds for named agents; only a stranger is meshed in."""
+        session = Session.from_config({
+            "shared_data": {"type": "memory"},
+            "participation": True,
+            "topology": {
+                "mode": "peer_to_peer",
+                "visibility": {"a": ["b"]},
+            },
+        })
+        session.register_participant("a", capabilities=["map"])
+        session.register_participant("b", capabilities=["map"])
+        session.register_participant("c", capabilities=["search"])
+        ids_a = sorted(p["agent_id"] for p in session.visible_participants("a"))
+        ids_b = sorted(p["agent_id"] for p in session.visible_participants("b"))
+        ids_c = sorted(p["agent_id"] for p in session.visible_participants("c"))
+        self.assertEqual(ids_a, ["a", "b", "c"])
+        self.assertEqual(ids_b, ["b", "c"])
+        self.assertEqual(ids_c, ["a", "b", "c"])
+
+    def test_p2p_leave_hides_leaver_records(self):
+        session = Session.from_config({
+            "shared_data": {"type": "memory"},
+            "participation": True,
+            "topology": {"mode": "peer_to_peer"},
+        })
+        session.register_participant("a")
+        session.register_participant("b")
+        session.record_update("a", {"x": 1})
+        session.record_update("b", {"x": 2})
+        actors_before = {r.actor for r in session.visible_records("a", kind="agent_update")}
+        self.assertEqual(actors_before, {"a", "b"})
+        session.deregister_participant("b")
+        actors_after = {r.actor for r in session.visible_records("a", kind="agent_update")}
+        self.assertEqual(actors_after, {"a"})
+        ids_a = sorted(p["agent_id"] for p in session.visible_participants("a"))
+        self.assertEqual(ids_a, ["a"])
+
+    def test_p2p_custom_membership_hook_keeps_yaml(self):
+        def keep_yaml(event, agent_id, members, visibility):
+            return {key: list(peers) for key, peers in visibility.items()}
+
+        session = Session.from_config({
+            "shared_data": {"type": "memory"},
+            "participation": True,
+            "topology": {
+                "mode": "peer_to_peer",
+                "visibility": {"a": ["b"]},
+                "on_membership_change": keep_yaml,
+            },
+        })
+        session.register_participant("a", capabilities=["map"])
+        session.register_participant("b", capabilities=["map"])
+        session.register_participant("c", capabilities=["search"])
+        ids_a = sorted(p["agent_id"] for p in session.visible_participants("a"))
+        ids_c = sorted(p["agent_id"] for p in session.visible_participants("c"))
+        self.assertEqual(ids_a, ["a", "b"])
+        self.assertEqual(ids_c, ["c"])
+
+    def test_p2p_listed_agents_keep_yaml_links(self):
+        session = Session.from_config({
+            "shared_data": {"type": "memory"},
+            "participation": True,
+            "topology": {
+                "mode": "peer_to_peer",
+                "visibility": {"a": ["b"]},
+            },
+        })
+        session.register_participant("a")
+        session.register_participant("b")
+        ids_a = sorted(p["agent_id"] for p in session.visible_participants("a"))
+        ids_b = sorted(p["agent_id"] for p in session.visible_participants("b"))
+        self.assertEqual(ids_a, ["a", "b"])
+        self.assertEqual(ids_b, ["b"])
+
+    def test_visible_participants_federated_uses_hub_roster(self):
+        session = Session.from_config({
+            "shared_data": {"type": "memory"},
+            "participation": True,
+            "topology": {"mode": "federated"},
+            "hub_id": "hub",
+        })
+        session.register_participant("a", capabilities=["map"])
+        session.register_participant("b", capabilities=["map"])
+        ids_a = sorted(p["agent_id"] for p in session.visible_participants("a"))
+        self.assertEqual(ids_a, ["a", "b"])
+        rosters = [
+            r for r in session.inspect("participation")
+            if r.payload.get("event") == "roster"
+        ]
+        self.assertTrue(rosters)
+        self.assertEqual(rosters[-1].actor, "hub")
+        session.deregister_participant("b")
+        ids_after = sorted(p["agent_id"] for p in session.visible_participants("a"))
+        self.assertEqual(ids_after, ["a"])
+
+    def test_federated_hub_hook_noop_writes_nothing(self):
+        def noop(event, agent_id, members, hub_id):
+            return []
+
+        session = Session.from_config({
+            "shared_data": {"type": "memory"},
+            "participation": True,
+            "topology": {
+                "mode": "federated",
+                "on_hub_membership": noop,
+            },
+            "hub_id": "hub",
+        })
+        session.register_participant("a")
+        session.register_participant("b")
+        self.assertEqual(session.visible_participants("a"), [])
+        rosters = [
+            r for r in session.inspect("participation")
+            if r.payload.get("event") == "roster"
+        ]
+        self.assertEqual(rosters, [])
+
+    def test_federated_hub_relay_join_leave(self):
+        from doagent.core.topology import relay_join_leave_as_hub
+
+        session = Session.from_config({
+            "shared_data": {"type": "memory"},
+            "participation": True,
+            "topology": {
+                "mode": "federated",
+                "on_hub_membership": relay_join_leave_as_hub,
+            },
+            "hub_id": "hub",
+        })
+        session.register_participant("a", capabilities=["map"])
+        session.register_participant("b", capabilities=["map"])
+        ids_a = sorted(p["agent_id"] for p in session.visible_participants("a"))
+        self.assertEqual(ids_a, ["a", "b"])
+        rosters = [
+            r for r in session.inspect("participation")
+            if r.payload.get("event") == "roster"
+        ]
+        self.assertEqual(rosters, [])
+        hub_joins = [
+            r for r in session.inspect("participation")
+            if r.actor == "hub" and r.payload.get("event") == "join"
+        ]
+        self.assertEqual(len(hub_joins), 2)
+        session.deregister_participant("b")
+        ids_after = sorted(p["agent_id"] for p in session.visible_participants("a"))
+        self.assertEqual(ids_after, ["a"])
+
     def test_basic_session_flow(self):
         shared_data = InMemorySharedData()
         session = Session(shared_data)
@@ -314,6 +538,39 @@ class TestSession(unittest.TestCase):
         self.assertEqual(len(records_a), 1)
         self.assertEqual(records_a[0].actor, "hub")
         self.assertEqual(len(records_hub), 3)
+
+    def test_decision_context_kinds_last_n_and_summarise(self):
+        session = Session.from_config({
+            "shared_data": {"type": "memory"},
+            "topology": {"mode": "centralised"},
+        })
+        session.record_update("a", {"n": 1})
+        session.record_update("b", {"n": 2})
+        session.record_update("a", {"n": 3})
+
+        all_updates = session.decision_context("a", kinds="agent_update")
+        self.assertEqual(len(all_updates), 3)
+
+        last_two = session.decision_context("a", kinds="agent_update", last_n=2)
+        self.assertEqual(len(last_two), 2)
+        self.assertEqual(last_two[0].payload["local_knowledge"]["n"], 2)
+        self.assertEqual(last_two[1].payload["local_knowledge"]["n"], 3)
+
+        none = session.decision_context("a", kinds="agent_update", last_n=0)
+        self.assertEqual(none, [])
+
+        mixed = session.decision_context("a", kinds=["agent_update", "participation"])
+        self.assertEqual(len(mixed), 3)
+
+        def count_records(records):
+            return len(records)
+
+        self.assertEqual(
+            session.decision_context("a", kinds="agent_update", summarise=count_records),
+            3,
+        )
+        with self.assertRaises(ValueError):
+            session.decision_context("a", last_n=-1)
 
 
 if __name__ == "__main__":

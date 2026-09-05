@@ -1,4 +1,4 @@
-"""Record factory helpers: create agent_update, trace, outcome, and explanation records.
+"""Record factory helpers: create agent_update, trace, outcome, explanation, and participation records.
 
 Used internally by RecordWriter, FunctionAgent, and StubAgent. Not part of the
 public Session API; users configure recording via Session and RunConfig.
@@ -125,6 +125,41 @@ def new_agent_update_record(
     return new_record(
         actor=actor,
         kind="agent_update",
+        payload=payload,
+        provenance=provenance,
+        accountability=accountability,
+        record_id=record_id,
+    )
+
+
+def new_participation_record(
+    *,
+    actor: str,
+    event: str,
+    capabilities: Optional[list[str]] = None,
+    resource_limits: Optional[Dict[str, float]] = None,
+    metadata: Optional[Dict[str, str]] = None,
+    members: Optional[list] = None,
+    member_id: Optional[str] = None,
+    provenance: Optional[Dict[str, Any]] = None,
+    accountability: Optional[Dict[str, Any]] = None,
+    record_id: Optional[str] = None,
+) -> SimpleRecord:
+    """Create a participation event record (join / leave / update / roster)."""
+    payload: Dict[str, Any] = {
+        "event": event,
+        "capabilities": list(capabilities or []),
+        "resource_limits": dict(resource_limits or {}),
+    }
+    if metadata:
+        payload["metadata"] = dict(metadata)
+    if members is not None:
+        payload["members"] = list(members)
+    if member_id is not None:
+        payload["member_id"] = member_id
+    return new_record(
+        actor=actor,
+        kind="participation",
         payload=payload,
         provenance=provenance,
         accountability=accountability,

@@ -20,7 +20,7 @@ They do **not** define the only use cases the library supports. Users can build 
 
 ## Paper as reference for benchmarks and application domains
 
-The **agentic reasoning paper** (see `papers/agentic-reasoning-llm-reading-guide.md`) discusses **§6 Applications** and **§7 Benchmarks**: concrete domains and evaluation setups used in the literature (e.g. mathematical reasoning, scientific discovery, code generation, tool use, multi-agent coordination, self-evolving or adaptive systems). We use that discussion as a **reference** when deciding which validation scenarios to implement and how to prioritise them. We do not commit to implementing every benchmark the paper mentions; we use the list to align our validation work with established domains and to justify our choices. Apart from the paper's alternatives we should explore and do something for the [Denario project](https://github.com/AstroPilot-AI/Denario)
+The **agentic reasoning paper** (see `papers/agentic-reasoning-llm-reading-guide.md`) discusses **§6 Applications** and **§7 Benchmarks**: concrete domains and evaluation setups used in the literature (e.g. mathematical reasoning, scientific discovery, code generation, tool use, multi-agent coordination, self-evolving or adaptive systems). We use that discussion as a **reference** when deciding which validation scenarios to implement and how to prioritise them. We do not commit to implementing every benchmark the paper mentions; we use the list to align our validation work with established domains and to justify our choices. Apart from the paper's alternatives we should explore and do something for the [Denario project](https://astropilot-ai.github.io/DenarioPaperPage/) ([GitHub](https://github.com/AstroPilot-AI/Denario)).
 
 ---
 
@@ -35,6 +35,22 @@ The **agentic reasoning paper** (see `papers/agentic-reasoning-llm-reading-guide
 | **Code generation, program synthesis** | (No dedicated REQ; optional future validation) | Traceability, provenance, accountability. |
 
 Validation scenarios we implement (e.g. gridworld, push, and future scientific-discovery or self-adaptive demos) are selected from this space to cover the three DOA principles and to match REQ-0010, REQ-0011, and REQ-0012. When we add or change validation examples, we refer to the paper’s §6/§7 and to this mapping to keep validation aligned with recognised benchmarks and application domains.
+
+---
+
+## Candidate evaluation environments
+
+Possible environments to evaluate DOAgent, in addition to the in-repo gridworld and push demos. None of these is a committed validation requirement.
+
+- [Multi-agent emergence environments](https://github.com/openai/multi-agent-emergence-environments)
+
+---
+
+## Related links
+
+- [Agent2Agent Protocol (A2A)](https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/)
+- [The Denario Project](https://astropilot-ai.github.io/DenarioPaperPage/)
+- [Designing AI agents that know when to step back](https://www.amazon.science/blog/designing-ai-agents-that-know-when-to-step-back)
 
 ---
 

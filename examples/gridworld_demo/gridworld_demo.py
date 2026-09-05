@@ -188,18 +188,21 @@ def run_with_session(
 
         for aid in active_ids:
             observation = observations.get(aid, {})
-            shared_records = session.visible_records(aid, kind="agent_update")
-            shared_map = build_shared_map(shared_records)
+            shared_map = session.decision_context(
+                aid, kinds="agent_update", summarise=build_shared_map,
+            )
             result = agents[aid].decide(observation, round_id, inputs={
                 "observation": observation,
                 "shared_map": shared_map,
+                "participants": session.visible_participants(aid),
             })
             actions[aid] = result["action"]
 
         if session.topology_mode == "federated":
             # Hub aggregates agent_update records for federated topology.
-            hub_records = session.visible_records(hub_id, kind="agent_update")
-            hub_summary = build_shared_map(hub_records)
+            hub_summary = session.decision_context(
+                hub_id, kinds="agent_update", summarise=build_shared_map,
+            )
             session.record_update(hub_id, hub_summary, payload_type="map_summary")
 
         step = wrapped_env.step(actions)

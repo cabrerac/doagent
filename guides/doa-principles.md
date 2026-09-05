@@ -37,7 +37,11 @@ session = Session.from_config(config)
 
 ## 2. Decentralisation
 
-Agents are autonomous and communicate with others based on their topology, whic controls who sees which records: everyone sees everything (centralised), or each agent sees only listed peers (peer-to-peer), or a hub aggregates (federated).
+Agents are autonomous and communicate with others based on their topology, which controls who sees which records: everyone sees everything (centralised), or each agent sees only listed peers (peer-to-peer), or a hub aggregates (federated).
+
+In peer-to-peer, `visibility` in config is the graph for agents **named there**. Join/leave
+update it. An agent **not** in that file is linked both ways to everyone currently in.
+Pass `topology.on_membership_change` to use a different rule.
 
 **Snippet — centralised vs peer-to-peer**
 
@@ -66,6 +70,8 @@ session = Session.from_config(config)
 
 # In the loop: only records this agent may see
 records = session.visible_records("agent_0", kind="agent_update")
+# Or shape them for decide (kinds, last N, optional summarise function):
+context = session.decision_context("agent_0", kinds="agent_update", last_n=10)
 ```
 
 YAML examples for gridworld: [`examples/README.md`](../examples/README.md).
@@ -74,7 +80,10 @@ YAML examples for gridworld: [`examples/README.md`](../examples/README.md).
 
 ## 3. Openness
 
-Agents can **join and leave**. They tell the session via a **participation registry** so the library knows who is in.
+Agents can **join and leave**. Join/leave are records in the shared store. Who an agent can *see* as present uses the
+**same topology filter** as other records (`visible_participants`). In federated mode the hub writes extra records
+so leaves can see membership. Default: a roster snapshot. Replace with `topology.on_hub_membership` (for example
+`relay_join_leave_as_hub`). In peer-to-peer the default membership hook updates who can see whom.
 
 **Snippet — enable registry and register/deregister**
 
@@ -91,6 +100,7 @@ config = {
 session = Session.from_config(config)
 
 session.register_participant("agent_0", capabilities=["map"])
+who = session.visible_participants("agent_0")  # topology-filtered current members
 # ... agent leaves ...
 session.deregister_participant("agent_0")
 # ... agent rejoins ...

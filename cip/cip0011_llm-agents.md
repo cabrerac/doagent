@@ -3,7 +3,7 @@ author: "Christian Cabrera"
 created: "2026-07-28"
 id: "0011"
 last_updated: "2026-07-28"
-status: "Proposed"
+status: "Accepted"
 compressed: false
 related_requirements:
 - "0005"
@@ -27,7 +27,7 @@ title: "LLM-Backed Agents: Configuration and Time Limits"
 ## Status
 
 - [x] Proposed - Initial idea documented
-- [ ] Accepted - Approved, ready to start work
+- [x] Accepted - Approved, ready to start work
 - [ ] In Progress - Actively being implemented
 - [ ] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
@@ -211,6 +211,20 @@ Specifically, it implements solutions for:
       quality.
 
 ## Progress Updates
+
+### 2026-07-28 (accepted)
+
+CIP moved to **Accepted** and broken into six backlog tasks:
+
+- `2026-07-28_run-config-time-limits` — the two limits and the cut-short record (do first)
+- `2026-07-28_user-limit-rule-hook` — user-supplied rules; depends on the limits landing
+- `2026-07-28_budget-in-decision-request` — remaining budget visible to policies; must fit CIP-0005 payloads
+- `2026-07-28_single-source-llm-provider-config` — provider and model in one place, plus an SDK timeout
+- `2026-07-28_notebooks-import-llm-tool` — remove the duplicated LLM tool from the notebooks
+- `2026-07-28_document-timing-limits` — run-config docs and the one line in `library-boundaries.md`
+
+The two example-side tasks (provider config, notebook cleanup) have no dependency on the library work and remove most
+of the setup friction on their own.
 
 ### 2026-07-28
 

@@ -2,12 +2,13 @@
 author: "Christian Cabrera"
 created: "2026-02-03"
 id: "0003"
-last_updated: "2026-03-19"
+last_updated: "2026-09-05"
 status: "Implemented"
 compressed: false
 related_requirements:
 - "0003"
-related_cips: []
+related_cips:
+- "0004"
 tags:
 - cip
 - decentralisation
@@ -61,9 +62,22 @@ Key points:
 
 - **Mechanism design / incentives.** Today we have topology and visibility only. The paper mentions mechanism design (incentives, rewards). Future iterations may want hooks for: who is allowed to write where (write authorisation), cost or quota of visibility (e.g. federated hubs limiting or charging access), or contribution/reward semantics (credit for useful writes). No commitment; document as a discussion topic so "mechanisms" can later include incentives, not only visibility.
 
-- **Dynamic topology.** Support for topology that changes at runtime (agents join/leave, graph changes). Already in gaps; explicitly relevant for open environments where the set of participants and their connectivity evolves during a run or across runs.
+- **Dynamic topology.** Support for topology that changes at runtime (agents join/leave, graph changes). **First slice (2026-09-05):** in peer-to-peer, join/leave update the visibility map. Default: agents named in the topology file keep those links; only an agent *not* in the file is meshed with current members. Full mesh is available as `mesh_on_membership_change`. Replaceable via `topology.on_membership_change`. Centralised and federated unchanged. Heartbeats and negotiation remain later.
 
 - **Cross-domain / federation boundaries.** Domains as trust or administrative boundaries (e.g. hub ↔ domain); which data or chunk belongs to which domain; rules for sharing and writing across federated domains. When the shared data model becomes distributed, "this chunk belongs to domain X" and cross-boundary policies (what can cross, who can write) align with federation. For future iteration.
+
+- **Coordination protocols (default + replaceable).** Topology *mode* (centralised / peer-to-peer / federated) is too coarse for openness and decentralisation decisions. How membership is made visible, who may read which records, and later who may join or write, belong in a **coordination protocol**: named rules for how agents use the shared store. This is not a Python `typing.Protocol` (those are library interfaces such as `SharedDataAdapter` and `DecisionAgent`). The tenet already states that coordination protocols can be swapped without changing agent code; REQ-0003 already defers "specific protocols" to CIPs. `select_routing` is the existing stub for this.
+
+  Split the protocol into at least two kinds of rule:
+
+  - **Visibility** — who may *read* which records (today: everyone; listed peers; only hub-authored).
+  - **Relay** — who *rewrites* so others can see an event under that filter. **First slice (2026-09-05):** federated hub membership is a replaceable hook (`topology.on_hub_membership`). Default: `snapshot_hub_roster`. Built-in alternative: `relay_join_leave_as_hub`. Visibility filtering (who may read) is still hard-coded by topology mode.
+
+  Alternatives such as hub re-emitting each join/leave with `actor=hub`, or widening the federated read filter, are other protocol choices, not new record kinds. Membership records stay data (CIP-0004). Session should *ask* the protocol rather than hardcoding `_publish_roster_if_federated`.
+
+  **Default:** preserve current behaviour so existing demos keep working (centralised sees all; peer-to-peer uses the visibility map; federated leaves see hub-authored records and the hub publishes a snapshot).
+
+  **User control:** pick a built-in by name in session config, or supply a custom object that implements a small hook (same pattern as adapters). First slice is visibility + relay only. Admission, incentives, and dynamic graphs stay later discussion items.
 
 ## Iteration Deliverable (PoC)
 - Topology enum/model and configuration structure.
@@ -98,8 +112,9 @@ This CIP addresses the following requirements:
 - [x] Update examples and tests
 - [ ] Distributed shared data model (chunks, sharding, placement, routing) — future iteration; see Discussion items
 - [ ] Mechanism design / incentives (write auth, visibility quotas, contribution rewards) — future iteration; discussion topic
-- [ ] Dynamic topology (runtime join/leave, graph changes) — future iteration; already in gaps
+- [x] Dynamic topology (runtime join/leave, graph changes) — first slice 2026-09-05: P2P map hook (YAML for named agents; mesh strangers); heartbeats/negotiation remain later
 - [ ] Cross-domain / federation boundaries (domain authority, chunk ownership, cross-boundary rules) — future iteration; see Discussion items
+- [ ] Coordination protocols (default + replaceable hook for visibility and relay) — relay first slice 2026-09-05 (`on_hub_membership`); visibility filter still hard-coded
 
 ## Progress Updates
 
@@ -115,6 +130,20 @@ Gaps and follow-on needs:
 
 ### 2026-02-06
 Iteration 2 discussion item: The current simple_push validation example does not exercise decentralisation modes. Iteration 2 should include a scenario that demonstrates centralised vs federated vs peer-to-peer coordination choices.
+
+### 2026-09-05 (hub membership hook)
+
+Federated hub extra writes after join/leave are a replaceable hook (`on_hub_membership`).
+Default remains the roster snapshot. CIP stays **Implemented**.
+
+### 2026-09-05 (dynamic topology)
+
+Peer-to-peer join/leave now update the visibility map. Default: YAML for named
+agents; mesh only strangers. `topology.on_membership_change` replaces that rule.
+CIP stays **Implemented**; this is a follow-on slice of the dynamic-topology discussion item.
+
+### 2026-09-05
+Design note: coordination protocols as the replaceable layer for decentralisation and openness (visibility + relay; default preserves current federated snapshot). Distinct from Python interface protocols. CIP stays **Implemented**; this is a future iteration, not a reopen.
 
 ### 2026-03-19
 CIP marked **Implemented** for current scoped delivery; future items unchanged (distributed store, mechanisms, dynamic topology, federation—see Discussion items).

@@ -74,6 +74,36 @@ All records share a common envelope:
 
 ---
 
+### 3.3 participation
+
+**Role:** Openness events — who joined, left, or updated advertised capabilities. This is the inspectable history of
+membership. It is not a decision and is not an `agent_update`.
+
+**When written:** Whenever participation is enabled on the session (`participation: True` or a supplied registry).
+Written at **every logging level**. The live registry remains a per-run index of who is in; these records are the
+shared-data event log. File and Mongo adapters persist them like any other kind (`participation.jsonl` / a
+`participation` collection). NoOp discards them. Replaying the log into the registry after a restart is out of scope
+for this kind's first iteration (CIP-0004).
+
+**Payload:**
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `event` | `"join"` \| `"leave"` \| `"update"` \| `"roster"` | Yes | Membership event |
+| `capabilities` | `List[str]` | No | Advertised capabilities at this event (join/leave/update) |
+| `resource_limits` | `Dict[str, float]` | No | Advertised resource limits at this event |
+| `metadata` | `Dict[str, str]` | No | Optional extra fields |
+| `members` | `List[dict]` | No | Current roster; used when `event` is `"roster"` |
+| `member_id` | `str` | No | Real member when the hub re-emits join/leave (`actor` is the hub) |
+
+**Envelope:** `kind` is `"participation"`. For join/leave/update, `actor` is usually the member. When a federated hub relays join/leave, `actor` is the hub and `member_id` is the member. For `roster`, `actor` is the hub. Provenance and accountability follow the same level rule as other records (Level 1+).
+
+The registry DTO (`ParticipationRecord`) is not this envelope. Session dual-writes: update the registry, then append a `SimpleRecord` of this kind. In federated mode the **default** hub hook appends a `roster` snapshot (`topology.on_hub_membership`; default `snapshot_hub_roster`). `relay_join_leave_as_hub` is a built-in alternative.
+
+**Decision-time view:** `session.visible_participants(agent_id)` rebuilds who is currently in from `visible_records(agent_id, kind="participation")` (same topology filter). Join/leave are replayed in write order; a `roster` event replaces the view. This is who is *available to that agent*, not the environment's global acting set.
+
+---
+
 ## 4. Record Kinds — Environment Side
 
 ### 4.1 environment_outcome
@@ -109,6 +139,7 @@ All records share a common envelope:
 agent_update  contains  local_knowledge, decision (decision contains optional explanation)
 trace         ──→  from: env_outcome, to: env_outcome, enabled_by: agent_update
 environment_outcome  contains  reward, env_status
+participation  event log of join / leave / update (registry is a per-run index, not this record)
 ```
 
 **Trace graph:** Traces form a directed graph. Nodes = environment outcomes (states). Edges = traces with `enabled_by` agent_update. State deduplication: equivalent states (by hash) reuse the same outcome id; multiple traces can point to the same outcome.
@@ -149,11 +180,14 @@ The first environment outcome (before any agent acts) uses the fixed id `"initia
 
 | Level | Purpose | What is stored |
 |-------|---------|----------------|
-| **0** | Communication | agent_update (with local_knowledge, decision), environment_outcome |
+| **0** | Communication | agent_update (with local_knowledge, decision), environment_outcome; **participation** when enabled |
 | **1** | Traceability, accountability | Level 0 + trace + provenance and accountability on envelope |
 | **2** | Interpretability | Level 1 + `decision.explanation` + `decision.response.reasoning` populated |
 
-At Level 0: agent_update has local_knowledge and decision (no explanation, no reasoning, no provenance). At Level 1: traces are stored and envelope has provenance and accountability (structural metadata). At Level 2: decision also includes explanation and reasoning (interpretability content).
+At Level 0: agent_update has local_knowledge and decision (no explanation, no reasoning, no provenance). Participation
+events (when enabled) are also stored at Level 0 — membership is communication, not interpretability. At Level 1:
+traces are stored and envelope has provenance and accountability (structural metadata). At Level 2: decision also
+includes explanation and reasoning (interpretability content).
 
 ---
 
@@ -219,6 +253,7 @@ The shared data model serves **two complementary roles**:
 |------|----------|----------|-------------|
 | **World log** | Environment | Analysts, dashboards, post-hoc tooling | `environment_outcome`, `trace` |
 | **Agent exchange medium** | Agents | Other agents (via `visible_records`) | `agent_update` |
+| **Openness / membership** | Session (on join/leave/update) | Analysts via `inspect`; agents via `visible_records` if they listen for this kind | `participation` |
 
 Both roles use the same record envelope, adapters, and logging levels. The `kind` field distinguishes what the record represents; the `actor` field identifies who produced it. The environment is a data producer (not a decision-maker) that writes outcome records using the same envelope as agents.
 
@@ -230,5 +265,6 @@ Both roles use the same record envelope, adapters, and logging levels. The `kind
 
 - CIP-0002: Shared Data Model as Agent Interface
 - CIP-0001: Library First Architecture (logging levels)
+- CIP-0004: Open Participation Registry (`participation` kind)
 - [Adapter Contract](adapter-contract.md) — implementation guidance for `SharedDataAdapter`, including dedup
-- Backlog: 2026-02-16_data-model-spec
+- Backlog: 2026-02-16_data-model-spec, 2026-09-05_participation-into-shared-data

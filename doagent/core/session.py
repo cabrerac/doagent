@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 from uuid import uuid4
 
 from ..interface.shared_data import SharedDataAdapter
@@ -25,6 +25,8 @@ from ._internal.trace_collector import _TraceCollector, merge_reasoning
 from .participation import InMemoryParticipationRegistry, ParticipationRecord
 from .run_config import RunConfig
 from .topology import Topology, TopologyConfig
+from .topology.membership import make_default_membership_hook
+from .topology.hub import snapshot_hub_roster
 
 _DEDUP_DEFAULT = object()
 """Sentinel to distinguish 'not provided' from explicit None (opt-out)."""
@@ -316,11 +318,20 @@ class Session:
         run_id: Optional[str] = None,
         run_path: Optional[str] = None,
         participation_registry: Optional[Any] = None,
+        on_membership_change: Optional[Callable[..., Dict[str, List[str]]]] = None,
+        on_hub_membership: Optional[Callable[..., Any]] = None,
     ) -> None:
         self._shared_data = shared_data
         self._config = run_config or RunConfig()
         self._topology = topology or TopologyConfig()
-        self._visibility = visibility or {}
+        self._visibility = {
+            key: list(peers) for key, peers in (visibility or {}).items()
+        }
+        self._on_membership_change = (
+            on_membership_change
+            or make_default_membership_hook(self._visibility)
+        )
+        self._on_hub_membership = on_hub_membership or snapshot_hub_roster
         self._hub_id = hub_id
         self._run_id = run_id
         self._run_path = run_path
@@ -393,7 +404,8 @@ class Session:
 
         Accepts an agent id string, a dict containing ``agent_id``/``id``,
         or an object exposing ``agent_id``/``id``. The session normalises
-        this into a participation record for the configured registry.
+        this into a participation record for the configured registry and
+        appends a ``participation`` event to the shared data model.
         """
         registry = self._participation_registry
         if registry is None:
@@ -408,16 +420,114 @@ class Session:
             metadata=metadata,
         )
         registry.register(record)
+        self._record_writer.on_participation(
+            agent_id=record.agent_id,
+            event="join",
+            capabilities=record.capabilities,
+            resource_limits=record.resource_limits,
+            metadata=record.metadata,
+        )
+        self._apply_membership_map("join", record.agent_id)
+        self._publish_hub_membership("join", record.agent_id)
 
     def deregister_participant(self, agent_or_id: Any) -> None:
-        """Deregister a participant by agent id or agent-like object."""
+        """Deregister a participant by agent id or agent-like object.
+
+        Appends a ``leave`` event to the shared data model, snapshotting
+        advertised capabilities from the registry when present.
+        """
         registry = self._participation_registry
         if registry is None:
             raise RuntimeError(
                 "Participation registry is not configured. Set participation=True "
                 "or provide participation_registry in Session.from_config()."
             )
-        registry.deregister(self._resolve_agent_id(agent_or_id))
+        agent_id = self._resolve_agent_id(agent_or_id)
+        existing = registry.get(agent_id)
+        registry.deregister(agent_id)
+        self._record_writer.on_participation(
+            agent_id=agent_id,
+            event="leave",
+            capabilities=list(existing.capabilities) if existing else [],
+            resource_limits=dict(existing.resource_limits) if existing else {},
+            metadata=existing.metadata if existing else None,
+        )
+        self._apply_membership_map("leave", agent_id)
+        self._publish_hub_membership("leave", agent_id)
+
+    def _apply_membership_map(self, event: str, agent_id: str) -> None:
+        """Update the peer-to-peer visibility map after join/leave.
+
+        Centralised and federated ignore the map. Peer-to-peer uses the
+        configured hook, or the default: listed topology agents keep their
+        YAML links. Only an unnamed agent is meshed with current members.
+        """
+        if self._topology.mode != Topology.PEER_TO_PEER:
+            return
+        hook = self._on_membership_change
+        members: List[str] = []
+        registry = self._participation_registry
+        if registry is not None:
+            members = [rec.agent_id for rec in registry.list()]
+        self._visibility = hook(event, agent_id, members, self._visibility)
+
+    def _publish_hub_membership(self, event: str, agent_id: str) -> None:
+        """In federated mode, ask the hub hook what extra records to write."""
+        if self._topology.mode != Topology.FEDERATED:
+            return
+        registry = self._participation_registry
+        members: List[Dict[str, Any]] = []
+        if registry is not None:
+            for rec in registry.list():
+                members.append({
+                    "agent_id": rec.agent_id,
+                    "capabilities": list(rec.capabilities),
+                    "resource_limits": dict(rec.resource_limits),
+                    **({"metadata": dict(rec.metadata)} if rec.metadata else {}),
+                })
+        writes = self._on_hub_membership(event, agent_id, members, self._hub_id)
+        for write in writes or []:
+            self._record_writer.on_participation(
+                agent_id=write.get("actor", self._hub_id),
+                event=write["event"],
+                capabilities=write.get("capabilities"),
+                resource_limits=write.get("resource_limits"),
+                metadata=write.get("metadata"),
+                members=write.get("members"),
+                member_id=write.get("member_id"),
+            )
+
+    def visible_participants(self, agent_id: str) -> List[Dict[str, Any]]:
+        """Who is currently in, from *agent_id*'s topology-filtered view.
+
+        Rebuilds membership from visible ``participation`` records (same
+        filter as ``visible_records``). Join/leave are replayed; a hub
+        ``roster`` event replaces the view (federated leaf agents).
+        """
+        records = self.visible_records(agent_id, kind="participation")
+        state: Dict[str, Dict[str, Any]] = {}
+        for rec in records:
+            event = rec.payload.get("event")
+            if event == "roster":
+                state = {}
+                for member in rec.payload.get("members") or []:
+                    mid = member.get("agent_id")
+                    if mid:
+                        state[mid] = dict(member)
+            elif event in ("join", "update"):
+                mid = rec.payload.get("member_id") or rec.actor
+                entry: Dict[str, Any] = {
+                    "agent_id": mid,
+                    "capabilities": list(rec.payload.get("capabilities") or []),
+                    "resource_limits": dict(rec.payload.get("resource_limits") or {}),
+                }
+                if rec.payload.get("metadata"):
+                    entry["metadata"] = dict(rec.payload["metadata"])
+                state[mid] = entry
+            elif event == "leave":
+                mid = rec.payload.get("member_id") or rec.actor
+                state.pop(mid, None)
+        return list(state.values())
 
     def inspect(self, kind: str) -> List[Any]:
         """Inspect records produced during the run, by kind.
@@ -427,7 +537,8 @@ class Session:
         traces, and agent decisions after a run.
 
         Args:
-            kind: Record kind — "outcome", "trace", or "agent_update".
+            kind: Record kind — "outcome", "trace", "agent_update", or
+                "participation".
 
         Returns:
             List of records of that kind.
@@ -437,6 +548,7 @@ class Session:
             outcomes = session.inspect("outcome")
             traces = session.inspect("trace")
             decisions = session.inspect("agent_update")
+            membership = session.inspect("participation")
         """
         return list(self._shared_data.listen(kind))
 
@@ -449,7 +561,8 @@ class Session:
           - scenario_name: str (e.g. "gridworld", "push"); when set with file or mongo storage, library creates run_id, output folder, and metadata.json
           - output_base: str (default "./output"); base directory for run folders when scenario_name is set
           - run_config: {"logging_level": 0|1|2}
-          - topology: {"mode": "centralised"|"peer_to_peer"|"federated", "visibility": {...}}
+          - topology: {"mode": "centralised"|"peer_to_peer"|"federated", "visibility": {...},
+                       optional "on_membership_change", "on_hub_membership"}
           - policies: {name: entry_point_or_callable, ...}
           - participation: bool (default False); if True, session gets an in-memory participation registry
           - participation_registry: optional registry instance (overrides participation: True)
@@ -550,6 +663,8 @@ class Session:
             mode = Topology("centralised")
         topology = TopologyConfig(mode=mode)
         visibility = topo_cfg.get("visibility") or None
+        on_membership_change = topo_cfg.get("on_membership_change")
+        on_hub_membership = topo_cfg.get("on_hub_membership")
         hub_id = config.get("hub_id", "hub")
         state_hash_fn = config.get("state_hash_fn", _DEDUP_DEFAULT)
 
@@ -567,6 +682,8 @@ class Session:
             run_id=run_id,
             run_path=run_path,
             participation_registry=part_registry,
+            on_membership_change=on_membership_change,
+            on_hub_membership=on_hub_membership,
         )
 
         policies_cfg = config.get("policies") or {}
@@ -706,30 +823,80 @@ class Session:
     ) -> List[SimpleRecord]:
         """Return records visible to *agent_id* under the configured topology.
 
-        - CENTRALISED: all records of the given kind.
+        - CENTRALISED: all records of the given kind (or every kind if omitted).
         - PEER_TO_PEER: only records from *agent_id* itself and its
-          visible peers (as defined by the visibility map).
+          visible peers (the live visibility map). Join/leave update that
+          map via ``on_membership_change`` (default: YAML for named agents;
+          mesh only agents not in the topology file).
         - FEDERATED: only records authored by the hub. If *agent_id* is
           the hub itself, all records are returned (the hub aggregates).
         """
-        all_records = list(self._shared_data.listen(kind))
+        all_records = (
+            list(self._shared_data.list())
+            if kind is None
+            else list(self._shared_data.listen(kind))
+        )
+        return self._records_visible_to(agent_id, all_records)
+
+    def _records_visible_to(
+        self,
+        agent_id: str,
+        records: List[SimpleRecord],
+    ) -> List[SimpleRecord]:
         mode = self._topology.mode
 
         if mode == Topology.CENTRALISED:
-            return all_records
+            return records
 
         if mode == Topology.PEER_TO_PEER:
             allowed: set[str] = {agent_id}
             if agent_id in self._visibility:
                 allowed.update(self._visibility[agent_id])
-            return [r for r in all_records if r.actor in allowed]
+            return [r for r in records if r.actor in allowed]
 
         if mode == Topology.FEDERATED:
             if agent_id == self._hub_id:
-                return all_records
-            return [r for r in all_records if r.actor == self._hub_id]
+                return records
+            return [r for r in records if r.actor == self._hub_id]
 
-        return all_records
+        return records
+
+    def decision_context(
+        self,
+        agent_id: str,
+        *,
+        kinds: Optional[Union[str, Sequence[str]]] = None,
+        last_n: Optional[int] = None,
+        summarise: Optional[Callable[[List[SimpleRecord]], Any]] = None,
+    ) -> Any:
+        """Context this agent may use for the next decision.
+
+        Same visibility rules as ``visible_records``. Optional filters:
+
+        - ``kinds``: one kind, or a list of kinds. Omit to include every kind.
+        - ``last_n``: keep only the last N records after that filter.
+        - ``summarise``: function from the record list to any value (for
+          example merge map updates). Omit to return the records.
+
+        These can be combined. This does not choose what to write; it only
+        shapes what the agent may read.
+        """
+        if kinds is None:
+            records = self.visible_records(agent_id)
+        elif isinstance(kinds, str):
+            records = self.visible_records(agent_id, kind=kinds)
+        else:
+            kind_set = set(kinds)
+            records = [
+                rec for rec in self.visible_records(agent_id) if rec.kind in kind_set
+            ]
+        if last_n is not None:
+            if last_n < 0:
+                raise ValueError("last_n must be >= 0")
+            records = records[-last_n:] if last_n > 0 else []
+        if summarise is not None:
+            return summarise(records)
+        return records
 
     @property
     def shared_data(self) -> SharedDataAdapter:

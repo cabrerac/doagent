@@ -67,4 +67,10 @@ __pycache__/
 .cursor/
 
 # Related work
-papers/
+related-work/
+
+# DOAgent paper
+doagent-paper/
+
+# Docs
+docs/protocol_tree_circular.png

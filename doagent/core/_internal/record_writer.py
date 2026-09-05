@@ -19,7 +19,12 @@ from ..run_config import (
     should_include_reasoning,
     should_write_trace,
 )
-from .record_helpers import new_agent_update_record, new_record, new_trace_record
+from .record_helpers import (
+    new_agent_update_record,
+    new_participation_record,
+    new_record,
+    new_trace_record,
+)
 
 
 StateHashFn = Callable[[Dict[str, Any]], str]
@@ -57,7 +62,7 @@ def _serializable(value: Any) -> Any:
 class RecordWriter:
     """Writes records to shared data based on run config.
 
-    Hook points: on_agent_decide, on_outcome_and_traces.
+    Hook points: on_agent_decide, on_outcome_and_traces, on_participation.
     Scenarios call these instead of new_* primitives.
     """
 
@@ -116,6 +121,47 @@ class RecordWriter:
             accountability=accountability,
         )
         self._agent_write(record)
+        return record.id
+
+    def on_participation(
+        self,
+        *,
+        agent_id: str,
+        event: str,
+        capabilities: Optional[list[str]] = None,
+        resource_limits: Optional[Dict[str, float]] = None,
+        metadata: Optional[Dict[str, str]] = None,
+        members: Optional[list] = None,
+        member_id: Optional[str] = None,
+    ) -> str:
+        """Record a participation event. Returns record id.
+
+        Written at every logging level. Envelope provenance and accountability
+        follow Level 1+ like other records.
+        """
+        level = self._config.logging_level
+        provenance = (
+            new_provenance(agent=agent_id, sources=[])
+            if should_include_provenance_accountability(level)
+            else {}
+        )
+        accountability = (
+            new_accountability(owner=agent_id)
+            if should_include_provenance_accountability(level)
+            else {}
+        )
+        record = new_participation_record(
+            actor=agent_id,
+            event=event,
+            capabilities=capabilities,
+            resource_limits=resource_limits,
+            metadata=metadata,
+            members=members,
+            member_id=member_id,
+            provenance=provenance,
+            accountability=accountability,
+        )
+        self._shared_data.write(record)
         return record.id
 
     def on_outcome_and_traces(

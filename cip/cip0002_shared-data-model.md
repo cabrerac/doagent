@@ -3,7 +3,7 @@
 author: "Christian Cabrera"
 created: "2026-02-02"
 id: "0002"
-last_updated: "2026-03-27"
+last_updated: "2026-09-05"
 status: "Implemented"
 compressed: false
 related_requirements:
@@ -102,25 +102,25 @@ The agentic reasoning paper emphasises **reasoning-centric memory**: memory that
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | **Task semantics**         | Memory organised or scoped by task/goal (e.g. "memory for this task", "what we did for goal X").                         |
 | **Temporal dependencies**  | Order and causality: what happened when, what led to what.                                                               |
-| **Agentic control**        | **When** and **what** to write: the agent (policy) decides what to commit to memory, not a fixed "dump every step" rule. |
+| **Agentic control**        | **Dropped (2026-09-05).** Not a DOA feature. The protocol writes each decision; the agent fills the payload values. No `write_memory`. |
 | **Search and memory loop** | Query memory → use in reasoning → optionally write → query again (read–reason–write–read).                               |
 | **Self-evolving state (S_k)** | Evolvable state across episodes (e.g. reflections, tool registries); meta-updates observable. Addressed by the same **search** features: e.g. `session.search(from, to)` or time/episode-scoped queries surface S_k when the substrate persists across runs. |
 
 
 **Stance: enabler first, optional library solutions.** DOAgent should **enable** these capabilities (primitives, data model, extension points) so users can build reasoning-centric memory on top; we can **optionally offer** thin helpers where the pattern is clear (e.g. a standard way to write to memory from a policy, or a search hook that adapters implement). This aligns with library-first and model-agnostic tenets.
 
-**Naming helpers for agentic reasoning.** As with `inspect` for observability, we should provide helpers that sound closer to the concepts we are enabling: e.g. `memory` (shared memory view), `search_memory` (query over memory), `write_memory` (agent-controlled write), or task-scoped views. The API then reads naturally for anyone thinking in agentic-reasoning terms, even when the implementation delegates to the same substrate (listen, visible_records, new record kinds).
+**Naming helpers.** Prefer names that match the job (e.g. `inspect` for observability, `decision_context` for what an agent may use to decide). Do not add `write_memory`: that name suggests a notebook write, which is not the protocol. Search helpers, if added later, can still sit on the same substrate (`listen`, `visible_records`, record kinds).
 
 **Current state vs future:**
 
 - **Temporal:** We already have timestamps, insertion order, and the trace graph (from_id/to_id). Temporal structure is largely in place; we can add small helpers (e.g. "memory since t", "in causal order") as part of the memory work.
 - **Task semantics:** Not yet. Enabler = optional task_id or tags on the envelope/payload so records can be scoped by task; users or adapters index/filter. Optional helper = e.g. `session.memory(agent_id, task_id=...)` if we add the dimension.
-- **Agentic control (when/what to write):** Today recording is implicit (every step → agent_update, outcome, trace). Enabler = a record kind (e.g. `memory` or `agent_memory`) that policies can ask the session to write, plus traceability. Optional helper = e.g. `session.write_memory(agent_id, content, ...)`.
+- **Agentic control (when/what to write):** **Dropped (2026-09-05).** This was imported from LLM “reasoning-centric memory” (the agent chooses what to commit to a notebook). It is not a DOA gap. The protocol already writes `agent_update` (and related kinds) on each decision; the agent already chooses the *values* in that record (action, explanation, and so on). We will not add `write_memory` or a per-agent keep/filter that opts out of that write. Inputs on the record are whatever the loop passed into `decide()`; outputs are the policy return. Search (query over the store) can still be considered later on its own.
 - **Search and memory loop:** Today we have listen(kind) and topology filtering only. Enabler = richer query/filter surface or an adapter extension point for search. Optional helper = e.g. `session.search_memory(agent_id, query=...)` or `session.search(from, to)` (time/episode range) delegating to an optional backend. **Self-evolving S_k** (evolvable memories across episodes) is part of this: search over a persistent substrate that spans runs naturally surfaces S_k (reflections, tool registries, etc.) and makes meta-updates observable.
 
 **Meta-update as a record kind.** The paper’s meta-update U(S_k, F_k) (evolvable state updated from feedback at the end of an episode) can be modeled as a **new record kind**, in the same spirit as policy factorization: we make the transition first-class and traceable. A record (e.g. `meta_update` or `evolvable_state_update`) would capture what changed in S from episode k to k+1, when it happened, and the feedback F_k that drove it (via provenance/sources), so that how state evolved is observable and attributable. To be discussed in a future iteration alongside policy factorization and other new record kinds.
 
-What to implement (task_id, write_memory, search / search_memory, temporal helpers, S_k via search, and meta-update record kind) will be discussed and decided in a future iteration. No implementation commitment in this CIP; this documents the capabilities and the enabler-plus-helpers direction.
+What to implement (task_id, search / search_memory, temporal helpers, S_k via search, and meta-update record kind) will be discussed and decided in a future iteration. `write_memory` / agentic control of the decision write is **not** in that list (dropped 2026-09-05; see bullet above). No other implementation commitment in this CIP; this documents the remaining capabilities and the enabler-plus-helpers direction.
 
 ## Iteration Deliverable (PoC)
 
@@ -172,11 +172,17 @@ This CIP addresses the following requirements:
 - Database adapter (Postgres, SQL  — deferred, no immediate use case)
 - Stream adapter (Kafka, Redis — deferred, no immediate use case)
 - Policy factorization (reason vs. action) — future iteration; see "Future iteration: Policy factorization" in Detailed Description
-- Shared memory API (`session.memory(agent_id, ...)`) — future iteration; see "Future iteration: Shared data as agentic shared memory (M)" in Detailed Description
+- Shared memory API (`session.memory(agent_id, ...)`) — superseded as a name by `session.decision_context` (2026-09-05) for the read path. `write_memory` dropped (not a DOA feature). Search remains later. See Progress Updates.
 - Oracle mode for analysis (e.g. `oracle_view` or `inspect(..., as_oracle=True)`) — future iteration; analysis-only, separate from memory
-- Reasoning-centric memory (task semantics, temporal helpers, agentic control/write_memory, search and memory loop) — future iteration; see "Future iteration: Reasoning-centric memory" in Detailed Description; enabler first, optional helpers named for agentic reasoning (like inspect for observability)
+- Reasoning-centric memory (task semantics, temporal helpers, search and memory loop) — future iteration except **agentic control / `write_memory`**, which was dropped 2026-09-05. See "Future iteration: Reasoning-centric memory" in Detailed Description.
 
 ## Progress Updates
+
+### 2026-09-05
+
+Read path for decision-time context: `session.decision_context(agent_id, kinds=..., last_n=..., summarise=...)`. Same visibility as `visible_records`. Gridworld uses it with `kinds="agent_update"` and `summarise=build_shared_map`. Named `session.memory` was not added (easy to confuse with choosing what to keep).
+
+**`write_memory` dropped.** Selective “what to keep” was from LLM agentic-memory papers, not from DOA. Recording each decision as `agent_update` (inputs from the loop, outputs from the policy) *is* the protocol; agents already choose the values in that record. No `write_memory` helper and no per-agent keep/filter. Search can still be considered later as its own slice.
 
 ### 2026-02-02
 

@@ -2,12 +2,13 @@
 author: "Christian Cabrera"
 created: "2026-02-03"
 id: "0004"
-last_updated: "2026-03-19"
-status: "In Progress"
+last_updated: "2026-09-05"
+status: "Implemented"
 compressed: false
 related_requirements:
 - "0004"
-related_cips: []
+related_cips:
+- "0003"
 tags:
 - cip
 - participation
@@ -24,20 +25,16 @@ title: "Open Participation Registry"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [x] In Progress - Actively being implemented
-- [ ] Implemented - Work complete, awaiting verification
+- [ ] In Progress - Actively being implemented
+- [x] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
 - [ ] Deferred - Postponed (use blocked_by field to indicate blocker)
 
-**In Progress** while **REQ-0004** still has **open acceptance criteria** (e.g. transparent capability/resource advertisement) and while **unchecked** items remain in **Implementation Status** (persistence, distributed discovery, etc.). **Future participation work** is already listed under **Discussion items / Future iteration**. Moving to **Implemented** later will **not** prevent more openness iterations—those become new tasks or a new CIP slice.
-
-**Blocking item for Implemented (identified 2026-07-28):** participation is declarable but **not observable**.
-`ParticipationRecord` carries `capabilities` and `resource_limits`, and `Session.register_participant()` accepts both,
-but it writes only to the registry — never to the shared data model. Participation therefore cannot be read back via
-`session.inspect(...)` like every other record. For a data-first library, "advertise capabilities and resource
-constraints in a transparent way" (REQ-0004) means participation must land in the shared data substrate. This is the
-one criterion keeping both this CIP and REQ-0004 open.
+**Implemented** means the PoC plus inspectable participation events and topology-filtered membership at decision
+time (`visible_participants`, federated hub roster). **REQ-0004** acceptance criteria are all met. Replay of the live
+registry after restart, admission policy, and cross-domain discovery remain future iterations — they do not block
+this status.
 
 ## Summary
 Define participation records and a registry interface so agents can join, leave, and advertise capabilities in an open system.
@@ -71,7 +68,11 @@ Key points:
 
 - **Discovery across domains.** Open collaboration across organisations may require **discovery** beyond a single registry: (a) **participant discovery** — finding agents or capabilities across multiple registries or domains (e.g. federated directory, registry-of-registries); (b) **data/resource discovery** — finding where a given chunk or capability lives when data is distributed. For future iteration.
 
-- **Persistence of participation.** Currently the participation registry is **in-memory only** (e.g. `InMemoryParticipationRegistry`). For future iteration we may want to **persist participation** to the same backend as the shared data model—e.g. file (when `shared_data.type` is file) or Mongo (when `shared_data.type` is mongo)—so that who is participating survives process restarts and is consistent with where records are stored.
+- **Persistence of participation.** Writing `participation` events through the shared-data adapter (file / Mongo)
+  persists the **event log**. The live registry (who is in right now) stays in-memory for the run. A later iteration
+  may **replay** those events into the registry after a restart so live membership survives process restart too.
+
+- **Federated roster is a default protocol, not a membership invariant.** Join/leave/update records name one actor. The hub `roster` snapshot (`payload.members`) is how the *current* federated coordination protocol republishes membership so leaf agents can see it under the hub-only visibility filter. Other relay or visibility choices (for example the hub re-emitting each join/leave with `actor=hub`) belong on CIP-0003 as replaceable coordination protocols, not as extra CIP-0004 record kinds.
 
 ## Iteration Deliverable (PoC)
 - Participation record structure.
@@ -90,6 +91,10 @@ Key points:
    - Allow Session to accept an optional participation registry (e.g. in config or constructor) and expose it (e.g. `session.participation_registry` or `session.get_participation_registry()`). Default: none or an in-memory instance created by the session when participation is enabled. This enables examples and run loops to call register/deregister when agents join or leave.
 5. **Update examples and tests**
    - Cover registration and listing using the exposed registry.
+6. **Write participation into the shared data model** (blocking item; backlog
+   `2026-09-05_participation-into-shared-data`)
+   - Dual-write: registry index plus `SimpleRecord` kind `participation` (`join` / `leave` / `update`).
+   - Inspectable via `session.inspect("participation")`. Event log persists with the adapter; live index is per-run.
 
 ## Backward Compatibility
 Additive only; no breaking changes.
@@ -108,13 +113,39 @@ This CIP addresses the following requirements:
 - [x] Implement in-memory registry
 - [x] **Expose participation registry through Session** — Session accepts `participation: True` or `participation_registry` in config and exposes `session.participation_registry`; examples and notebooks use it on leave/rejoin (2026-03-17).
 - [x] Update examples and tests (gridworld demo and notebook use registry; push notebook notes openness).
-- [ ] **Write participation into the shared data model** so capabilities and resource limits are inspectable like any other record — **the blocking item for Implemented** (see Status note, 2026-07-28).
-- [ ] **Persist participation** (file/Mongo aligned with shared data model) — future iteration; currently in-memory only (see Discussion items).
+- [x] **Write participation into the shared data model** so capabilities and resource limits are inspectable like any other record — dual-write `join`/`leave` events (`RecordWriter.on_participation`); tests cover inspect, file persist, and logging levels (2026-09-05, backlog `2026-09-05_participation-into-shared-data`).
+- [x] **Membership at decision time** — `visible_participants(agent_id)` uses the same topology filter as other records; federated hub writes `roster` events (2026-09-05, backlog `2026-09-05_visible-participants`).
+- [ ] **Replay participation** into the live registry after restart — future iteration; the event log itself already persists with the adapter (see Discussion items).
 - [ ] Registry vs store / chunk ownership (placement in registry when data is distributed) — future iteration; see Discussion items
 - [ ] Admission and policy enforcement hooks — future iteration; already in gaps
 - [ ] Discovery across domains (participant and data/resource discovery) — future iteration; see Discussion items
 
 ## Progress Updates
+
+### 2026-09-05 (coordination protocol pointer)
+
+Federated `roster` / `payload.members` is the **default** relay so leaves can see membership. It is not the only
+legal shape. Configurable coordination protocols (visibility + relay) are a CIP-0003 future iteration.
+
+### 2026-09-05 (visible participants)
+
+Agents read who is in from the shared store under the same topology filter. `visible_participants` replays visible
+join/leave (and hub `roster` in federated mode). Gridworld passes `participants` into `decide`. CIP stays
+**Implemented**; this is a follow-on iteration, not a reopen.
+
+### 2026-09-05 (later)
+
+Blocking item done. `register_participant` / `deregister_participant` append `participation` records; file adapter
+writes `participation.jsonl`. Tests passed. CIP and REQ-0004 marked **Implemented**. Closed waits on verification.
+Replay of live membership after restart stays a future iteration.
+
+### 2026-09-05
+
+Approach **A** agreed for the blocking item: keep the in-memory registry as a per-run index, and append
+`participation` events (`join` / `leave` / `update`) through the shared-data adapter so they are inspectable and
+persist with file or Mongo. Live membership after restart (replay) stays a later iteration. Backlog task
+`2026-09-05_participation-into-shared-data` created. Spec updated in `docs/data-model-spec.md`. CIP stays
+**In Progress** until tests pass.
 
 ### 2026-07-28
 Reviewed alongside CIP-0007/0008/0009 (all three promoted to **Implemented**). This CIP **stays In Progress**, and the
@@ -154,4 +185,5 @@ Clarified **Status** note: **In Progress** is compatible with a long-running ope
 Participation registry exposed through Session: config keys `participation: True` (creates in-memory registry) and `participation_registry` (user-supplied); property `session.participation_registry`. Gridworld example and notebook updated to register/deregister on leave/rejoin; push notebook notes that openness is demonstrated in gridworld. **Persistence:** For future iteration we may persist participation to file or Mongo depending on the shared data model in use; currently the registry is in-memory only. Added Discussion item "Persistence of participation" and Implementation Status item for persist participation (file/Mongo).
 
 ## References
-- None yet
+- Backlog: `backlog/features/2026-09-05_participation-into-shared-data.md`
+- Spec: `docs/data-model-spec.md` §3.3
