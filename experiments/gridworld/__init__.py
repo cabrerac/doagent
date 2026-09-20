@@ -1,8 +1,5 @@
-"""Grid-world experiment scenario."""
+"""Grid-world experiment evaluator."""
 
-from .scenario import GridWorldRunSummary, run_gridworld_validation
+from .evaluate import evaluate_gridworld
 
-__all__ = [
-    "GridWorldRunSummary",
-    "run_gridworld_validation",
-]
+__all__ = ["evaluate_gridworld"]

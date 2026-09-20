@@ -69,7 +69,7 @@ connects to the existing IDK work. These experiments belong to CIP-0010; this CI
 ### The constraint that shapes the design
 
 The library must not depend on any provider SDK. That is the `model-agnostic-core` tenet, and it is why
-`examples/llm_policy.py` states it has zero library dependency. But a timeout is a runtime concern that example code
+`examples/_shared/llm_policy.py` states it has zero library dependency. But a timeout is a runtime concern that example code
 cannot fully solve, because only the library sees every decision and writes the records.
 
 Options considered:
@@ -235,7 +235,8 @@ REQ-0013 created for the bounded-runs outcome, with REQ-0005 linked for the conf
 
 ## References
 
-- `examples/llm_policy.py` — `create_llm_tool` and `llm_decide_factory`
+- `examples/_shared/llm_client.py` — provider clients, model identity, token usage
+- `examples/_shared/llm_policy.py` — generic decision policy without provider code
 - `docs/data-model-spec.md` — choice shape, `choice.error`, tool steps with `elapsed_s`
 - `docs/library-boundaries.md` — user versus library responsibilities
 - `backlog/features/2026-03-28_notebook-restructuring-llm-integration.md` — where both problems were recorded

@@ -205,7 +205,7 @@ The library does not implement distributed locking or coordination. Parallel sup
 6. **State deduplication is transparent:** `Session` defaults to `default_state_hash` (hashes `observations` + `done` fields). The user can override or disable. Dedup reuses existing outcome IDs and records pointer traces instead of duplicate outcomes.
 7. **Topology is enforced by Session:** `visible_records()` applies topology rules, so agents only see records permitted by the configured mode.
 8. **Config validation:** Library validates config at Session creation; invalid config raises before any writes.
-9. **Examples:** Demos (push_demo, gridworld_demo) use only the Session API; minimal_usage demonstrates config-driven setup.
+9. **Examples:** Demos (`examples/push`, `examples/gridworld`) use only the Session API; `examples/minimal` demonstrates config-driven setup.
 
 ---
 

@@ -8,12 +8,9 @@ import unittest
 from pathlib import Path
 
 from doagent import Session, make_env
-from experiments import (
-    measure_baseline,
-    output_bytes_from_path,
-    run_push_validation,
-)
-from examples.push_demo.env import create_push_env
+from examples.push.env import create_push_env
+from examples.push.session import run_with_session
+from experiments import measure_baseline, output_bytes_from_path
 
 
 def _fixed_policy(params):
@@ -64,20 +61,19 @@ class TestPushValidation(unittest.TestCase):
         session = Session.from_config(config)
         env = self._make_external_env()
 
-        summary = run_push_validation(
-            session=session,
-            env=env,
-            configs=_agent_configs(),
-            rounds=3,
-            seed=123,
+        outcome_count = run_with_session(
+            session,
+            env,
+            _agent_configs(),
+            3,
+            123,
         )
 
         agent_updates = session.inspect("agent_update")
         traces = session.inspect("trace")
         outcomes = session.inspect("outcome")
 
-        self.assertEqual(summary.rounds, 3)
-        self.assertEqual(summary.outcomes, 3)
+        self.assertEqual(outcome_count, 3)
         self.assertEqual(len(agent_updates), 6)
         self.assertEqual(len(traces), 6)
         self.assertEqual(len(outcomes), 3)
@@ -95,12 +91,12 @@ class TestPushValidation(unittest.TestCase):
             session = Session.from_config(config)
             env = self._make_external_env()
 
-            run_push_validation(
-                session=session,
-                env=env,
-                configs=_agent_configs(),
-                rounds=2,
-                seed=321,
+            run_with_session(
+                session,
+                env,
+                _agent_configs(),
+                2,
+                321,
             )
 
             agent_updates = session.inspect("agent_update")
@@ -116,12 +112,12 @@ class TestPushValidation(unittest.TestCase):
         env = self._make_external_env()
 
         def run():
-            run_push_validation(
-                session=session,
-                env=env,
-                configs=_agent_configs(),
-                rounds=2,
-                seed=42,
+            run_with_session(
+                session,
+                env,
+                _agent_configs(),
+                2,
+                42,
             )
 
         metrics = measure_baseline(run)

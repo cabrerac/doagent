@@ -8,10 +8,14 @@ doagent/          Library: Session, adapters, topology, records, participation
   analysis/
   records/
   interface/
-examples/         gridworld_demo, push_demo, minimal_usage, README (config)
+examples/         runnable minimal, gridworld, and push examples
+  _shared/        repository-only environment and optional LLM clients
 notebooks/        Colab step-by-step demos
 guides/           doa-principles + layout-and-api (README has the env checklist)
-experiments/      Comparison runners, baselines
+experiments/      evaluation functions, comparison runners, paper experiments
+  _shared/        baseline and one-condition result helpers
+  runners/        storage, topology, and attribution comparison commands
+  attribution/    Who&When / TraceElephant / DOAgent attribution evaluation
 docs/             Architecture / adapter notes for contributors
 tests/
 ```

@@ -8,12 +8,10 @@ import unittest
 from pathlib import Path
 
 from doagent import Session, make_env
-from experiments import (
-    run_gridworld_validation,
-    output_bytes_from_path,
-)
-from examples.gridworld_demo.env import create_gridworld_env
-from examples.gridworld_demo.policies import (
+from examples.gridworld.env import create_gridworld_env
+from examples.gridworld.session import run_with_session
+from experiments import output_bytes_from_path
+from examples.gridworld.policies import (
     random_explore_policy,
     frontier_explore_policy,
 )
@@ -59,34 +57,33 @@ class TestGridWorldValidation(unittest.TestCase):
         session = Session.from_config(config)
         env = self._make_env()
 
-        summary = run_gridworld_validation(
-            session=session,
-            env=env,
-            configs=_agent_configs(),
-            rounds=3,
-            seed=123,
+        summary = run_with_session(
+            session,
+            env,
+            _agent_configs(),
+            3,
+            123,
         )
 
         agent_updates = session.inspect("agent_update")
         traces = session.inspect("trace")
         outcomes = session.inspect("outcome")
 
-        self.assertEqual(summary.rounds, 3)
-        self.assertEqual(summary.outcomes, 3)
-        self.assertEqual(summary.total_cells, 16)
-        self.assertGreaterEqual(summary.coverage, 0.0)
-        self.assertLessEqual(summary.coverage, 1.0)
+        self.assertEqual(summary["outcomes"], 3)
+        self.assertEqual(summary["total_cells"], 16)
+        self.assertGreaterEqual(summary["coverage"], 0.0)
+        self.assertLessEqual(summary["coverage"], 1.0)
         self.assertEqual(len(agent_updates), 6)
         self.assertEqual(len(traces), 6)
         self.assertEqual(len(outcomes), 3)
         for record in agent_updates:
             self.assertIn("decision", record.payload)
             self.assertIn("local_knowledge", record.payload)
-        self.assertEqual(set(summary.contributions.keys()), {"agent_0", "agent_1"})
-        self.assertLessEqual(sum(summary.contributions.values()), summary.total_cells)
-        if summary.discovery_round is not None:
-            self.assertGreaterEqual(summary.discovery_round, 0)
-            self.assertLessEqual(summary.discovery_round, summary.rounds)
+        self.assertEqual(set(summary["contributions"].keys()), {"agent_0", "agent_1"})
+        self.assertLessEqual(sum(summary["contributions"].values()), summary["total_cells"])
+        if summary["discovery_round"] is not None:
+            self.assertGreaterEqual(summary["discovery_round"], 0)
+            self.assertLessEqual(summary["discovery_round"], 3)
 
     def test_validation_with_file_adapter(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -94,18 +91,18 @@ class TestGridWorldValidation(unittest.TestCase):
             session = Session.from_config(config)
             env = self._make_env()
 
-            summary = run_gridworld_validation(
-                session=session,
-                env=env,
-                configs=_agent_configs(),
-                rounds=2,
-                seed=321,
+            summary = run_with_session(
+                session,
+                env,
+                _agent_configs(),
+                2,
+                321,
             )
 
             agent_updates = session.inspect("agent_update")
             outcomes = session.inspect("outcome")
 
-            self.assertEqual(summary.outcomes, 2)
+            self.assertEqual(summary["outcomes"], 2)
             self.assertEqual(len(agent_updates), 4)
             self.assertEqual(len(outcomes), 2)
             self.assertGreater(output_bytes_from_path(temp_dir), 0)

@@ -2,7 +2,7 @@
 
 import unittest
 
-from examples.minimal_usage import main
+from examples.minimal.run import main
 
 
 class TestExample(unittest.TestCase):

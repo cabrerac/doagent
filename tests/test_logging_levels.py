@@ -6,9 +6,9 @@ Use only the public API: Session.from_config, make_env, session.inspect, RunConf
 import unittest
 
 from doagent import Session, RunConfig, make_env
-from experiments import run_gridworld_validation
-from examples.gridworld_demo.env import create_gridworld_env
-from examples.gridworld_demo.policies import (
+from examples.gridworld.env import create_gridworld_env
+from examples.gridworld.session import run_with_session
+from examples.gridworld.policies import (
     random_explore_policy,
     frontier_explore_policy,
 )
@@ -61,7 +61,7 @@ class TestLoggingLevels(unittest.TestCase):
         session = Session.from_config(config)
         env = self._make_env()
 
-        run_gridworld_validation(
+        run_with_session(
             session=session,
             env=env,
             configs=_agent_configs_with_explanation(),
@@ -91,7 +91,7 @@ class TestLoggingLevels(unittest.TestCase):
         session = Session.from_config(config)
         env = self._make_env()
 
-        run_gridworld_validation(
+        run_with_session(
             session=session,
             env=env,
             configs=_agent_configs_with_explanation(),
@@ -128,7 +128,7 @@ class TestLoggingLevels(unittest.TestCase):
         session = Session.from_config(config)
         env = self._make_env()
 
-        run_gridworld_validation(
+        run_with_session(
             session=session,
             env=env,
             configs=_agent_configs_with_explanation(),
@@ -164,7 +164,7 @@ class TestLoggingLevels(unittest.TestCase):
         session = Session.from_config(config)
         env = self._make_env()
 
-        run_gridworld_validation(
+        run_with_session(
             session=session,
             env=env,
             configs=_agent_configs_with_explanation(),

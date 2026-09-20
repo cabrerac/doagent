@@ -1,8 +1,5 @@
-"""Simple push experiment scenario."""
+"""Push experiment evaluator."""
 
-from .scenario import PushRunSummary, run_push_validation
+from .evaluate import evaluate_push
 
-__all__ = [
-    "PushRunSummary",
-    "run_push_validation",
-]
+__all__ = ["evaluate_push"]

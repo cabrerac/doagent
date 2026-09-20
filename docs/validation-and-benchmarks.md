@@ -31,24 +31,26 @@ The **agentic reasoning paper** (see `papers/agentic-reasoning-llm-reading-guide
 | **Multi-agent games, coordination** | REQ-0010 (Validation on Multi-Agent Games) | Shared data (communication channel), decentralisation (topology, visibility), openness (participation). |
 | **Self-adaptive systems, runtime reconfiguration** | REQ-0011 (Validation on Self-Adaptive Systems) | Decentralisation (control distribution), openness (agents joining/leaving, adaptation). |
 | **Scientific discovery, mathematical reasoning** | REQ-0012 (Validation on Scientific Discovery in Maths) | Shared data (reasoning traces, provenance), interpretability and traceability, accountability. |
-| **Tool use, long-horizon reasoning** | (No dedicated REQ; can be covered by examples or future REQ) | Shared data (memory, search), policy factorisation (reason vs. action). |
-| **Code generation, program synthesis** | (No dedicated REQ; optional future validation) | Traceability, provenance, accountability. |
+| **Tool use, long-horizon reasoning / generalist LLM MAS** | REQ-0014 (Magentic-One–style evaluation); CIP-0012 | Shared data (ledgers, tool results), decentralisation (federated orchestrator hub), interpretability / provenance for who/when. |
+| **Code generation, program synthesis** | (No dedicated REQ; optional future validation; Coder role appears inside REQ-0014) | Traceability, provenance, accountability. |
 
-Validation scenarios we implement (e.g. gridworld, push, and future scientific-discovery or self-adaptive demos) are selected from this space to cover the three DOA principles and to match REQ-0010, REQ-0011, and REQ-0012. When we add or change validation examples, we refer to the paper’s §6/§7 and to this mapping to keep validation aligned with recognised benchmarks and application domains.
+Validation scenarios we implement (e.g. gridworld, push, Magentic-One–style LLM MAS, and future scientific-discovery or self-adaptive demos) are selected from this space to cover the three DOA principles and to match REQ-0010–REQ-0012 and REQ-0014. When we add or change validation examples, we refer to the paper’s §6/§7 and to this mapping to keep validation aligned with recognised benchmarks and application domains.
 
 ---
 
-## AAMAS 2027 paper evaluation (2026-09-06)
+## AAMAS 2027 paper evaluation (updated 2026-09-18)
 
-The paper reports a **current LLM multi-agent** setting, not the in-repo games. Gridworld and push stay **development / fast runs** (logging-level checks, planted who/when, no API cost). Do not use OpenAI multi-agent emergence as the paper env (classic RL, not LLM MAS).
+The paper reports a **current multi-agent** setting hosted on DOAgent, not the in-repo games as the lead story. Gridworld and push stay **development / fast runs**. Do not use OpenAI multi-agent emergence as the paper env (classic RL, not 2026 LLM MAS).
+
+**Authoritative design:** [REQ-0014](../requirements/req0014_magentic-one-style-evaluation.md) and [CIP-0012](../cip/cip0012_magentic-one-doa-evaluation.md) (**In Progress**). Use **current** DOAgent APIs; open a new REQ/CIP for library gaps.
 
 **What goes in the paper**
 
-- A **small subset** of the Who&When / GAIA family: a few agents with tools, a handful of tasks, **known** who/when (annotation or planted error). Not 127 systems and not a clone of CaptainAgent or Magnetic-One.
-- Same attribution questions on (a) an AutoGen-style **conversation log** plus Zhang-style inference, versus (b) **DOAgent records** plus lookup, at more than one logging level.
-- Overhead versus recording off (`NoOp`). Not a task-success bake-off against AutoGen or AgentScope.
+- **Phase 1 (paper-minimum):** a **small** addition team in `experiments/attribution/` (gold = checker / step 2). **Attribution (paired):** one D2 run writes full records; observe-only Who&When and TraceElephant-static collectors write from that same run; D0/D1 are projected from D2; judges score W, T, D0, D1, and D2; lookup uses D2. **Capture cost (unpaired):** live W, T, D0, D1, and D2. Time includes writing the capture log; bytes count only `who_when.json`, `trace_elephant.json`, or `records/`. Run `python -m experiments.runners.attribution_comparison` for cost and `--table accuracy` for judges.
+- **Phase 2 (stretch):** Magentic-One–style port. If it lands, it leads the paper and Phase 1 is the proof of concept.
+- Not Who&When / TraceElephant published gold or published accuracies as the controlled arm. Not a task-success bake-off against AutoGen or AgentScope.
 
-Zhang et al. (ICML'25, Who&When) is the comparison that shares the **who/when** question; AutoGen/AgentScope are log formats / platforms, not attribution methods. Confirm details when reading that paper. Full note: `cabrerac.github.io/work-space/doagent/planning/subtasks.md`. Bib: `doagent-paper/references.bib`.
+Zhang et al. (Who&When) and Chen et al. (TraceElephant) share the who/when question and the W/T observability regimes. Bib: `doagent-paper/references.bib`.
 
 ---
 
@@ -71,5 +73,5 @@ Possible environments to evaluate DOAgent, in addition to the in-repo gridworld 
 ## References
 
 - **Reading guide:** `papers/agentic-reasoning-llm-reading-guide.md` — efficient reading order; §6 Applications and §7 Benchmarks as reference.
-- **Validation requirements:** REQ-0010 (multi-agent games), REQ-0011 (self-adaptive systems), REQ-0012 (scientific discovery in maths).
-- **Validation CIPs:** CIP-0010 (Validation on Multi-Agent Games); additional CIPs for REQ-0011 and REQ-0012 when implemented.
+- **Validation requirements:** REQ-0010 (multi-agent games), REQ-0011 (self-adaptive systems), REQ-0012 (scientific discovery in maths), REQ-0014 (LLM MAS attribution evaluation).
+- **Validation CIPs:** CIP-0010 (Validation on Multi-Agent Games); CIP-0012 (LLM MAS attribution evaluation, In Progress); additional CIPs for REQ-0011 and REQ-0012 when implemented.

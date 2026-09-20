@@ -44,10 +44,12 @@ This document defines the three-layer architecture that separates **what end use
 
 **Purpose:** Support the DOAgent research project’s own evaluation: compare DOAgent with other systems, compare versions of DOAgent, run controlled benchmarks and baselines. Not for end users.
 
-**Current location:** `experiments/` at repo root (runners, reporters, baselines, push/gridworld scenario wiring). End-user demos live in `examples/push_demo/` and `examples/gridworld_demo/` and use only the public Session API.
+**Current location:** `experiments/` at repo root (evaluators, comparison
+runners, baselines, and paper experiments). End-user demos live in
+`examples/push/` and `examples/gridworld/` and use only the public Session API.
 
-**Target state:** Not part of the public API. Implemented as:
-- `experiments/` at repo root (runners, reporters, baselines, scenario wiring). Demos in `examples/` (push_demo, gridworld_demo) show end-user usage and may call into experiments for running comparisons.
+**Target state:** Not part of the public API. Experiments may import examples;
+examples do not import experiments.
 
 **Implications:**
 - Not documented as part of the public API.

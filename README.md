@@ -55,10 +55,10 @@ from doagent.analysis import provenance, traceability, accountability, interpret
 
 Demos are **in the repository**, not inside the pip package. They use file (or mongo) as the shared data model, then write analysis under `output/<run_id>/analysis/`.
 
-- **Grid-world** — Four agents, shared map, optional participation. Config: `examples/gridworld_demo/gridworld_demo_config.yaml` (per-agent `metadata.explanation` demonstrates interpretability Level 2 alongside Level 1). Mongo: set `storage: "mongo"` under `scenario` (server must be running).
-Local: `python -m examples.gridworld_demo.gridworld_demo`
+- **Grid-world** — Four agents, shared map, optional participation. Config: `examples/gridworld/config.yaml` (per-agent `metadata.explanation` demonstrates interpretability Level 2 alongside Level 1). Mongo: set `storage: "mongo"` under `scenario` (server must be running).
+Local: `python -m examples.gridworld.run`
 - **Push** — Two agents, PettingZoo MPE. Extra deps: `pip install pettingzoo[mpe] mpe2 pygame`.
-Local: `python -m examples.push_demo.push_demo`
+Local: `python -m examples.push.run`
 
 
 
@@ -82,9 +82,9 @@ The demos can be open in Colab, run top to bottom.
 git clone https://github.com/cabrerac/doagent.git
 cd doagent
 pip install -e .
-python -m examples.gridworld_demo.gridworld_demo
+python -m examples.gridworld.run
 pip install pettingzoo[mpe] mpe2 pygame   # only for push
-python -m examples.push_demo.push_demo
+python -m examples.push.run
 ```
 
 Extra options (topology, mongo, participation): `[examples/README.md](examples/README.md)`. Notebook notes: `[notebooks/README.md](notebooks/README.md)`.
@@ -101,7 +101,7 @@ To implement your environment, please follow the instructions below:
    After: `session.inspect("agent_update")`, etc. For file-backed runs, run [Analysis](#analysis) with `session.run_id`.
 5. **Analysis** — After a persisted run, use `doagent.analysis` with `run_id` and `output_base` (see [Analysis](#analysis) below).
 
-Reference implementations: `examples/gridworld_demo`, `examples/push_demo`.
+Reference implementations: `examples/gridworld`, `examples/push`.
 
 ## Analysis
 
@@ -137,7 +137,18 @@ accountability.causal_attribution(run_id, output_base=output_base, write_output=
 interpretability.build_atomic_explanations(effective_id or "last", run_id, output_base=output_base, write_output=True)
 ```
 
-Gridworld demo runs all four; push demo runs provenance, traceability, interpretability only. Comparisons / baselines: `experiments/` (see `examples/README.md`).
+Gridworld demo runs all four, push demo runs provenance, traceability, interpretability only.
+
+Paper evaluation (Who&When, TraceElephant-static, and DOAgent records) is under
+`experiments/attribution/`, not `examples/`. Offline capture cost:
+
+```bash
+python -m experiments.runners.attribution_comparison
+```
+
+Paired judge accuracy (needs an API key): `--table accuracy`. Details:
+[experiments/attribution/README.md](experiments/attribution/README.md).
+Other comparison runners: `experiments/runners/` (see [examples/README.md](examples/README.md)).
 
 ## Project layout
 

@@ -1,0 +1,25 @@
+# Deterministic addition run with a planted solver value and missed check.
+query:
+  a: 3
+  b: 4
+plant:
+  plant_wrong_sum: 8
+  plant_accept_wrong: true
+run_config:
+  logging_level: 2
+storage: file
+output_base: ./output
+
+# GPT-4o is the main attribution judge used by Who&When and TraceElephant.
+judge:
+  provider: openai
+  model: gpt-4o
+  temperature: 0
+  methods:
+    - all_at_once
+    - step_by_step
+    - binary_search
+  views:
+    - w
+    - t
+    - d

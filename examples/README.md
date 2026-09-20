@@ -5,9 +5,9 @@ Minimal runs that demonstrate the library with file as the shared data model: co
 **Run from the repository root** after installing the library (`pip install -e .` in the doagent repo). The demos import `doagent` and show how to use it as a library.
 
 ```bash
-python -m examples.gridworld_demo.gridworld_demo [config.yaml]
-python -m examples.push_demo.push_demo
-python -m examples.minimal_usage
+python -m examples.gridworld.run [config.yaml]
+python -m examples.push.run
+python -m examples.minimal.run
 ```
 
 Each demo uses the **public API** only: `Session`, `RunConfig`, `make_env`, `RunReporter`, and `doagent.analysis`.
@@ -17,9 +17,9 @@ Each demo uses the **public API** only: `Session`, `RunConfig`, `make_env`, `Run
 
 | Example            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **gridworld_demo** | Four agents explore a grid; shared data stores discovered cells. Session with file as shared data model and optional **participation registry** (openness: register/deregister when agents leave or rejoin in the energy model). Analysis: provenance, traceability, **causal attribution** (fits discovery), interpretability. The bundled `gridworld_demo_config.yaml` and notebooks set per-agent `metadata.explanation` so runs can show **Level 2** (explicit rationale) alongside **Level 1** transitions without rationale. |
-| **push_demo**      | Two agents in a PettingZoo MPE push scenario. Session with file as shared data model, then analysis: provenance, traceability, interpretability (no attribution — push has no discovery semantics). Agent metadata injects decision rationale text into `agent_update` records, demonstrating interpretability Level 2 without leaving the Session API boundary. Requires `pettingzoo[mpe]`, `mpe2`, `pygame`.                                                                                                                     |
-| **minimal_usage**  | Smallest Session-based run (in-memory as shared data model) for quick sanity checks.                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **gridworld** | Four agents explore a grid; shared data stores discovered cells. Session with file as shared data model and optional **participation registry** (openness: register/deregister when agents leave or rejoin in the energy model). Analysis: provenance, traceability, **causal attribution** (fits discovery), interpretability. The bundled `config.yaml` and notebooks set per-agent `metadata.explanation` so runs can show **Level 2** (explicit rationale) alongside **Level 1** transitions without rationale. |
+| **push**      | Two agents in a PettingZoo MPE push scenario. Session with file as shared data model, then analysis: provenance, traceability, interpretability (no attribution — push has no discovery semantics). Agent metadata injects decision rationale text into `agent_update` records, demonstrating interpretability Level 2 without leaving the Session API boundary. Requires `pettingzoo[mpe]`, `mpe2`, `pygame`.                                                                                                                     |
+| **minimal**  | Smallest Session-based run (in-memory as shared data model) for quick sanity checks.                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 
 When the session uses file as the shared data model, output lives under `output/<run_id>/`: `records/`, `metadata.json`, and `analysis/<category>/` for analysis artefacts. The demos call analysis with `write_output=True`, so the library writes analysis artefacts into each category folder. **Use only the analysis tools that fit your scenario.** The current modules are an expandable demonstration set of what DOAgent analysis enables (see main README [Analysis](../README.md#analysis) and `doagent.analysis` package docstring).
@@ -53,7 +53,7 @@ In your config, set `scenario.topology` (or the top-level `topology` key, depend
     hub_id: "hub"
   ```
 
-Gridworld demo reads topology from `scenario.topology` in its YAML; see `gridworld_demo_config.yaml`.
+Gridworld reads topology from `scenario.topology` in `examples/gridworld/config.yaml`.
 
 ### Storage (shared data model)
 
@@ -72,7 +72,7 @@ In `run_config`, set `logging_level` to 0, 1, or 2 to control how much is record
 
 When your scenario has agents that join or leave (e.g. gridworld energy model), set `participation: True` in the session config so the session gets a **participation registry** (`session.participation_registry`). In the run loop, call `session.register_participant(agent_id, capabilities=[...])` when an agent joins and `session.deregister_participant(agent_id)` when they leave. Those calls also append `participation` records. Use `session.visible_participants(agent_id)` for who is in **from that agent’s topology view** (not the global acting set). Gridworld demo does this when `scenario.participation.energy_model` is true in the YAML.
 
-Agents read shared map cells with `session.decision_context(aid, kinds="agent_update", summarise=build_shared_map)` (see `examples/gridworld_demo/gridworld_demo.py`).
+Agents read shared map cells with `session.decision_context(aid, kinds="agent_update", summarise=build_shared_map)` (see `examples/gridworld/session.py`).
 
 ### Optional topology hooks (Python config only)
 
@@ -86,3 +86,9 @@ config["topology"]["on_hub_membership"] = relay_join_leave_as_hub        # feder
 ```
 
 Defaults and field meanings: `[guides/doa-principles.md](../guides/doa-principles.md)`.
+
+## Experiments
+
+Paper evaluation and comparison runners live under `experiments/`.
+For example, failure attribution: `experiments/attribution/` and
+`python -m experiments.runners.attribution_comparison`.

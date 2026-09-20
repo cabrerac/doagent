@@ -14,7 +14,7 @@ from typing import Any, Dict
 from doagent import Session, RunConfig
 from doagent.core._internal.trace_collector import _TraceCollector, merge_reasoning
 from doagent.core.adapters import InMemorySharedData
-from examples.llm_policy import llm_decide_factory
+from examples._shared.llm_policy import llm_decide_factory
 
 
 # ---------------------------------------------------------------------------

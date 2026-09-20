@@ -107,7 +107,7 @@ session.deregister_participant("agent_0")
 session.register_participant("agent_0", capabilities=["map"])
 ```
 
-Working example: `examples/gridworld_demo` (energy model + registry), gridworld Colab notebook.
+Working example: `examples/gridworld` (energy model + registry), gridworld Colab notebook.
 
 ---
 
