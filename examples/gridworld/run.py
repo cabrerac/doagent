@@ -117,6 +117,7 @@ def main() -> None:
         record_series=True, series_every=1, record_entropy=True, action_space=5,
     )
     summary = run_with_session(session, **run_kwargs, reporter=reporter)
+    session.close()
     reporter.finalize(
         rounds=rounds, seed=seed, outcomes=summary["outcomes"],
         elapsed_seconds=0.0, output_bytes=0, render=render,

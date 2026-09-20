@@ -1,7 +1,7 @@
-"""Record factory helpers: create agent_update, trace, outcome, explanation, and participation records.
+"""Record factory helpers for agent_update, trace, outcome, explanation, and participation records.
 
-Used internally by RecordWriter, FunctionAgent, and StubAgent. Not part of the
-public Session API; users configure recording via Session and RunConfig.
+Used internally by RecordWriter, FunctionAgent, and StubAgent.
+Not part of the public Session API; users configure recording via Session and RunConfig.
 """
 
 from __future__ import annotations

@@ -1,4 +1,5 @@
-"""Traceability analysis: trace graph, graph traversal, which actions influenced outcomes."""
+"""Traceability analysis: the trace graph, its traversal, and which actions influenced which outcomes.
+"""
 
 from __future__ import annotations
 
@@ -28,33 +29,32 @@ def build_trace_graph(
     output_base: str = "./output",
     write_output: bool = False,
 ) -> Any:
-    """Build a directed graph of how the run evolved: states and who moved between them.
+    """Build a directed graph of how the run evolved.
 
-    **What it means:** The trace graph is a directed graph of the run's execution.
-    Nodes are outcomes (environment states at a given step). Edges are transitions
-    between states, each tagged with the agent whose decision enabled that
-    transition. Multiple agents can produce parallel edges between the same
-    pair of states in a single round (e.g. multi-agent step), so the graph is
-    a multigraph.
+    The trace graph describes the run's execution.
+    Nodes are outcomes, the environment states at a given step.
+    Edges are transitions between states, each tagged with the agent whose decision enabled it.
+    Several agents can produce parallel edges between the same pair of states in
+    one round, as in a multi-agent step, so the graph is a multigraph.
 
-    **How it works:** The method loads outcome, trace, and agent_update records
-    for the run. It creates one node per outcome (and optionally an initial_state
-    node), and one edge per trace record from from_id to to_id, annotated with
-    the acting agent and round. The result is a networkx MultiDiGraph (or
-    equivalent) that can be passed to render_trace_graph or traversed for
-    get_traces_to / get_traces_from. When write_output is True, writes
-    trace_graph.png and trace_graph.pdf to output_base/run_id/analysis/traceability/.
+    The method loads outcome, trace, and agent_update records for the run.
+    It creates one node per outcome, optionally an initial_state node, and one
+    edge per trace record from from_id to to_id.
+    Each edge is annotated with the acting agent and the round.
+    The result is a networkx MultiDiGraph.
+    Pass it to render_trace_graph, or traverse it with get_traces_to and
+    get_traces_from.
 
     Args:
         run_id: Run identifier (same as the run's output folder name).
         output_base: Base directory for run folders; default "./output".
-        write_output: If True, write PNG and PDF to output_base/run_id/analysis/traceability/.
+        write_output: If True, write trace_graph.png and trace_graph.pdf to output_base/run_id/analysis/traceability/.
 
     Returns:
-        A networkx MultiDiGraph with nodes for outcomes and edges for trace
-        links. Node attributes: round, total_reward. Edge attributes: agent,
-        round, action, enabled_by, trace_id. Graph attribute node_meta (dict
-        keyed by node id) holds type (outcome/initial), round, total_reward.
+        A networkx MultiDiGraph with nodes for outcomes and edges for trace links.
+            Node attributes: round, total_reward.
+            Edge attributes: agent, round, action, enabled_by, trace_id.
+            Graph attribute node_meta (dict keyed by node id) holds type (outcome/initial), round, total_reward.
 
     Raises:
         FileNotFoundError: If run metadata or records are not found.
@@ -125,15 +125,14 @@ def get_traces_to(
     *,
     output_base: str = "./output",
 ) -> List[Dict[str, Any]]:
-    """Return the trace records that lead into the given record (incoming transitions).
+    """Return the incoming transitions of the given record.
 
-    **What it means:** "Traces to" a record are the transitions that ended at
-    this state — i.e. trace records whose to_id equals the given record_id.
-    They answer "which actions (and which agents) led to this outcome?"
+    The traces to a record are the transitions that ended at this state, the
+    trace records whose to_id equals the given record_id.
+    They answer which actions, and which agents, led to this outcome.
 
-    **How it works:** The method loads trace records for the run and filters
-    those whose payload to_id matches record_id. The result is a list of
-    trace records (as dicts), sorted by round then actor.
+    The method keeps the trace records whose payload to_id matches record_id,
+    sorted by round then actor.
 
     Args:
         record_id: The outcome or record id to query (destination of traces).
@@ -141,8 +140,7 @@ def get_traces_to(
         output_base: Base directory for run folders; default "./output".
 
     Returns:
-        List of trace records as dicts (id, kind, actor, timestamp, payload, ...)
-        that point to record_id.
+        List of trace records as dicts (id, kind, actor, timestamp, payload, and so on) that point to record_id.
 
     Raises:
         FileNotFoundError: If run metadata or records are not found.
@@ -163,16 +161,14 @@ def get_traces_from(
     *,
     output_base: str = "./output",
 ) -> List[Dict[str, Any]]:
-    """Return the trace records that leave from the given record (outgoing transitions).
+    """Return the outgoing transitions of the given record.
 
-    **What it means:** "Traces from" a record are the transitions that started
-    from this state — i.e. trace records whose from_id equals the given
-    record_id. They answer "what transitions did this state lead to, and
-    which agents enabled them?"
+    The traces from a record are the transitions that started at this state, the
+    trace records whose from_id equals the given record_id.
+    They answer what this state led to and which agents enabled it.
 
-    **How it works:** The method loads trace records for the run and filters
-    those whose payload from_id matches record_id. The result is a list of
-    trace records (as dicts), sorted by round then actor.
+    The method keeps the trace records whose payload from_id matches record_id,
+    sorted by round then actor.
 
     Args:
         record_id: The outcome or record id to query (source of traces).
@@ -241,22 +237,19 @@ def _compute_layout(
 def render_trace_graph(graph: Any, output_path: str) -> None:
     """Draw the trace graph to a file (PNG, PDF, or DOT).
 
-    **What it means:** A visualisation of the trace graph — nodes as states,
-    edges as transitions, with layout and optional coloring by agent or round.
-    Useful for inspecting run structure, convergence points, and agent roles.
+    Nodes are drawn as states and edges as transitions, with optional colouring by agent or round.
+    The figure is useful for inspecting run structure, convergence points, and agent roles.
 
-    **How it works:** The method takes an already-built graph (e.g. from
-    build_trace_graph), computes a layout, and writes the figure to
-    output_path. The output format is inferred from the path extension
-    (e.g. .png, .pdf, .dot).
+    The method takes an already-built graph, such as one from
+    build_trace_graph, computes a layout, and writes the figure to output_path.
+    The format is inferred from the path extension.
 
     Args:
-        graph: A trace graph produced by build_trace_graph (networkx
-            MultiDiGraph with graph.node_meta and edge attributes).
-        output_path: Path for the output file (e.g. graph.png, graph.pdf, graph.dot).
+        graph: A trace graph produced by build_trace_graph (networkx MultiDiGraph with graph.node_meta and edge attributes).
+        output_path: Path for the output file, for example graph.png, graph.pdf, or graph.dot.
 
     Raises:
-        ImportError: If networkx (for .dot) or matplotlib (for .png/.pdf) is not installed.
+        ImportError: If networkx (for .dot) or matplotlib (for .png and .pdf) is not installed.
     """
     try:
         import networkx as nx

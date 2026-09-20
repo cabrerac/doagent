@@ -23,8 +23,7 @@ class BaselineMetrics:
 def output_bytes_from_path(path: str | Path | None) -> int:
     """Return the size of a file, or of every file under a directory.
 
-    Run folders store records and analysis in subfolders, so a top-level
-    listing would under-count recording cost.
+    Run folders store records and analysis in subfolders, so a top-level listing would under-count recording cost.
     """
     if path is None:
         return 0

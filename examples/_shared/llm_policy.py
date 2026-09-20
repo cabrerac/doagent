@@ -1,8 +1,7 @@
 """Generic LLM decision policy for repository examples.
 
-This is example code, not part of the doagent library. Provider transport
-lives in ``llm_client``; this module only builds prompts and maps model
-output onto a Session ``choice``.
+This is example code, not part of the doagent library.
+Provider transport lives in ``llm_client``; this module only builds prompts and maps model output onto a Session ``choice``.
 """
 
 from __future__ import annotations
@@ -67,11 +66,10 @@ def llm_decide_factory(params: Dict[str, Any]) -> Any:
     Params:
         model: Model identifier passed to the LLM callable (default "gpt-4o").
         action_space: Dict mapping action integers to descriptions.
-        confidence_threshold: Below this confidence, the agent abstains (default 0.3).
+        confidence_threshold: Below this confidence the agent abstains (default 0.3).
         system_prompt: Optional override for the system prompt.
-        build_prompt: Optional callable ``(observation, action_space, goal) -> str``
-            that builds the user message.  When omitted the default prompt
-            template is used.
+        build_prompt: Optional callable taking the observation, action space, and goal, and returning the user message.
+            When omitted, the default prompt template is used.
     """
     model = params.get("model", "gpt-4o")
     action_space: Dict[int, str] = params.get("action_space", {0: "noop"})

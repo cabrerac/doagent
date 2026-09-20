@@ -1,11 +1,10 @@
 """Join/leave updates to the peer-to-peer visibility map.
 
-The topology ``visibility`` dict is the graph for agents named in it (as a
-key or as a peer). After join/leave, Session asks a membership hook for the
-new map.
+The topology ``visibility`` dict is the graph for agents named in it (as a key or as a peer).
+After join/leave, Session asks a membership hook for the new map.
 
-Default: agents listed in that graph keep (or restore) those links. Only an
-agent *not* named there is linked both ways to everyone currently in.
+Default: agents listed in that graph keep (or restore) those links.
+Only an agent *not* named there is linked both ways to everyone currently in.
 Leave drops the agent from every list.
 
 Users may pass another callable as ``topology.on_membership_change``.
@@ -84,8 +83,7 @@ def mesh_on_membership_change(
 ) -> Dict[str, List[str]]:
     """Mesh every join with everyone currently in. Leave drops the agent.
 
-    Use as ``on_membership_change`` when you want a live full mesh, including
-    agents already listed in the topology file.
+    Use as ``on_membership_change`` when you want a live full mesh, including agents already listed in the topology file.
     """
     vis = copy_visibility(visibility)
     if event == "leave":

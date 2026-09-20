@@ -1,8 +1,8 @@
 """How the federated hub tells leaves who is in.
 
-Leaves only see records whose author is the hub, so after join/leave the hub
-must write something they can read. Session asks this hook; the default is a
-roster snapshot. Pass another callable as ``topology.on_hub_membership``.
+Leaves only see records whose author is the hub, so after join/leave the hub must write something they can read.
+Session asks this hook; the default is a roster snapshot.
+Pass another callable as ``topology.on_hub_membership``.
 """
 
 from __future__ import annotations
@@ -22,9 +22,8 @@ class HubMembershipHook(Protocol):
     ) -> Sequence[Mapping[str, Any]]:
         """Return writes. Each item is passed to the participation writer.
 
-        Keys: ``event`` (required); optional ``actor`` (default hub),
-        ``members``, ``member_id``, ``capabilities``, ``resource_limits``,
-        ``metadata``. Return an empty list to write nothing extra.
+        Keys: ``event`` (required); optional ``actor`` (default hub), ``members``, ``member_id``, ``capabilities``, ``resource_limits``, ``metadata``.
+        Return an empty list to write nothing extra.
         """
         ...
 

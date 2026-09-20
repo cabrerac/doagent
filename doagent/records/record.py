@@ -14,11 +14,9 @@ except ImportError:  # pragma: no cover
 class Provenance(TypedDict, total=False):
     """Flat provenance attribution for a record.
 
-    Answers "who created this record, from what inputs, using what tools?"
-    One attribution per record (matches the design choice of one agent_update
-    per agent per step). Records are immutable; provenance is set at write
-    time. In a later iteration, one trace edge per ``derived_from`` source
-    will be derived from provenance for graph traversal.
+    Answers "who created this record, from what inputs, using what tools?" One attribution per record (matches the design choice of one agent_update per agent per step).
+    Records are immutable; provenance is set at write time.
+    In a later iteration, one trace edge per ``derived_from`` source will be derived from provenance for graph traversal.
     """
 
     created_by: str
@@ -34,10 +32,9 @@ INITIAL_STATE_ID = "initial_state"
 class Accountability(TypedDict, total=False):
     """Accountability metadata for a record.
 
-    Ownership and governance context: who is responsible for this record,
-    under which policy, and within what scope. Kept on the envelope so
-    decisions can be reviewed, challenged, and governed without a separate
-    record type. All fields are optional.
+    Ownership and governance context: who is responsible for this record, under which policy, and within what scope.
+    Kept on the envelope so decisions can be reviewed, challenged, and governed without a separate record type.
+    All fields are optional.
     """
 
     owner: str

@@ -1,31 +1,37 @@
-"""Analysis module: run_id-based analysis for provenance, traceability, accountability, interpretability.
+"""Posterior analysis of recorded runs, addressed by run_id.
 
-Use the submodules for the property you need. **Choose analyses that fit your scenario** —
-not every tool is relevant for every run:
+Each property has its own submodule.
+Pick the analyses that fit the run.
 
-  from doagent.analysis import traceability, provenance, accountability, interpretability
+    from doagent.analysis import (
+        accountability,
+        interpretability,
+        provenance,
+        traceability,
+        views,
+    )
 
-  traceability.build_trace_graph(run_id, output_base=None)   # any run: how did state evolve?
-  provenance.walk_chain(record_id, run_id, ...)              # any run: why did this state happen?
-  accountability.causal_attribution(run_id, ...)              # scenarios with discovery/contribution (e.g. gridworld)
-  interpretability.build_atomic_explanations(record_id, run_id, ...)  # transition-level atomic units
+    traceability.build_trace_graph(run_id, output_base=None)
+    provenance.walk_chain(record_id, run_id)
+    accountability.causal_attribution(run_id)
+    interpretability.build_atomic_explanations(record_id, run_id)
+    views.decision_steps(records, level=2)
 
-- **Provenance** and **traceability**: generic; use for any recorded run.
-- **Accountability** (causal attribution): best when the run has a clear notion of
-  "who contributed what" (e.g. discovered cells, coverage). Less meaningful for
-  scenarios that do not model discovery or contribution in the same way.
-- **Interpretability**: use when you care about explanations for outcomes as
-  transition-level atomic explanation units.
+Provenance and traceability apply to any recorded run.
+Accountability suits runs that model who contributed what.
+Interpretability explains outcomes as transition-level units.
+Views project stored records into compact step lists.
 
-Resolution is internal: pass run_id (and optional output_base); the module resolves
-via run metadata and uses inspect-style access to records.
+Pass a run_id and an optional output_base.
+The module resolves the run through its metadata.
 """
 
-from . import accountability, interpretability, provenance, traceability
+from . import accountability, interpretability, provenance, traceability, views
 
 __all__ = [
     "accountability",
     "interpretability",
     "provenance",
     "traceability",
+    "views",
 ]

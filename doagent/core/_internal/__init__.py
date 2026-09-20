@@ -1,7 +1,7 @@
 """Internal implementation used by Session (record writing, policy registry).
 
-Not part of the minimal doagent API. Re-exports are available from doagent.core
-for tests and advanced use.
+Not part of the minimal doagent API.
+Re-exports are available from doagent.core for tests and advanced use.
 """
 
 from .record_helpers import (

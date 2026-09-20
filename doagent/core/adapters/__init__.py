@@ -1,11 +1,15 @@
 """Shared-data adapters: storage backends for DOAgent records.
 
-All adapters implement the SharedDataAdapter protocol. Use via
-Session.from_config({"shared_data": {"type": "memory"|"file"|"noop"}})
-or import for direct use::
+All adapters implement the SharedDataAdapter protocol.
+Use via Session.from_config({"shared_data": {"type": "memory"|"file"|"noop"}}) or import for direct use:
 
-    from doagent.core.adapters import InMemorySharedData, FileSharedData, NoOpSharedData
-    from doagent.core.adapters import MongoSharedData  # optional: pip install pymongo
+    from doagent.core.adapters import (
+        FileSharedData,
+        InMemorySharedData,
+        NoOpSharedData,
+    )
+    # optional, needs pip install pymongo
+    from doagent.core.adapters import MongoSharedData
 """
 
 from .in_memory import InMemorySharedData

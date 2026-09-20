@@ -1,10 +1,10 @@
 """MongoDB shared data adapter: one collection per record kind.
 
-Requires ``pymongo``::
+Requires ``pymongo``:
 
     pip install pymongo
 
-Usage::
+Usage:
 
     from pymongo import MongoClient
     from doagent.core.adapters import MongoSharedData
@@ -27,16 +27,16 @@ _STATE_INDEX_COLLECTION = "_state_index"
 class MongoSharedData(SharedDataAdapter):
     """MongoDB adapter using one collection per record kind.
 
-    Each record kind maps to a MongoDB collection. The dedup state
-    index lives in a ``_state_index`` collection with unique hash keys.
+    Each record kind maps to a MongoDB collection.
+    The dedup state index lives in a ``_state_index`` collection with unique hash keys.
     """
 
     def __init__(self, db: Any) -> None:
         """Initialise with a pymongo Database instance.
 
         Args:
-            db: A ``pymongo.database.Database`` object. The adapter
-                creates collections on first write.
+            db: A ``pymongo.database.Database`` object.
+                The adapter creates collections on first write.
         """
         self._db = db
 
@@ -114,8 +114,7 @@ class MongoSharedData(SharedDataAdapter):
         """Create recommended MongoDB indexes for query performance.
 
         Call once after creating the adapter to ensure fast lookups.
-        Not called automatically to avoid index creation on every
-        instantiation.
+        Not called automatically to avoid index creation on every instantiation.
         """
         for kind in ("agent_update", "outcome", "trace"):
             col = self._db[kind]

@@ -1,7 +1,7 @@
 """Score attribution predictions against planted gold labels.
 
-Lookup is reported beside the LLM judges, not as a fourth prompting
-style. It has no judge-token cost.
+Lookup is reported beside the LLM judges, not as a fourth prompting style.
+It has no judge-token cost.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 """Grid-world policy factories for the gridworld demo.
 
-This is example code, not part of the doagent library. It contains
-heuristic and LLM-based policies for the grid-world mapping scenario.
+This is example code, not part of the doagent library.
+It contains heuristic and LLM-based policies for the grid-world mapping scenario.
 """
 
 from __future__ import annotations
@@ -156,8 +156,7 @@ def _build_gridworld_prompt(
 ) -> str:
     """Build a gridworld-specific user prompt for the LLM.
 
-    ``inputs`` is the full request inputs dict, typically containing
-    ``observation`` (from env) and ``shared_map`` (aggregated from records).
+    ``inputs`` is the full request inputs dict, typically containing ``observation`` (from env) and ``shared_map`` (aggregated from records).
     """
     observation = inputs.get("observation", inputs)
     shared_map = inputs.get("shared_map", {})

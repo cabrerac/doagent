@@ -44,6 +44,7 @@ def main() -> None:
     outcomes = session.inspect("outcome")
     assert len(agent_updates) == 1
     assert len(outcomes) == 1
+    session.close()
 
 
 if __name__ == "__main__":

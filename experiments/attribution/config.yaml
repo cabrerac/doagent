@@ -10,6 +10,15 @@ run_config:
 storage: file
 output_base: ./output
 
+# Repetition counts for the two experiments.
+# cost: executions of each capture condition (W, T, D0, D1, D2).
+# executions: paired attribution executions, one trajectory each.
+# judge: judge passes over the stored packs of one execution.
+repeats:
+  cost: 10
+  executions: 1
+  judge: 10
+
 # GPT-4o is the main attribution judge used by Who&When and TraceElephant.
 judge:
   provider: openai
@@ -22,4 +31,6 @@ judge:
   views:
     - w
     - t
-    - d
+    - d0
+    - d1
+    - d2

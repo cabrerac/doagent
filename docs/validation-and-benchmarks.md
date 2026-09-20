@@ -38,7 +38,7 @@ Validation scenarios we implement (e.g. gridworld, push, Magentic-One–style LL
 
 ---
 
-## AAMAS 2027 paper evaluation (updated 2026-09-18)
+## AAMAS 2027 paper evaluation (updated 2026-09-20)
 
 The paper reports a **current multi-agent** setting hosted on DOAgent, not the in-repo games as the lead story. Gridworld and push stay **development / fast runs**. Do not use OpenAI multi-agent emergence as the paper env (classic RL, not 2026 LLM MAS).
 
@@ -47,7 +47,7 @@ The paper reports a **current multi-agent** setting hosted on DOAgent, not the i
 **What goes in the paper**
 
 - **Phase 1 (paper-minimum):** a **small** addition team in `experiments/attribution/` (gold = checker / step 2). **Attribution (paired):** one D2 run writes full records; observe-only Who&When and TraceElephant-static collectors write from that same run; D0/D1 are projected from D2; judges score W, T, D0, D1, and D2; lookup uses D2. **Capture cost (unpaired):** live W, T, D0, D1, and D2. Time includes writing the capture log; bytes count only `who_when.json`, `trace_elephant.json`, or `records/`. Run `python -m experiments.runners.attribution_comparison` for cost and `--table accuracy` for judges.
-- **Phase 2 (stretch):** Magentic-One–style port. If it lands, it leads the paper and Phase 1 is the proof of concept.
+- **Phase 2 (stretch; design 2026-09-20):** five Magentic-One roles on a Session. Specialists are AutoGen `MultimodalWebSurfer`, `FileSurfer`, `MagenticOneCoderAgent`, and `CodeExecutorAgent`. Do not run `MagenticOneGroupChat`. Same W/T/D protocol. New gold (planted or annotated). If it lands, it leads the paper and Phase 1 is the proof of concept.
 - Not Who&When / TraceElephant published gold or published accuracies as the controlled arm. Not a task-success bake-off against AutoGen or AgentScope.
 
 Zhang et al. (Who&When) and Chen et al. (TraceElephant) share the who/when question and the W/T observability regimes. Bib: `doagent-paper/references.bib`.

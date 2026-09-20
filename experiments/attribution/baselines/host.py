@@ -1,6 +1,7 @@
 """Addition team without DOAgent: the host loop passes return values.
 
-This is the cost-run host for W-only and T-only. Collectors watch, but are not the mailbox.
+This is the cost-run host for W-only and T-only.
+Collectors watch the run, but are not the mailbox.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 """Optional provider clients shared by repository examples and experiments.
 
-Provider SDKs are imported only when a client is created. They are not DOAgent
-dependencies.
+Provider SDKs are imported only when a client is created.
+They are not DOAgent dependencies.
 """
 
 from __future__ import annotations
@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 from typing import Any, Callable, Dict, Optional
+
+from .env_file import load_dotenv
 
 
 @dataclass(frozen=True)
@@ -41,7 +43,25 @@ def create_llm_client(
     provider: str = "openai",
     timeout: float = 60.0,
 ) -> LLMClient:
-    """Create a provider client returning text, model identity, and token usage."""
+    """Create a provider client returning text, model identity, and token usage.
+
+    The key is taken from the api_key argument, then from the environment.
+    A .env file at the repository root is loaded first if it exists.
+    Variables already set in the environment are left unchanged.
+
+    Args:
+        api_key:
+            Provider key. When omitted, the matching environment variable is used.
+        provider:
+            openai or gemini.
+        timeout:
+            Request timeout in seconds.
+
+    Returns:
+        A callable that takes model, messages, and temperature.
+        The callable returns text, model identity, and token usage.
+    """
+    load_dotenv()
     normalized_provider = provider.lower()
     if normalized_provider == "openai":
         key = (

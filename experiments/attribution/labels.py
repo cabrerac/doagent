@@ -15,9 +15,8 @@ CHECK_STEP_INDEX = 2
 def gold_record(query: Dict[str, Any], plant: Dict[str, Any]) -> Dict[str, Any]:
     """Labels for who is responsible and at which step.
 
-    The solver may inject a wrong sum first. This example treats the
-    checker as responsible when it accepts that sum: a later agent was
-    expected to catch the error and did not.
+    The solver may inject a wrong sum first.
+    This example treats the checker as responsible when it accepts that sum: a later agent was expected to catch the error and did not.
     """
     a, b = int(query["a"]), int(query["b"])
     return {

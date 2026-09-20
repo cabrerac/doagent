@@ -9,7 +9,10 @@ from ._resolve import resolve_run
 
 
 def _record_to_dict(record: Any) -> Dict[str, Any]:
-    """Turn a SimpleRecord into a dict for index lookups (id, kind, payload, provenance, actor)."""
+    """Turn a SimpleRecord into a dict for index lookups.
+
+    Keeps id, kind, payload, provenance, and actor.
+    """
     return {
         "id": record.id,
         "kind": record.kind,
@@ -173,34 +176,27 @@ def walk_chain(
     max_depth: Optional[int] = None,
     output_base: str = "./output",
 ) -> Any:
-    """Walk the provenance chain backwards from a record and return a structured chain.
+    """Walk the provenance chain backwards from a record.
 
-    **What it means:** The provenance chain is the linkage from a record back to the
-    records it was derived from. For example, an outcome points to the trace that
-    produced it, and that trace points to the agent decision and the prior state.
-    Walking the chain answers "why was this state or outcome reached?"
+    The provenance chain links a record back to the records it was derived from.
+    An outcome points to the trace that produced it, and that trace points to the agent decision and the prior state, so walking the chain answers why a state or outcome was reached.
 
-    **How it works:** Starting from the given record_id, the method follows
-    derived_from / trace from_id–to_id links backwards through outcomes, traces,
-    and agent_update records. The walk can be limited by max_depth. The result
-    is a structured representation of the chain (e.g. nested dict or list of
-    steps) suitable for inspection or passing to render_chain_tree.
+    Starting from the given record_id, the method follows derived_from links and trace from_id to to_id links backwards through outcomes, traces, and agent_update records, stopping at max_depth if one is given.
+    The result can be inspected directly or passed to render_chain_tree.
 
     Args:
-        record_id: The record to start from (e.g. an outcome id, or "last" for
-            the final outcome of the run).
+        record_id: The record to start from, either an outcome id or "last" for the final outcome of the run.
         run_id: Run identifier (same as the run's output folder name).
-        max_depth: Optional maximum number of steps to walk backwards; None = no limit.
+        max_depth: Maximum number of steps to walk backwards.
+            None means no limit.
         output_base: Base directory for run folders; default "./output".
 
     Returns:
-        A nested dict with keys record_id, kind, depth, summary, and children
-        (list of same structure), representing the provenance chain tree.
+        A nested dict with keys record_id, kind, depth, summary, and children (list of same structure), representing the provenance chain tree.
 
     Raises:
         FileNotFoundError: If run metadata or records are not found.
-        ValueError: If record_id is "last" but the run has no outcomes, or if
-            record_id is not "last"/"initial_state" and the record is not in the run.
+        ValueError: If record_id is "last" but the run has no outcomes, or if record_id is neither "last" nor "initial_state" and the record is not in the run.
     """
     resolved = resolve_run(run_id, output_base=output_base)
     index = _build_index(resolved)
@@ -280,34 +276,26 @@ def render_chain_tree(
     output_base: str = "./output",
     write_output: bool = False,
 ) -> Optional[str]:
-    """Produce a tree diagram of the provenance chain and optionally write PNG+PDF.
+    """Draw a tree diagram of the provenance chain.
 
-    **What it means:** A chain tree is a visual representation of the same
-    provenance chain that walk_chain returns: which records led to which,
-    from a given record back to earlier states and decisions.
+    The chain tree is a visual form of the same chain walk_chain returns: which records led to which, from a given record back to earlier states and decisions.
 
-    **How it works:** The method builds the provenance chain for the given
-    record_id (using the same logic as walk_chain), then lays it out as a
-    tree and optionally renders it. When write_output is True, writes
-    provenance_tree.png and provenance_tree.pdf to output_base/run_id/analysis/provenance/.
-    When write_output is False, output_path must be provided and a single file is written.
+    The method builds the chain for the given record_id with the same logic as walk_chain, lays it out as a tree, and renders it.
 
     Args:
-        record_id: The record to root the tree at (e.g. outcome id or "last").
+        record_id: The record to root the tree at, either an outcome id or "last".
         run_id: Run identifier (same as the run's output folder name).
         output_path: Path for a single output file when write_output is False.
         output_base: Base directory for run folders; default "./output".
-        write_output: If True, write PNG and PDF to output_base/run_id/analysis/provenance/
-            and return the effective record_id (for use with build_atomic_explanations).
+        write_output: If True, write provenance_tree.png and provenance_tree.pdf to output_base/run_id/analysis/provenance/ and return the effective record_id, which build_atomic_explanations can take.
 
     Returns:
-        When write_output is True, the effective record_id (e.g. last outcome id);
-        otherwise None.
+        The effective record_id when write_output is True, such as the last outcome id.
+            None otherwise.
 
     Raises:
         FileNotFoundError: If run metadata or records are not found.
-        ValueError: If record_id is "last" but the run has no outcomes, or if
-            record_id is not in the run; or if write_output is False and output_path is None.
+        ValueError: If record_id is "last" but the run has no outcomes, if record_id is not in the run, or if write_output is False and output_path is None.
         ImportError: If matplotlib is not installed.
     """
     if not write_output and output_path is None:

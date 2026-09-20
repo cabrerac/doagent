@@ -1,17 +1,14 @@
 """Run the three-agent addition example and write attribution gold labels.
 
-From the repository root::
+From the repository root:
 
     python -m experiments.attribution.run
     python -m experiments.attribution.run --storage memory
     python -m experiments.attribution.run --observe
 
-The team uses a federated topology: the orchestrator is the hub. Other
-agents only see hub-authored records, so after the solver acts the
-orchestrator republishes the reported sum. That is ordinary Session
-usage, not a special library mode.
-
-Step index (0-based) used in gold.json: 0 assign, 1 solve, 2 check.
+The orchestrator assigns, the solver adds, and the checker accepts or rejects.
+Gold labels name the responsible agent and step.
+Step 0 is assign, step 1 is solve, and step 2 is check.
 """
 
 from __future__ import annotations
@@ -48,7 +45,21 @@ from experiments.attribution.projections import (
 )
 
 def load_yaml(path: Path) -> Dict[str, Any]:
-    """Load a mapping from a YAML file. Requires PyYAML."""
+    """Load a mapping from a YAML file.
+
+    Args:
+        path:
+            YAML file to read.
+
+    Returns:
+        The mapping stored in the file.
+
+    Raises:
+        ImportError:
+            If PyYAML is not installed.
+        ValueError:
+            If the file does not contain a mapping.
+    """
     try:
         import yaml
     except ImportError as exc:
@@ -64,7 +75,23 @@ def build_session(
     output_base: str,
     logging_level: int = 2,
 ) -> Session:
-    """Create a Session with the three scripted policies registered."""
+    """Create a session with the orchestrator, solver, and checker policies.
+
+    Args:
+        storage:
+            Either memory or file.
+        output_base:
+            Root folder for file-backed runs.
+        logging_level:
+            Session recording level, 0, 1, or 2.
+
+    Returns:
+        An open session ready to run the team.
+
+    Raises:
+        ValueError:
+            If storage is not memory or file.
+    """
     config: Dict[str, Any] = {
         "run_config": {"logging_level": logging_level},
         "topology": {"mode": "federated"},
@@ -97,30 +124,91 @@ def run_addition_team(
     logging_level: int = 2,
     write_eval_artifacts: bool = True,
 ) -> Dict[str, Any]:
-    """Run assign, solve, then check. Return the session, gold labels, and key values.
+    """Run assign, solve, then check.
 
-    Parameters
-    ----------
-    query:
-        ``{"a": int, "b": int}`` — the numbers to add.
-    plant:
-        Optional ``plant_wrong_sum`` and ``plant_accept_wrong`` (see config.yaml).
-    storage:
-        ``memory`` or ``file``.
-    output_base:
-        Root folder for file-backed runs (``output/<run_id>/``).
-    collectors:
-        Observe-only W/T hooks.
-    logging_level:
-        Session recording level (0, 1, or 2).
-    write_eval_artifacts:
-        Write gold, projections, and the manifest. Cost runs turn this off
-        so those files stay off the capture clock.
+    The session is closed before this function returns.
+
+    Args:
+        query:
+            The numbers to add, as a and b.
+        plant:
+            Optional plant_wrong_sum and plant_accept_wrong.
+        storage:
+            Either memory or file.
+        output_base:
+            Root folder for file-backed runs.
+        collectors:
+            Collectors that record each step.
+        logging_level:
+            Session recording level, 0, 1, or 2.
+        write_eval_artifacts:
+            Write gold, projections, and the manifest.
+
+    Returns:
+        The session, gold labels, artifacts, and watcher packs.
+
+    Raises:
+        RuntimeError:
+            If the solver misses the assignment or the checker misses a value.
+        ValueError:
+            If storage is not memory or file.
     """
     watchers = tuple(collectors)
     session = build_session(storage, output_base, logging_level=logging_level)
-    env = session.wrap_env(ArithmeticEnv(query), env_actor="arithmetic_env")
+    try:
+        return _run_addition_team(
+            session,
+            query,
+            plant,
+            storage=storage,
+            output_base=output_base,
+            watchers=watchers,
+            logging_level=logging_level,
+            write_eval_artifacts=write_eval_artifacts,
+        )
+    finally:
+        session.close()
 
+
+def _run_addition_team(
+    session: Session,
+    query: Dict[str, Any],
+    plant: Dict[str, Any],
+    *,
+    storage: str,
+    output_base: str,
+    watchers: tuple[StepCollector, ...],
+    logging_level: int,
+    write_eval_artifacts: bool,
+) -> Dict[str, Any]:
+    """Run assign, solve, and check on an open session.
+
+    Args:
+        session:
+            Open session that already has policies registered.
+        query:
+            The numbers to add, as a and b.
+        plant:
+            Optional plant_wrong_sum and plant_accept_wrong.
+        storage:
+            Either memory or file, recorded on the manifest.
+        output_base:
+            Root folder for file-backed runs.
+        watchers:
+            Collectors that record each step.
+        logging_level:
+            Session recording level, 0, 1, or 2.
+        write_eval_artifacts:
+            Write gold, projections, and the manifest.
+
+    Returns:
+        The session, gold labels, artifacts, and watcher packs.
+
+    Raises:
+        RuntimeError:
+            If the solver misses the assignment or the checker misses a value.
+    """
+    env = session.wrap_env(ArithmeticEnv(query), env_actor="arithmetic_env")
     session.register_participant(ORCHESTRATOR, capabilities=["plan", "assign"])
     session.register_participant(SOLVER, capabilities=["add"])
     session.register_participant(CHECKER, capabilities=["verify"])
@@ -252,7 +340,12 @@ def run_addition_team(
 
 
 def main(argv: Optional[list[str]] = None) -> None:
-    """CLI: load config.yaml, run the team, print gold labels."""
+    """Load the config, run the team, and print the gold labels.
+
+    Args:
+        argv:
+            Optional command-line arguments.
+    """
     parser = argparse.ArgumentParser(
         description="Three-agent addition example with a known failure for attribution"
     )

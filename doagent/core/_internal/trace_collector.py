@@ -1,9 +1,7 @@
 """Lightweight tool-call trace collector for policy factorization.
 
-Used internally by SessionAgent.decide() to wrap per-agent tools and
-capture their invocations as structured reasoning steps.  Not part of
-the public API — users configure tools via agent configs and the
-session handles the rest.
+Used internally by SessionAgent.decide() to wrap per-agent tools and capture their invocations as structured reasoning steps.
+Not part of the public API — users configure tools via agent configs and the session handles the rest.
 """
 
 from __future__ import annotations
@@ -64,8 +62,8 @@ class _TraceCollector:
 
 
 def _safe_serialize(obj: Any, *, max_depth: int = 3) -> Any:
-    """Best-effort serialization for trace I/O.  Truncates deeply nested
-    or non-JSON-friendly objects to keep records manageable."""
+    """Best-effort serialization for trace I/O.
+    Truncates deeply nested or non-JSON-friendly objects to keep records manageable."""
     if max_depth <= 0:
         return repr(obj)
     if obj is None or isinstance(obj, (bool, int, float, str)):

@@ -69,3 +69,11 @@ solver / checker; planted wrong sum; recoverability gold is the checker at
 step 2). Independent Who&When and TraceElephant collectors, D0/D1 projections
 from D2, lookup, GPT-4o judges, and unpaired W/T/D0/D1/D2 capture-cost runs
 are in place. W and T are not projected from D.
+
+### 2026-09-20 (later)
+Phase 1 live campaign `attribution_campaign_20260920_193358` ran (cost 10,
+judge 10). Phase 2 is specified in CIP-0012: five Magentic-One roles; reuse
+AutoGen `MultimodalWebSurfer`, `FileSurfer`, `MagenticOneCoderAgent`, and
+`CodeExecutorAgent`; Session is the mailbox (`MagenticOneGroupChat` is not).
+Query family may match Who&When / GAIA. Published gold labels do not transfer.
+Implementation is the next session.

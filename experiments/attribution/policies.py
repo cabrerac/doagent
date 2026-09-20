@@ -1,8 +1,7 @@
 """Scripted policies for the addition-team example.
 
 Each factory returns a ``decide(request)`` callable that the Session wraps.
-Policies are deterministic so a run can inject a known wrong sum and a
-known missed check without calling a language model.
+Policies are deterministic so a run can inject a known wrong sum and a known missed check without calling a language model.
 """
 
 from __future__ import annotations
@@ -25,8 +24,7 @@ def _assignment_from_choice(action: Any) -> Optional[Dict[str, Any]]:
 def latest_assignment(records: List[Any]) -> Optional[Dict[str, Any]]:
     """Find the most recent addition assignment in visible ``agent_update`` records.
 
-    Looks at decision actions first, then at ``local_knowledge['assignment']``
-    (used when the orchestrator republishes the task for other agents).
+    Looks at decision actions first, then at ``local_knowledge['assignment']`` (used when the orchestrator republishes the task for other agents).
     """
     for record in reversed(records):
         decision = record.payload.get("decision") or {}
@@ -44,8 +42,7 @@ def latest_assignment(records: List[Any]) -> Optional[Dict[str, Any]]:
 def latest_solver_value(records: List[Any]) -> Optional[Any]:
     """Find the most recent solver result in visible records.
 
-    Prefers a hub republish (``local_knowledge['solver_value']``), then a
-    solver decision whose action type is ``solve``.
+    Prefers a hub republish (``local_knowledge['solver_value']``), then a solver decision whose action type is ``solve``.
     """
     for record in reversed(records):
         local = record.payload.get("local_knowledge") or {}
@@ -60,10 +57,9 @@ def latest_solver_value(records: List[Any]) -> Optional[Any]:
 
 
 def orchestrator_policy_factory(params: Dict[str, Any]):
-    """Build a policy that assigns the solver to add ``query['a']`` and ``query['b']``.
+    """Build a policy that assigns the solver to add the two query values.
 
-    The query is taken from ``request['inputs']['query']``, or from ``params``
-    if the inputs omit it.
+    The query is taken from request['inputs']['query'], or from params if the inputs omit it.
     """
 
     def decide(request: Dict[str, Any]) -> Dict[str, Any]:
@@ -88,8 +84,7 @@ def orchestrator_policy_factory(params: Dict[str, Any]):
 def solver_policy_factory(params: Dict[str, Any]):
     """Build a policy that returns a sum for the assigned pair.
 
-    If ``params['plant_wrong_sum']`` is set, that value is returned instead
-    of ``a + b``.
+    If ``params['plant_wrong_sum']`` is set, that value is returned instead of ``a + b``.
     """
     planted = params.get("plant_wrong_sum")
 
@@ -110,9 +105,8 @@ def solver_policy_factory(params: Dict[str, Any]):
 def checker_policy_factory(params: Dict[str, Any]):
     """Build a policy that accepts or rejects the solver's value.
 
-    The honest rule is ``accept`` only when the reported value equals
-    ``a + b``. If ``params['plant_accept_wrong']`` is true (the default for
-    this example), the checker always accepts, including a wrong sum.
+    The honest rule is ``accept`` only when the reported value equals ``a + b``.
+    If ``params['plant_accept_wrong']`` is true (the default for this example), the checker always accepts, including a wrong sum.
     """
     plant_accept_wrong = bool(params.get("plant_accept_wrong", True))
 

@@ -1,7 +1,7 @@
 """Grid-world environment factory for the gridworld example.
 
-This is example code, not part of the doagent library. It contains the
-GridWorldEnv implementation and a factory function for use with make_env.
+This is example code, not part of the doagent library.
+It contains the GridWorldEnv implementation and a factory function for use with make_env.
 """
 
 from __future__ import annotations

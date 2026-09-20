@@ -92,6 +92,7 @@ def evaluate_gridworld(
         print_every=0,
         reporter=reporter,
     )
+    session.close()
     elapsed = perf_counter() - started
     records_path = (
         Path(session.run_path) / "records" if session.run_path else None

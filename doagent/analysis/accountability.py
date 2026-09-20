@@ -10,7 +10,7 @@ from ._resolve import resolve_run
 
 
 def _extract_agent_cells(outcome: Any, agent: str) -> Set[Tuple[int, int]]:
-    """Extract the set of observed cells (x, y) for a specific agent from an outcome record."""
+    """Extract the cells (x, y) one agent observed in an outcome record."""
     payload = getattr(outcome, "payload", outcome) if not isinstance(outcome, dict) else outcome.get("payload", {})
     obs = payload.get("observations", {}) if isinstance(payload, dict) else {}
     ob = obs.get(agent, {}) if isinstance(obs, dict) else {}
@@ -24,9 +24,9 @@ def _compute_attribution(
 ) -> Dict[str, Any]:
     """Compute per-agent causal attribution from traces and outcomes.
 
-    For each trace edge, attributes new cells visible in the enabling agent's
-    observation (destination outcome) that were not in that agent's observation
-    in the source outcome. Tracks productive vs redundant moves per agent.
+    For each trace edge, the new cells in the enabling agent's observation are attributed to that agent.
+    New means present in the destination outcome but absent from the source outcome.
+    Productive and redundant moves are counted per agent.
     """
     outcome_by_id = {o.id: o for o in outcomes}
 
@@ -116,38 +116,32 @@ def causal_attribution(
     output_base: str = "./output",
     write_output: bool = False,
 ) -> Dict[str, Any]:
-    """Attribute "who contributed what" to the run by assigning credit from trace edges.
+    """Assign credit for what each agent contributed to the run.
 
-    **What it means:** Causal attribution answers "who contributed what?" for a
-    multi-agent run. Each transition in the trace graph is caused by one agent's
-    decision. Attribution assigns the *effect* of that transition (e.g. newly
-    discovered cells, or other outcome deltas) to that agent. It uses each
-    agent's own observations so that when multiple agents could have led to the
-    same state, only the agent who actually enabled the transition gets credit
-    for the new discoveries visible in their observation. The result supports
-    per-agent metrics: coverage over time, total contribution, and effectiveness
-    (productive vs redundant moves).
+    Each transition in the trace graph is caused by one agent's decision.
+    Attribution assigns the effect of that transition to that agent, such as newly discovered cells.
+    It works from each agent's own observations.
+    When several agents could have led to the same state, only the agent that enabled it receives credit.
+    The result supports coverage over time, total contribution, and effectiveness.
 
-    **How it works:** The method loads outcome, trace, and agent_update records
-    for the run. For each trace edge, it identifies the enabling agent. From the
-    destination outcome it takes that agent's observation (e.g. cells seen)
-    and compares it to the source outcome's observation for the same agent to
-    count what is new. It aggregates these counts per agent across rounds,
-    producing a structured dict with per-agent discovery counts, cumulative
-    coverage, and productive vs redundant decision counts. When write_output
-    is True, writes attribution charts (PNG + PDF) to
-    output_base/run_id/analysis/accountability/.
+    The method loads outcome, trace, and agent_update records for the run.
+    For each trace edge it identifies the enabling agent.
+    It then compares that agent's observations in the destination and source outcomes to count what is new.
+    Those counts are aggregated per agent across rounds.
 
     Args:
         run_id: Run identifier (same as the run's output folder name).
         output_base: Base directory for run folders; default "./output".
-        write_output: If True, write PNG and PDF to output_base/run_id/analysis/accountability/.
+        write_output: If True, write the charts as PNG and PDF to output_base/run_id/analysis/accountability/.
 
     Returns:
-        A structured dict with keys: agents (list), agent_discovered (agent -> set
-        of (x,y) cells), agent_productive, agent_redundant (agent -> int),
-        per_round_cumulative (round -> agent -> cumulative count), global_known
-        (set of (x,y)), max_round. Suitable for render_attribution_charts.
+        A dict that render_attribution_charts accepts, with these keys:
+        - agents: the agent ids seen in the run.
+        - agent_discovered: agent to the set of (x, y) cells it discovered.
+        - agent_productive and agent_redundant: agent to a count of moves.
+        - per_round_cumulative: round to agent to cumulative count.
+        - global_known: every (x, y) cell discovered in the run.
+        - max_round: the highest round reached.
 
     Raises:
         FileNotFoundError: If run metadata or records are not found.
@@ -164,24 +158,20 @@ def causal_attribution(
 
 
 def render_attribution_charts(attribution: Dict[str, Any], output_path: str) -> None:
-    """Produce charts that visualise the causal attribution (coverage, totals, effectiveness).
+    """Draw coverage, totals, and effectiveness for a causal attribution.
 
-    **What it means:** Attribution charts turn the output of causal_attribution
-    into visual form: e.g. a line chart of per-agent cumulative coverage over
-    time, a bar chart of total cells discovered per agent, and an effectiveness
-    chart comparing productive vs redundant decisions per agent. This makes it
-    easy to compare agents and spot contribution patterns.
+    The figure has three panels:
+    - Cumulative coverage per agent over time.
+    - Total cells discovered per agent.
+    - Productive against redundant decisions per agent.
 
-    **How it works:** The method takes the structured attribution dict returned
-    by causal_attribution and generates a single multi-panel figure (three
-    subplots). If output_path is a directory, writes causal_attribution.png
-    (and .pdf) there; if it is a file path, writes that file (format from
-    extension).
+    The method takes the dict returned by causal_attribution.
+    If output_path is a directory, it writes causal_attribution.png and .pdf there.
+    If it is a file path, it writes that file and infers the format from the extension.
 
     Args:
         attribution: The structured dict returned by causal_attribution.
-        output_path: Path for the output file or directory (e.g. charts/,
-            or attribution.png).
+        output_path: Path for the output file or directory (e.g. charts/, or attribution.png).
 
     Raises:
         ImportError: If matplotlib is not installed.

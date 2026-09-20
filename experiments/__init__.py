@@ -1,6 +1,7 @@
 """DOAgent experiments: evaluators, comparison runners, and paper evaluations.
 
-Not part of the public API. For end-user demos see examples/.
+Not part of the public API.
+For end-user demos see examples/.
 """
 
 from doagent import RunReporter

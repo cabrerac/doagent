@@ -1,4 +1,5 @@
-"""Independent Who&When and TraceElephant collectors, plus the no-DOAgent host loop."""
+"""Independent Who&When and TraceElephant collectors, plus the host loop that runs the team without DOAgent.
+"""
 
 from .host import run_direct_team
 from .trace_elephant.collector import StepIOCollector

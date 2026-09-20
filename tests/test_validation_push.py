@@ -104,6 +104,7 @@ class TestPushValidation(unittest.TestCase):
 
             self.assertEqual(len(agent_updates), 4)
             self.assertEqual(len(outcomes), 2)
+            session.close()
             self.assertGreater(output_bytes_from_path(temp_dir), 0)
 
     def test_baseline_run(self):

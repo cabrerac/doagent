@@ -1,7 +1,7 @@
 """Push environment factory for the push example.
 
-This is example code, not part of the doagent library. It creates a
-PettingZoo MPE2 push environment wrapped via examples._shared.environment.
+This is example code, not part of the doagent library.
+It creates a PettingZoo MPE2 push environment wrapped via examples._shared.environment.
 """
 
 from __future__ import annotations

@@ -1,8 +1,8 @@
 """Minimal environment for the addition-team example.
 
-There is no grid or simulator. Each agent observes the same query
-``{"a": ..., "b": ...}``. ``step`` records the latest actions and returns
-that same query so the Session API has a normal environment to wrap.
+There is no grid or simulator.
+Each agent observes the same query ``{"a": ..., "b": ...}``.
+``step`` records the latest actions and returns that same query so the Session API has a normal environment to wrap.
 """
 
 from __future__ import annotations

@@ -110,6 +110,7 @@ class TestSession(unittest.TestCase):
                 resource_limits={"cpu": 1.0},
             )
             session.deregister_participant("agent_a")
+            session.close()
 
             path = records_dir / "participation.jsonl"
             self.assertTrue(path.is_file())

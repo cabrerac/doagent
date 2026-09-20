@@ -1,8 +1,6 @@
 """Session-based API for transparent DOAgent usage.
 
-Users create a Session, wrap their env, create agents, and run their loop.
-Recording happens internally — no RecordWriter, INITIAL_STATE_ID, or
-record helpers visible to user code.
+Users create a Session, wrap their env, create agents, and run their loop. Recording happens internally.
 
 Supports all three DOA principles:
 - Shared-data model: records, adapters, trace, deduplication.
@@ -40,7 +38,11 @@ def _create_run_folders_and_metadata(
     records_dir_name: str = "records",
     mongo_uri: Optional[str] = None,
 ) -> tuple[str, Path, Optional[Path]]:
-    """Create output_base/run_id/, optional records subfolder, and metadata.json. Return (run_id, run_path, records_path or None)."""
+    """Create output_base/run_id/, a records subfolder, and metadata.json.
+
+    The records subfolder is only created for file storage.
+    Returns the run_id, the run path, and the records path if there is one.
+    """
     output_base = Path(output_base)
     run_id = f"{scenario_name}_run_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
     run_path = output_base / run_id
@@ -216,10 +218,10 @@ class SessionAgent:
         Args:
             observation: The env observation for this agent.
             round_id: Current round number.
-            inputs: Optional structured inputs dict for the request. If
-                provided, used as ``request["inputs"]`` directly (so you
-                can pass ``{"observation": ..., "shared_map": ...}``).
-                Defaults to ``{"observation": observation}``.
+            inputs: Structured inputs for the request, used directly when
+                given, so a policy can receive keys such as observation and
+                shared_map.
+                Defaults to the observation alone.
         """
         obs = _serializable(observation)
         request_inputs = _serializable(inputs) if inputs is not None else {"observation": obs}
@@ -273,9 +275,9 @@ class SessionAgent:
 # ---------------------------------------------------------------------------
 
 class Session:
-    """DOAgent session -- configure once, run transparently.
+    """DOAgent session, configured once and then run transparently.
 
-    Config-driven usage (recommended)::
+    Config-driven usage (recommended):
 
         session = Session.from_config({
             "shared_data": {"type": "memory"},
@@ -297,8 +299,9 @@ class Session:
             observations = step["observations"]
 
         outcomes = session.inspect("outcome")
+        session.close()
 
-    Programmatic usage::
+    Programmatic usage:
 
         session = Session(shared_data, run_config)
         env = session.wrap_env(my_env)
@@ -350,12 +353,15 @@ class Session:
 
     @property
     def run_id(self) -> Optional[str]:
-        """Run identifier when this session has an output folder (file-backed with scenario_name). None otherwise."""
+        """Run identifier when this session has an output folder.
+
+        Set for file-backed sessions with a scenario_name, None otherwise.
+        """
         return self._run_id
 
     @property
     def run_path(self) -> Optional[str]:
-        """Path to the run folder (output_base/run_id) when this session has one. None otherwise."""
+        """Path to the run folder, output_base/run_id, or None if there is none."""
         return self._run_path
 
     @property
@@ -370,7 +376,11 @@ class Session:
 
     @property
     def participation_registry(self) -> Optional[Any]:
-        """Participation registry for open join/leave (openness principle). None if not configured."""
+        """Participation registry for open join and leave, if one is configured.
+
+        Supports the openness principle.
+        None when not configured.
+        """
         return self._participation_registry
 
     @staticmethod
@@ -402,10 +412,11 @@ class Session:
     ) -> None:
         """Register a participant using Session-level API.
 
-        Accepts an agent id string, a dict containing ``agent_id``/``id``,
-        or an object exposing ``agent_id``/``id``. The session normalises
-        this into a participation record for the configured registry and
-        appends a ``participation`` event to the shared data model.
+        Accepts an agent id, a dict holding agent_id or id, or an object
+        exposing either of those attributes.
+        The session turns it into a participation record for the configured
+        registry.
+        It also appends a participation event to the shared data model.
         """
         registry = self._participation_registry
         if registry is None:
@@ -433,8 +444,8 @@ class Session:
     def deregister_participant(self, agent_or_id: Any) -> None:
         """Deregister a participant by agent id or agent-like object.
 
-        Appends a ``leave`` event to the shared data model, snapshotting
-        advertised capabilities from the registry when present.
+        Appends a leave event to the shared data model.
+        Advertised capabilities are copied from the registry when it has them.
         """
         registry = self._participation_registry
         if registry is None:
@@ -458,9 +469,10 @@ class Session:
     def _apply_membership_map(self, event: str, agent_id: str) -> None:
         """Update the peer-to-peer visibility map after join/leave.
 
-        Centralised and federated ignore the map. Peer-to-peer uses the
-        configured hook, or the default: listed topology agents keep their
-        YAML links. Only an unnamed agent is meshed with current members.
+        Centralised and federated ignore the map.
+        Peer-to-peer uses the configured hook.
+        By default, agents listed in the topology keep their YAML links.
+        Only an unnamed agent is meshed with current members.
         """
         if self._topology.mode != Topology.PEER_TO_PEER:
             return
@@ -500,9 +512,10 @@ class Session:
     def visible_participants(self, agent_id: str) -> List[Dict[str, Any]]:
         """Who is currently in, from *agent_id*'s topology-filtered view.
 
-        Rebuilds membership from visible ``participation`` records (same
-        filter as ``visible_records``). Join/leave are replayed; a hub
-        ``roster`` event replaces the view (federated leaf agents).
+        Membership is rebuilt from the participation records this agent can see,
+        under the same filter as visible_records.
+        Join and leave events are replayed in order.
+        For a federated leaf agent, a hub roster event replaces the view.
         """
         records = self.visible_records(agent_id, kind="participation")
         state: Dict[str, Dict[str, Any]] = {}
@@ -529,21 +542,53 @@ class Session:
                 state.pop(mid, None)
         return list(state.values())
 
+    def close(self) -> None:
+        """Flush buffered shared data if the adapter supports it.
+
+        File storage writes its JSONL files once here.
+        """
+        flush = getattr(self._shared_data, "flush", None)
+        if callable(flush):
+            flush()
+
+    def __enter__(self) -> "Session":
+        """Return this session for a with-block.
+
+        Returns:
+            The session itself.
+        """
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        """Close the session when the with-block ends.
+
+        Args:
+            exc_type:
+                Exception type if the block failed.
+            exc:
+                Exception instance if the block failed.
+            tb:
+                Traceback if the block failed.
+
+        Returns:
+            False.
+        """
+        self.close()
+        return False
+
     def inspect(self, kind: str) -> List[Any]:
         """Inspect records produced during the run, by kind.
 
-        Provides transparent access to what the library recorded.
-        Supports the transparency goal: users can inspect outcomes,
-        traces, and agent decisions after a run.
+        Outcomes, traces, and agent decisions can all be read back after a run.
 
         Args:
-            kind: Record kind — "outcome", "trace", "agent_update", or
+            kind: One of "outcome", "trace", "agent_update", or
                 "participation".
 
         Returns:
             List of records of that kind.
 
-        Examples::
+        Examples:
 
             outcomes = session.inspect("outcome")
             traces = session.inspect("trace")
@@ -554,20 +599,30 @@ class Session:
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> "Session":
-        """Build a Session from a config dict. Keeps adapter construction internal.
+        """Build a Session from a config dict.
 
-        Config keys (all optional):
-          - shared_data: {"type": "memory"|"file"|"mongo"|"noop"} (file: "path" or scenario_name; mongo: "uri"/"mongo_uri" and optionally scenario_name for library-created run_id + metadata.json)
-          - scenario_name: str (e.g. "gridworld", "push"); when set with file or mongo storage, library creates run_id, output folder, and metadata.json
-          - output_base: str (default "./output"); base directory for run folders when scenario_name is set
-          - run_config: {"logging_level": 0|1|2}
-          - topology: {"mode": "centralised"|"peer_to_peer"|"federated", "visibility": {...},
-                       optional "on_membership_change", "on_hub_membership"}
-          - policies: {name: entry_point_or_callable, ...}
-          - participation: bool (default False); if True, session gets an in-memory participation registry
-          - participation_registry: optional registry instance (overrides participation: True)
-          - hub_id: str (default "hub")
-          - state_hash_fn: callable for dedup (default: default_state_hash)
+        Adapter construction stays internal.
+        Every config key is optional:
+
+        - shared_data: {"type": "memory"|"file"|"mongo"|"noop"}.
+          File storage takes "path" or a scenario_name.
+          Mongo storage takes "uri" or "mongo_uri".
+          Add a scenario_name to have the run_id and metadata.json created.
+        - scenario_name: str, for example "gridworld" or "push".
+          With file or mongo storage, this creates the run_id, the output
+          folder, and metadata.json.
+        - output_base: str, default "./output".
+          Base directory for run folders when scenario_name is set.
+        - run_config: {"logging_level": 0|1|2}.
+        - topology: a mode of "centralised", "peer_to_peer", or "federated",
+          plus a visibility map.
+          It also accepts "on_membership_change" and "on_hub_membership".
+        - policies: {name: entry_point_or_callable, ...}.
+        - participation: bool, default False.
+          If True, the session gets an in-memory participation registry.
+        - participation_registry: a registry instance, which overrides participation: True.
+        - hub_id: str, default "hub".
+        - state_hash_fn: callable for deduplication, default default_state_hash.
         """
         from .adapters import InMemorySharedData, FileSharedData, NoOpSharedData
 
@@ -723,13 +778,13 @@ class Session:
         """Create wrapped agents from configs and a PolicyRegistry.
 
         Each config is a dict with:
-          - "id": str -- agent identifier
-          - "policy": dict -- policy name and params (e.g. {"name": "my_policy", "params": {...}})
-          - "metadata": dict, optional -- e.g. {"explanation": "..."} for interpretability
 
-        If *registry* is None, the session's internal registry (built by
-        ``from_config``) is used.  This lets config-driven setups work
-        without the user ever importing ``PolicyRegistry``.
+        - "id": str, the agent identifier.
+        - "policy": dict, the policy name and its params.
+        - "metadata": dict, optional, for example {"explanation": "..."} for interpretability.
+
+        If registry is None, the session uses the one built by from_config.
+        Config-driven setups therefore need no policy registry of their own.
         """
         if self._wrapped_env is None:
             raise RuntimeError("Call session.wrap_env() before create_agents().")
@@ -770,8 +825,8 @@ class Session:
     ) -> str:
         """Record a decision made externally (e.g. multiprocessing workers).
 
-        Registers the agent_update on the wrapped env so the next env.step()
-        includes it in outcome/trace records.
+        Registers the agent_update on the wrapped env, so the next call to
+        env.step includes it in the outcome and trace records.
         """
         obs = _serializable(observation)
         request: Dict[str, Any] = {
@@ -821,15 +876,16 @@ class Session:
         agent_id: str,
         kind: Optional[str] = None,
     ) -> List[SimpleRecord]:
-        """Return records visible to *agent_id* under the configured topology.
+        """Return the records visible to one agent under the configured topology.
 
-        - CENTRALISED: all records of the given kind (or every kind if omitted).
-        - PEER_TO_PEER: only records from *agent_id* itself and its
-          visible peers (the live visibility map). Join/leave update that
-          map via ``on_membership_change`` (default: YAML for named agents;
-          mesh only agents not in the topology file).
-        - FEDERATED: only records authored by the hub. If *agent_id* is
-          the hub itself, all records are returned (the hub aggregates).
+        - CENTRALISED: all records of the given kind, or every kind if the kind is omitted.
+        - PEER_TO_PEER: only records from the agent itself and its visible
+          peers, taken from the live visibility map.
+          Join and leave update that map through on_membership_change.
+          By default, named agents keep their YAML links, and only an agent
+          absent from the topology file is meshed with the current members.
+        - FEDERATED: only records authored by the hub.
+          When the agent is the hub itself, all records are returned, since the hub aggregates.
         """
         all_records = (
             list(self._shared_data.list())
@@ -871,15 +927,17 @@ class Session:
     ) -> Any:
         """Context this agent may use for the next decision.
 
-        Same visibility rules as ``visible_records``. Optional filters:
+        Same visibility rules as visible_records.
+        Optional filters, which can be combined:
 
-        - ``kinds``: one kind, or a list of kinds. Omit to include every kind.
-        - ``last_n``: keep only the last N records after that filter.
-        - ``summarise``: function from the record list to any value (for
-          example merge map updates). Omit to return the records.
+        - kinds: one kind, or a list of kinds.
+          Omit to include every kind.
+        - last_n: keep only the last N records after that filter.
+        - summarise: a function from the record list to any value, such as one
+          that merges map updates.
+          Omit to return the records.
 
-        These can be combined. This does not choose what to write; it only
-        shapes what the agent may read.
+        This shapes what the agent may read.
         """
         if kinds is None:
             records = self.visible_records(agent_id)
@@ -915,8 +973,7 @@ def _wrap_policy_with_metadata(
 ) -> Callable[..., Dict[str, Any]]:
     """Inject explanation metadata into policy responses.
 
-    Provenance and accountability are handled by RecordWriter at the
-    appropriate logging level — not injected via metadata.
+    Provenance and accountability come from the configured logging level.
     """
     explanation = metadata.get("explanation")
     if explanation is None:

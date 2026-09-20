@@ -12,6 +12,10 @@ from experiments.attribution.baselines import (
     StepIOCollector,
     run_direct_team,
 )
+from experiments.attribution.campaign import (
+    new_campaign_dir,
+    run_accuracy_campaign,
+)
 from experiments.attribution.evaluate import evaluate_baseline_cost
 from experiments.attribution.labels import CHECKER
 from experiments.attribution.run import run_addition_team
@@ -101,17 +105,20 @@ class TestAttributionBaselines(unittest.TestCase):
             self.assertTrue(pack.is_file())
             self.assertEqual(measured.output_bytes, pack.stat().st_size)
 
-    def test_accuracy_runner_writes_collector_packs_then_judges(self) -> None:
-        from experiments.runners.attribution_comparison import (
-            run_attribution_accuracy,
-        )
-
+    def test_accuracy_campaign_writes_collector_packs_then_judges(self) -> None:
         with tempfile.TemporaryDirectory() as output_base:
+            campaign_dir = new_campaign_dir(output_base)
             with patch(
-                "experiments.runners.attribution_comparison.run_judges"
+                "experiments.attribution.campaign.run_judges"
             ) as judges:
-                judges.return_value = {}
-                scores_path = run_attribution_accuracy(QUERY, PLANT, output_base)
+                judges.return_value = {"scores": {}}
+                run_accuracy_campaign(
+                    QUERY,
+                    PLANT,
+                    campaign_dir=campaign_dir,
+                    executions=1,
+                    judge_passes=1,
+                )
             run_dir = Path(judges.call_args[0][0])
             analysis = run_dir / "analysis" / "attribution"
             who_when = json.loads(
@@ -126,7 +133,7 @@ class TestAttributionBaselines(unittest.TestCase):
             self.assertIn("solver_value", trace[2]["input"])
             self.assertLess(len(d0), len(d2))
             self.assertTrue(all(item.get("kind") != "trace" for item in d0))
-            self.assertEqual(scores_path, analysis / "scores.json")
+            self.assertEqual(run_dir.parent, campaign_dir / "runs")
             judges.assert_called_once()
 
 

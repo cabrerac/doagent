@@ -1,11 +1,8 @@
 """Integration tests: Session + real env + real policies + real wiring.
 
-These catch bugs that unit tests with stubs miss -- verifying that
-observations, policies, shared maps, and actions are wired correctly
-end-to-end.
+These catch bugs that unit tests with stubs miss -- verifying that observations, policies, shared maps, and actions are wired correctly end-to-end.
 
-Uses the config-driven Session API (Session.from_config) with no
-doagent.core or doagent.records imports.
+Uses the config-driven Session API (Session.from_config) with no doagent.core or doagent.records imports.
 """
 
 import unittest

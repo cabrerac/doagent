@@ -69,6 +69,7 @@ def main() -> None:
         session, env, configs, rounds, seed,
         render=render_demo, reporter=reporter,
     )
+    session.close()
     reporter.finalize(
         rounds=rounds, seed=seed, outcomes=outcomes,
         elapsed_seconds=0.0, output_bytes=0, render=render_demo,
@@ -139,6 +140,7 @@ def main() -> None:
             render=False,
         )
         llm_updates = llm_session.inspect("agent_update")
+        llm_session.close()
         abstain_count = sum(
             1 for r in llm_updates
             if r.payload.get("decision", {}).get("response", {}).get("choice", {}).get("status") == "abstain"

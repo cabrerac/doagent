@@ -55,7 +55,7 @@ Zhang/Chen-style **LLM judges** (all-at-once, step-by-step, binary search) score
 
 **Paper-minimum (Phase 1):** a **small** DOAgent team (about 2–3 agents, at most one thin tool — not a browser). Planted \((i^*, t^*)\). This evaluation **goes in the paper**.
 
-**Stretch (Phase 2):** a Magentic-One–faithful port (orchestrator + specialists, ledgers) on current DOAgent APIs. **If it lands in time**, it becomes the paper’s main instance and Phase 1 is reported as a **proof of concept**. If it does not, Phase 1 remains the paper eval. Magentic-One is **not** removed from this CIP.
+**Stretch (Phase 2):** Magentic-One roles and **real** specialist tools on current DOAgent APIs. Specialists are Microsoft’s AutoGen agents. Coordination stays on the Session store. **If it lands in time**, it becomes the paper’s main instance and Phase 1 is reported as a **proof of concept**. If it does not, Phase 1 remains the paper eval. Magentic-One is **not** removed from this CIP.
 
 **Library-first constraint:** implement using **current** DOAgent Session, topology, participation, recording levels, and analysis APIs. If something required for a paper-usable run is missing, **stop and open a new requirement and/or CIP**.
 
@@ -76,7 +76,7 @@ Gridworld and push remain fast development checks. They are not the paper’s pr
 ### Design principles
 
 1. **Phase 1 first.** Small team + planted gold + W/T/D + judges + lookup + costs. Paper-complete without Magentic-One.
-2. **Magentic-One kept, not required.** Same mapping as before; implement if time; then it leads the paper and Phase 1 is the PoC.
+2. **Magentic-One kept, not required.** Same mapping as before. Phase 2 reuses AutoGen specialist agents and tools. The store remains the mailbox. If it lands, it leads the paper and Phase 1 is the PoC.
 3. **Current DOAgent first.** `Session.from_config`, topology, `decision_context`, `visible_participants`, `record_update` / `agent_update`, logging levels 0–2, `inspect`, participation.
 4. **Gap → new REQ/CIP.** No private validation protocol that pretends to be a library feature.
 5. **Paired attribution, unpaired cost.** Do not score W from one seed against T from another. Do not put judge time in the capture-cost clock. Do not compare to Zhang/Chen published accuracies as a controlled arm. Do not use their gold on our new runs.
@@ -120,16 +120,44 @@ W and T are not the mailbox. Time includes writing the capture log. Bytes count 
 
 **Paper figures (Phase 1):** (1) who/when for LLM judges on paired W vs T vs D0/D1/D2; (2) lookup vs those methods (accuracy + judge tokens); (3) capture cost of W vs T vs live D0/D1/D2.
 
-### Phase 2 — Magentic-One on DOAgent (stretch)
+### Phase 2 — Magentic-One on DOAgent (stretch; agreed 2026-09-20)
 
-If Phase 1 works and time remains, port Magentic-One as closely as feasible (roles and ledger loops; tools may stay stubbed). Then:
+Phase 1 live campaign `attribution_campaign_20260920_193358` is in. Phase 2 is the next implementation session.
 
-- Apply the **same** paired-attribution / unpaired-cost protocol. On an LLM team, do not pair who/when across three live runs; keep sidecars on one execution for attribution.
-- Magentic-One becomes the **main** paper instance; Phase 1 is the **proof of concept**.
-- Fidelity statement: what matches Fourney et al. / Who&When / TraceElephant Magentic-One; what is stubbed.
-- Still **new gold** (planted or annotated). Their 184 / 220 labels do not transfer.
+**Same failure type, not their labelled instance.** Reuse a versioned Who&When / GAIA / AssistantBench **query**. Aim at the same **kind** of failure (wrong web fact, orchestrator accepts). Do **not** copy published `mistake_agent` / `mistake_step`. Those indexes belong to an AutoGen log we are not replaying. After our run, write **new** gold (planted or newly annotated).
 
-CaptainAgent-generated teams stay deferred (many per-query systems).
+**Reuse their agents and tools, not their group chat.**
+
+| Reuse | Do not reuse |
+|---|---|
+| `MultimodalWebSurfer` (Chromium / Playwright) | `MagenticOneGroupChat` (that class **is** their mailbox) |
+| `FileSurfer` | Published Who&When / TraceElephant gold on our new transcript |
+| `MagenticOneCoderAgent` | Stub specialists that invent a fake page |
+| `CodeExecutorAgent` as ComputerTerminal | Wrapping AutoGen as the coordinator and treating D as a sidecar |
+
+Each specialist is a long-lived AutoGen object, wrapped as a Session policy. A dedicated event loop calls `on_messages` so the browser, file workspace, and shell stay open across turns. The orchestrator is ours: task ledger and progress ledger are hub `record_update` writes (`task_ledger`, `progress_ledger`). A thin turn-clock env advances the shared step. W and T only watch.
+
+**Gold modes** (config):
+
+- `accept_last` — after the first specialist result, the orchestrator stops. Used for offline tests and a smoke campaign so recoverability gold is known (orchestrator at that accept step).
+- `none` — live run may fail on its own. Annotate `gold.json` after the fact.
+
+Do not write “correct is …” into D2 explanations.
+
+**Judge.** `SYSTEM_PROMPT` roster comes from the team on the evidence (or config). It must not stay “orchestrator, solver, and checker.”
+
+**Dependencies.** Optional extra (`autogen-agentchat`, `autogen-ext[magentic-one,openai]`, Playwright Chromium). Offline tests use scripted stand-ins. CI does not need a browser.
+
+**Same protocol as Phase 1.** Paired attribution (one execution, D + observe-only W/T). Unpaired capture cost (W-only / T-only host loop without Session; live D0/D1/D2). Magentic-One becomes the **main** paper instance if it lands. Phase 1 is then the proof of concept.
+
+**Planned tree** (implementation next session; not written yet):
+
+- `experiments/magentic_one/` — `query.py`, `specialists.py`, `orchestrator.py`, `host.py`, `direct.py`, `run.py`, `config.yaml`, README
+- Hook `evaluate.py`, `campaign.py`, and `attribution_comparison.py` (`--team magentic_one`)
+- `tests/test_magentic_one_team.py`; judge roster tests
+- `pyproject.toml` optional extra
+
+CaptainAgent-generated teams stay deferred.
 
 ### Magentic-One → DOAgent mapping (Phase 2; also a pattern for Phase 1)
 
@@ -183,7 +211,7 @@ Logging level **1+** for who/provenance; **2** when step-level “when” needs 
 | Lookup rules that are more than `actor` + step id | 1 | Document in run README; library CIP only if reused |
 | Built-in assign-one-agent / stall / replan helpers | 2 | Prefer validation helper |
 | First-class ledger **kinds** | 2 | REQ + CIP on data model |
-| Production WebSurfer | 2 | Stub allowed; separate tooling REQ/CIP if live browser is required |
+| Production WebSurfer | 2 | Reuse AutoGen `MultimodalWebSurfer` as a Session policy. Open a library CIP only if Session cannot host a long-lived async agent. |
 | TraceElephant **dynamic** replay / counterfactual | neither required | Separate CIP if claimed |
 
 Rule: **scenario policies and stubs live under validation/examples**; **shared abstractions** become library CIPs.
@@ -200,12 +228,12 @@ Rule: **scenario policies and stubs live under validation/examples**; **shared a
 Under `experiments/attribution/` for Phase 1 (and a sibling experiment for Phase 2):
 
 1. **Query / plant pack** — Phase 1: small frozen tasks + planted-error specs. Phase 2: versioned GAIA / AssistantBench / Who&When Magentic-One IDs.
-2. **Pinned config** — models, limits, logging level, topology, stub vs live tools.
+2. **Pinned config** — models, limits, logging level, topology, live AutoGen tools vs test stand-ins.
 3. **Entry script(s)** — paired D+W+T run; separate D / W-only / T-only cost runs.
 4. **Gold** — planted (and optional annotation) keyed by `run_id`.
 5. **Judge + lookup scripts** — pinned judge model; lookup rule documented.
 6. **Run manifest** — `run_id`, git commit, timestamps, config hash.
-7. **Fidelity statement** — Phase 1 team description; Phase 2 Magentic-One vs stubs.
+7. **Fidelity statement** — Phase 1 team description; Phase 2: AutoGen specialists + DOAgent mailbox, not MagenticOneGroupChat.
 
 ### Alternatives considered
 
@@ -215,6 +243,8 @@ Under `experiments/attribution/` for Phase 1 (and a sibling experiment for Phase
 | Small team only, delete Magentic-One from CIP | Rejected; mapping and Phase 2 stay |
 | Offline reshape of published Who&When / TraceElephant logs only | Not the main eval (no live D); optional footnote |
 | Dual implementation (AutoGen Magentic-One vs DOAgent) as Phase 1 | Deferred; too heavy. Phase 1 is **one** team; W/T are collectors, not a second MAS |
+| Wrap `MagenticOneGroupChat` and log into D | Rejected. D would be a sidecar. The store would not be the mailbox. |
+| Phase 2 with stub specialists only | Rejected 2026-09-20. Agents and tools must match the baseline implementations. |
 | W/T only as post-hoc exports of D | Rejected for the paper tables; collectors are the W/T packs |
 | NoOp as “without DOAgent” / capture-cost baseline | Rejected for this team (store is the coordination channel) |
 | MultiAgentBench / ASC full metric suite | Rejected (wrong metrics / no dataset) |
@@ -231,7 +261,7 @@ Under `experiments/attribution/` for Phase 1 (and a sibling experiment for Phase
 6. **Independent W and T baselines** under `experiments/attribution/baselines/{who_when,trace_elephant}`.
 7. **Paired attribution run** and **unpaired capture-cost runs**; repeats when needed.
 8. **Phase 1 paper-ready** — figures/tables for AAMAS even if Phase 2 never starts.
-9. **Phase 2 (if time)** — Magentic-One mapping, stub tools, same paired/unpaired protocol; then treat Phase 1 as PoC in the paper.
+9. **Phase 2** — Magentic-One roles, AutoGen specialist tools, orchestrator and ledgers on the Session store, same paired/unpaired protocol. Then treat Phase 1 as PoC in the paper if Phase 2 lands.
 10. Update REQ-0014 acceptance when Phase 1 (and Phase 2 if any) is validated.
 
 ## Backward Compatibility
@@ -251,6 +281,7 @@ No breaking change to existing demos. New validation code is additive. Library c
 **Phase 2 (if built)**
 
 - Ledger updates visible under federated topology; only assignee acts per inner-loop step.
+- Offline tests use stand-in specialists (no Playwright, no API key).
 - Same paired-attribution / unpaired-cost smoke as Phase 1 on a Magentic-One–style run.
 
 ## Related Requirements
@@ -275,8 +306,11 @@ No breaking change to existing demos. New validation code is additive. Library c
 - [x] Paper-shaped collector packs; judges score collectors not D projections; runner has separate cost and accuracy tables (2026-09-20)
 - [x] Capture cost: W, T, live D0/D1/D2; bytes are the capture log only; D0/D1 accuracy views projected from D2 (2026-09-20)
 - [x] Removed W/T projections; judges read collector packs only (2026-09-20)
-- [ ] Phase 1 paper-ready (minimum)
-- [ ] Phase 2 Magentic-One–DOA port (stretch)
+- [x] Recoverability judge prompt; paper plot labels; campaign progress and auto-plots (2026-09-20)
+- [x] Phase 1 live campaign `attribution_campaign_20260920_193358` (cost 10, judge 10)
+- [x] Phase 2 design: real AutoGen specialists, Session mailbox, new gold (2026-09-20)
+- [ ] Phase 1 paper-ready (abstract and write-up; tables exist)
+- [ ] Phase 2 Magentic-One–DOA port (real tools; next implementation session)
 - [ ] Follow-on REQ/CIP opened for any confirmed library gaps
 - [ ] REQ-0014 acceptance criteria updated when validated
 

@@ -63,9 +63,9 @@ def _rationale_text(
 def render_atomic_explanation_text(unit: Dict[str, Any]) -> str:
     """Render one atomic explanation unit into stable human text.
 
-    The text mirrors the canonical template:
-    "System was at state <from>. Agent <agent> made decision <action>
-    [because <rationale>]. As a result, the system ended at state <to>."
+    The text mirrors the canonical template: "System was at state <from>.
+    Agent <agent> made decision <action> [because <rationale>].
+    As a result, the system ended at state <to>."
     """
     from_state = unit.get("from_state_id") or "unknown_state"
     to_state = unit.get("to_state_id") or "unknown_state"
@@ -93,19 +93,12 @@ def build_atomic_explanations(
 ) -> List[Dict[str, Any]]:
     """Build transition-level atomic explanations for a target record.
 
-    What it does:
-    - Resolves a run by `run_id` and reads `outcome`, `trace`, `agent_update`,
-      and `explanation` records.
-    - Constructs one atomic unit per interpreted transition into `record_id`:
-      `from_state -> decision -> optional rationale -> to_state`.
-    - Annotates each unit with `level`:
-      - `1`: decision-link only (no explicit rationale text found)
-      - `2`: rationale text found (from explanation records or decision response)
-    - Produces both machine-friendly fields and `rendered_text`.
+    The run is resolved by run_id, and its outcome, trace, agent_update, and explanation records are read.
+    One atomic unit is built per interpreted transition into record_id, running from the source state through the decision and any rationale to the destination state.
+    Each unit carries a level: 1 when only the decision link is available, and 2 when rationale text was found, either in explanation records or in the decision response.
+    Units hold both machine-friendly fields and rendered_text.
 
-    Output file (optional):
-    - When `write_output=True`, writes
-      `output_base/run_id/analysis/interpretability/atomic_explanations_for_last.json`.
+    When write_output is True, the units are also written to atomic_explanations_for_last.json under output_base/run_id/analysis/interpretability/.
     """
     resolved = resolve_run(run_id, output_base=output_base)
     outcomes = list(resolved.inspect("outcome"))

@@ -82,8 +82,8 @@ def lookup_planted_failure(
 ) -> Optional[Dict[str, Any]]:
     """Find a checker that accepted a reported value known to be wrong.
 
-    This is an explicit rule for the addition example, not a general
-    attribution algorithm. It uses structured fields already present in D.
+    This is an explicit rule for the addition example, not a general attribution algorithm.
+    It uses structured fields already present in D.
     """
     for record in agent_updates:
         step = _decision_step(record)

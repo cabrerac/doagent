@@ -65,6 +65,7 @@ def evaluate_push(
         render=False,
         reporter=reporter,
     )
+    session.close()
     elapsed = perf_counter() - started
     records_path = (
         Path(session.run_path) / "records" if session.run_path else None

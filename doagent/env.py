@@ -1,8 +1,7 @@
 """Generic environment factory for DOAgent.
 
-Resolves an entry point (string or callable) and calls it with the given
-params to create an environment instance. The library contains no
-scenario-specific env code; all env creation logic lives in user/example code.
+Resolves an entry point (string or callable) and calls it with the given params to create an environment instance.
+The library contains no scenario-specific env code; all env creation logic lives in user/example code.
 """
 
 from __future__ import annotations
@@ -15,15 +14,13 @@ def make_env(entry_point: Union[str, Callable[..., Any]], **params: Any) -> Any:
     """Create an environment from an entry point.
 
     Args:
-        entry_point: Either a callable that returns an env, or a string in
-            the format "module.path:callable_name" that will be resolved
-            via importlib.
+        entry_point: Either a callable that returns an env, or a string in the format "module.path:callable_name" that will be resolved via importlib.
         **params: Keyword arguments passed to the resolved callable.
 
     Returns:
         The environment instance returned by the callable.
 
-    Examples::
+    Examples:
 
         # String entry point (config-friendly, works in YAML)
         env = make_env("my_project.envs:create_grid", width=10, height=10)

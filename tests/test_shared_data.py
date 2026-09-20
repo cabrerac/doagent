@@ -92,6 +92,21 @@ class TestSharedData(unittest.TestCase):
             self.assertIsNotNone(file_round_trip)
             self.assertEqual(file_round_trip, first)
 
+    def test_file_adapter_writes_disk_on_flush(self) -> None:
+        """Writes stay in memory until flush, then reload from disk."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            adapter = FileSharedData(temp_dir)
+            record = new_record(actor="agent-1", kind="note", payload={"n": 1})
+            adapter.write(record)
+            path = Path(temp_dir) / "note.jsonl"
+            self.assertFalse(path.exists())
+            self.assertEqual(adapter.read(record.id), record)
+            adapter.flush()
+            self.assertTrue(path.is_file())
+            reloaded = FileSharedData(temp_dir)
+            self.assertEqual(reloaded.read(record.id), record)
+            self.assertEqual(list(reloaded.list()), [record])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

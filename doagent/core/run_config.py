@@ -26,9 +26,7 @@ class RunConfig:
     """Configuration for a validation run.
 
     Attributes:
-        logging_level: 0 = agent_update + outcome (no trace, no provenance,
-            no explanation); 1 = + trace + provenance + accountability on
-            envelope; 2 = + decision.explanation + decision.response.reasoning.
+        logging_level: 0 = agent_update + outcome (no trace, no provenance, no explanation); 1 = + trace + provenance + accountability on envelope; 2 = + decision.explanation + decision.response.reasoning.
             Default: 2.
     """
 

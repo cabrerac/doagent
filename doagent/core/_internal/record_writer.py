@@ -1,7 +1,7 @@
 """Record writer with hook points for level-gated record creation.
 
-Scenarios call RecordWriter hooks instead of new_record/new_agent_update_record
-directly. RecordWriter encapsulates all record creation and writing.
+Scenarios call RecordWriter hooks instead of new_record/new_agent_update_record directly.
+RecordWriter encapsulates all record creation and writing.
 """
 
 from __future__ import annotations
@@ -38,9 +38,7 @@ _STATE_FIELDS = ("observations", "done")
 def default_state_hash(payload: Dict[str, Any]) -> str:
     """SHA-256 of state-only fields (observations, done).
 
-    Excludes transition fields (actions, rewards) and temporal fields
-    (round) so that revisiting the same physical state at different
-    rounds correctly deduplicates.
+    Excludes transition fields (actions, rewards) and temporal fields (round) so that revisiting the same physical state at different rounds correctly deduplicates.
     """
     state = {k: payload[k] for k in _STATE_FIELDS if k in payload}
     canonical = json.dumps(state, sort_keys=True, default=str)
@@ -79,11 +77,12 @@ class RecordWriter:
         Args:
             shared_data: Target for outcome and trace records.
             run_config: Logging level and other config.
-            agent_write_fn: Optional. If provided, used for agent_update records
-                (e.g. mp_interface.write_record). Else shared_data.write.
-            state_hash_fn: Optional. If provided, enables state deduplication
-                for environment outcomes. Receives the outcome payload dict and
-                must return a hex digest string.
+            agent_write_fn: Optional.
+                If provided, used for agent_update records, such as mp_interface.write_record.
+                Otherwise shared_data.write is used.
+            state_hash_fn: Optional.
+                If provided, enables state deduplication for environment outcomes.
+                Receives the outcome payload dict and must return a hex digest string.
         """
         self._shared_data = shared_data
         self._config = run_config
@@ -136,8 +135,8 @@ class RecordWriter:
     ) -> str:
         """Record a participation event. Returns record id.
 
-        Written at every logging level. Envelope provenance and accountability
-        follow Level 1+ like other records.
+        Written at every logging level.
+        Envelope provenance and accountability follow Level 1+ like other records.
         """
         level = self._config.logging_level
         provenance = (

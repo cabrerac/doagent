@@ -1,4 +1,5 @@
-"""Internal run resolution: load run metadata and expose inspect-style access to records."""
+"""Internal run resolution: load run metadata and expose inspect-style access to records.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +12,7 @@ from ..records import SimpleRecord
 
 
 def _get_mongo_shared_data_class() -> Any:
-    """Lazy import of MongoSharedData so pymongo is only required when resolving mongo runs."""
+    """Import MongoSharedData lazily, so pymongo is only needed for mongo runs."""
     try:
         from ..core.adapters import MongoSharedData
         return MongoSharedData
@@ -22,7 +23,10 @@ def _get_mongo_shared_data_class() -> Any:
 
 
 def _load_metadata(run_id: str, output_base: str | Path = "./output") -> dict[str, Any]:
-    """Read metadata.json for a run. Raises FileNotFoundError if run folder or metadata missing."""
+    """Read metadata.json for a run.
+
+    Raises FileNotFoundError if the run folder or the metadata is missing.
+    """
     base = Path(output_base)
     meta_path = base / run_id / "metadata.json"
     if not meta_path.is_file():
@@ -85,14 +89,13 @@ def resolve_run(
 ) -> _ResolvedRun:
     """Resolve run_id to a read-only run view with inspect(kind).
 
-    Reads metadata from output_base/run_id/metadata.json. For file-backed runs,
-    opens the records directory; for mongo-backed runs, connects using
-    metadata mongo_uri and mongo_database. Returns an object that supports
-    inspect(kind) like Session.
+    Reads metadata from output_base/run_id/metadata.json.
+    For file-backed runs, opens the records directory; for mongo-backed runs, connects using metadata mongo_uri and mongo_database.
+    Returns an object that supports inspect(kind) like Session.
 
     Raises:
         FileNotFoundError: If metadata or records path is missing.
-        ValueError: If storage_type is 'memory' (no posterior analysis) or mongo metadata is incomplete.
+        ValueError: If storage_type is 'memory', which cannot be analysed afterwards, or if mongo metadata is incomplete.
         ImportError: If storage_type is 'mongo' and pymongo is not installed.
         NotImplementedError: If storage_type is not supported.
     """

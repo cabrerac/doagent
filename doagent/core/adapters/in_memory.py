@@ -11,9 +11,7 @@ from ...records import SimpleRecord
 class InMemorySharedData(SharedDataAdapter):
     """In-memory adapter using one collection per record kind.
 
-    Mirrors the storage layout used by MongoDB and the file adapter:
-    each record kind (agent_update, outcome, trace, ...) is stored in
-    its own dict, enabling efficient kind-scoped queries via listen().
+    Mirrors the storage layout used by MongoDB and the file adapter: each record kind (agent_update, outcome, trace, ...) is stored in its own dict, enabling efficient kind-scoped queries via listen().
     """
 
     def __init__(self) -> None:

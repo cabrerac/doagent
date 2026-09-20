@@ -105,6 +105,7 @@ class TestGridWorldValidation(unittest.TestCase):
             self.assertEqual(summary["outcomes"], 2)
             self.assertEqual(len(agent_updates), 4)
             self.assertEqual(len(outcomes), 2)
+            session.close()
             self.assertGreater(output_bytes_from_path(temp_dir), 0)
 
 
