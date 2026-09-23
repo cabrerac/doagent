@@ -1,4 +1,6 @@
-"""Independent Who&When and TraceElephant collectors, plus the host loop that runs the team without DOAgent.
+"""Export the Who&When collector, the TraceElephant collector, and the direct host loop.
+
+The host loop passes each result to the next policy.
 """
 
 from .host import run_direct_team

@@ -128,7 +128,7 @@ Use `--formats png` or `--formats pdf` to write only one of the two.
 
 ## Next experiment
 
-The same two tables will run on a five-agent Magentic-One-style team.
-Those agents use a real browser, files, coder, and shell.
-Coordination still goes through the shared store.
-That team is not in this folder yet.
+The same two tables run on the five-agent team in `experiments/magentic_one/` with `--team magentic_one`.
+The crate campaign `attribution_campaign_20260923_004741` scored at the ceiling.
+The next who and when case should follow a Who&When dataset execution as closely as possible.
+Whether a fully described dataset execution can be replayed here is still open.

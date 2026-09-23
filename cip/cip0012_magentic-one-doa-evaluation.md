@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-09-15"
 id: "0012"
-last_updated: "2026-09-20"
+last_updated: "2026-09-23"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -122,7 +122,7 @@ W and T are not the mailbox. Time includes writing the capture log. Bytes count 
 
 ### Phase 2 — Magentic-One on DOAgent (stretch; agreed 2026-09-20)
 
-Phase 1 live campaign `attribution_campaign_20260920_193358` is in. Phase 2 is the next implementation session.
+Phase 1 live campaign `attribution_campaign_20260920_193358` is in. Phase 2 stand-in campaigns ran on 2026-09-23. The capital plant did not favour DOAgent. The crate plant (`attribution_campaign_20260923_004741`) sat at the ceiling because the plan stated the grading rule. Next session starts from a case as close as possible to a Who&When dataset execution. Whether a fully described dataset execution can be reproduced here is still open. Do not copy published mistake indexes onto a new log.
 
 **Same failure type, not their labelled instance.** Reuse a versioned Who&When / GAIA / AssistantBench **query**. Aim at the same **kind** of failure (wrong web fact, orchestrator accepts). Do **not** copy published `mistake_agent` / `mistake_step`. Those indexes belong to an AutoGen log we are not replaying. After our run, write **new** gold (planted or newly annotated).
 
@@ -135,7 +135,7 @@ Phase 1 live campaign `attribution_campaign_20260920_193358` is in. Phase 2 is t
 | `MagenticOneCoderAgent` | Stub specialists that invent a fake page |
 | `CodeExecutorAgent` as ComputerTerminal | Wrapping AutoGen as the coordinator and treating D as a sidecar |
 
-Each specialist is a long-lived AutoGen object, wrapped as a Session policy. A dedicated event loop calls `on_messages` so the browser, file workspace, and shell stay open across turns. The orchestrator is ours: task ledger and progress ledger are hub `record_update` writes (`task_ledger`, `progress_ledger`). A thin turn-clock env advances the shared step. W and T only watch.
+Each specialist is a long-lived AutoGen object, wrapped as a Session policy. A dedicated event loop calls `on_messages` so the browser, file workspace, and shell stay open across turns. The Session records the action that policy returns. The orchestrator is ours. The task ledger rides on the assign action (`facts`, `guesses`, `plan`). The progress ledger rides on the accept action (`is_complete`, `reason`, `next_agent`, `stall_count`). `decide` stores both. A thin turn-clock env advances the shared step. W and T only watch.
 
 **Gold modes** (config):
 
@@ -144,18 +144,18 @@ Each specialist is a long-lived AutoGen object, wrapped as a Session policy. A d
 
 Do not write “correct is …” into D2 explanations.
 
-**Judge.** `SYSTEM_PROMPT` roster comes from the team on the evidence (or config). It must not stay “orchestrator, solver, and checker.”
+**Judge.** `gold.json` stores `roster`. The judge inserts those names into the shared recoverability prompt. The addition team stores orchestrator, solver, and checker. This team stores all five roles, including specialists that stayed idle. A run with no roster raises.
 
 **Dependencies.** Optional extra (`autogen-agentchat`, `autogen-ext[magentic-one,openai]`, Playwright Chromium). Offline tests use scripted stand-ins. CI does not need a browser.
 
 **Same protocol as Phase 1.** Paired attribution (one execution, D + observe-only W/T). Unpaired capture cost (W-only / T-only host loop without Session; live D0/D1/D2). Magentic-One becomes the **main** paper instance if it lands. Phase 1 is then the proof of concept.
 
-**Planned tree** (implementation next session; not written yet):
+**Tree** (2026-09-22):
 
-- `experiments/magentic_one/` — `query.py`, `specialists.py`, `orchestrator.py`, `host.py`, `direct.py`, `run.py`, `config.yaml`, README
-- Hook `evaluate.py`, `campaign.py`, and `attribution_comparison.py` (`--team magentic_one`)
-- `tests/test_magentic_one_team.py`; judge roster tests
-- `pyproject.toml` optional extra
+- In `experiments/magentic_one/`: `query.py`, `team.py`, `direct.py`, `specialists.py`. Frozen query `capital-of-france`. Accept-last gold is the orchestrator at step 2. Planted web fact is Lyon.
+- `specialists.py` wraps an `on_messages` agent as a Session policy. Tests pass a stand-in. The four AutoGen classes are not constructed yet.
+- Optional extra `magentic-one` in `pyproject.toml`.
+- Still to add: `config.yaml`, campaign `--team magentic_one`, gold mode `none`.
 
 CaptainAgent-generated teams stay deferred.
 
@@ -309,8 +309,14 @@ No breaking change to existing demos. New validation code is additive. Library c
 - [x] Recoverability judge prompt; paper plot labels; campaign progress and auto-plots (2026-09-20)
 - [x] Phase 1 live campaign `attribution_campaign_20260920_193358` (cost 10, judge 10)
 - [x] Phase 2 design: real AutoGen specialists, Session mailbox, new gold (2026-09-20)
+- [x] Phase 2 stand-in team, direct host, and W/T collectors on one step clock (2026-09-22)
+- [x] Judge roster read from `gold.json` (2026-09-22)
+- [x] `on_messages` policy wrapper and optional `magentic-one` extra (2026-09-22)
+- [x] Four AutoGen specialist classes construct. One live browser smoke wrote gold and packs (2026-09-23)
+- [x] Recorded runs write D0, D1, and D2. Campaign `--team magentic_one` runs the stand-in (2026-09-23)
+- [x] Crate plant campaign `attribution_campaign_20260923_004741` (cost 10, judge 10). Scores at the ceiling (2026-09-23)
+- [ ] Who&When-shaped scenario. Settle whether a described dataset execution can be replayed before coding the plant
 - [ ] Phase 1 paper-ready (abstract and write-up; tables exist)
-- [ ] Phase 2 Magentic-One–DOA port (real tools; next implementation session)
 - [ ] Follow-on REQ/CIP opened for any confirmed library gaps
 - [ ] REQ-0014 acceptance criteria updated when validated
 

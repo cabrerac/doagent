@@ -1,8 +1,8 @@
-"""Run reporting: optional progress and summary for session-based runs.
+"""Print progress and a summary for a session run.
 
-RunReporter is a small helper for demos and scripts.
-It is not required for recording; the library records via the session regardless.
-Use it when you want periodic console output and a final summary (rounds, outcomes, rewards).
+RunReporter collects rewards and actions while a loop is running.
+Call on_outcome after each step, then finalize at the end.
+metrics returns those totals as a mapping.
 """
 
 from __future__ import annotations
@@ -14,10 +14,11 @@ from typing import Any, Dict, List, Optional
 
 @dataclass
 class RunReporter:
-    """Collect and print runtime progress and final summaries for a run.
+    """Collect rewards and actions, then print a summary.
 
-    Optional: pass to your run loop and call on_outcome each step, then finalize() at the end.
-    Use metrics() to get a dict for writing summary JSON (e.g. in comparison experiments).
+    Call on_outcome after each step.
+    Call finalize when the run ends.
+    Call metrics to obtain the totals as a mapping.
     """
 
     label: str
@@ -41,7 +42,18 @@ class RunReporter:
         actions: Dict[str, Any],
         rewards: Dict[str, float],
     ) -> None:
-        """Record one step: accumulate rewards and action counts; optionally print."""
+        """Add one step's rewards and actions.
+
+        Prints a progress line when print_every is greater than zero and this round falls on that interval.
+
+        Args:
+            round_id:
+                Step index in the run.
+            actions:
+                Action taken by each agent.
+            rewards:
+                Reward received by each agent.
+        """
         for agent, reward in rewards.items():
             self.total_rewards[agent] = self.total_rewards.get(agent, 0.0) + reward
             if agent not in self.min_rewards:
@@ -75,7 +87,24 @@ class RunReporter:
         render: bool,
         path: Optional[str] = None,
     ) -> None:
-        """Print a short run summary (rounds, outcomes, rewards)."""
+        """Print rounds, outcomes, elapsed time, and reward totals.
+
+        Args:
+            rounds:
+                Number of rounds in the run.
+            seed:
+                Seed used for the run.
+            outcomes:
+                Number of recorded outcomes.
+            elapsed_seconds:
+                Wall-clock time of the run.
+            output_bytes:
+                Size of the written output.
+            render:
+                Whether rendering was enabled.
+            path:
+                Output path to include when one was written.
+        """
         avg_rewards = {
             agent: (total / outcomes if outcomes else 0.0)
             for agent, total in self.total_rewards.items()
@@ -96,6 +125,15 @@ class RunReporter:
             )
 
     def _entropy(self, counts: Dict[str, int]) -> tuple[float, float]:
+        """Return raw and normalized entropy for one agent's action counts.
+
+        Args:
+            counts:
+                Action name to how many times it was taken.
+
+        Returns:
+            Raw entropy, and that value divided by the action-space maximum.
+        """
         total = sum(counts.values())
         if total <= 0:
             return 0.0, 0.0
@@ -115,9 +153,16 @@ class RunReporter:
         outcomes: int,
         extra: Optional[Dict[str, object]] = None,
     ) -> Dict[str, object]:
-        """Return the run metrics.
+        """Return reward totals, action counts, and any recorded series.
 
-        Covers rewards and action counts, plus entropy and series when available.
+        Args:
+            outcomes:
+                Number of recorded outcomes, used to average rewards.
+            extra:
+                Extra fields merged into extra_metrics.
+
+        Returns:
+            A mapping of the collected totals.
         """
         avg_rewards = {
             agent: (total / outcomes if outcomes else 0.0)

@@ -32,6 +32,10 @@ dependencies = [
 dev = [
     "mongomock",
 ]
+magentic-one = [
+    "autogen-agentchat",
+    "autogen-ext[magentic-one,openai]",
+]
 
 [project.urls]
 Repository = "https://github.com/cabrerac/doagent"

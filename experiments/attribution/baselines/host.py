@@ -1,7 +1,6 @@
-"""Addition team without DOAgent: the host loop passes return values.
+"""Run the addition team by passing each result to the next policy.
 
-This is the cost-run host for W-only and T-only.
-Collectors watch the run, but are not the mailbox.
+Optional collectors are notified after each decision.
 """
 
 from __future__ import annotations
@@ -27,7 +26,20 @@ def run_direct_team(
     plant: Dict[str, Any],
     collectors: Iterable[StepCollector] = (),
 ) -> Dict[str, Any]:
-    """Run assign, solve, then check with in-process hand-off."""
+    """Run assign, solve, then check, passing each result to the next policy.
+
+    Args:
+        query:
+            The numbers to add, as a and b.
+        plant:
+            Optional plant_wrong_sum and plant_accept_wrong.
+        collectors:
+            Observers notified after each decision.
+            No observers are attached when this is omitted.
+
+    Returns:
+        Gold labels, the assignment, the solver value, the three responses, and any collector packs.
+    """
     watchers = tuple(collectors)
     orch = orchestrator_policy_factory({"query": query})
     solver = solver_policy_factory(

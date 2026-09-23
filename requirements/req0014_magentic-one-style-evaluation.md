@@ -4,7 +4,7 @@ title: "Magentic-One–Style LLM MAS Evaluation with Reproducible Attribution Co
 status: "In Progress"
 priority: "High"
 created: "2026-09-15"
-last_updated: "2026-09-20"
+last_updated: "2026-09-23"
 related_tenets:
 - "data-first-shared-model"
 - "interpretability-and-traceability"
@@ -77,3 +77,22 @@ AutoGen `MultimodalWebSurfer`, `FileSurfer`, `MagenticOneCoderAgent`, and
 `CodeExecutorAgent`; Session is the mailbox (`MagenticOneGroupChat` is not).
 Query family may match Who&When / GAIA. Published gold labels do not transfer.
 Implementation is the next session.
+
+### 2026-09-22
+Phase 2 code started in `experiments/magentic_one/`. Five roles run on a
+federated Session. Accept-last gold is the orchestrator at step 2. Task and
+progress ledgers ride on the assign and accept actions. A direct host and
+Who&When / TraceElephant collectors share that step clock. The judge reads
+`roster` from `gold.json`. `specialists.py` calls `on_messages` and the
+Session stores the action that comes back. The optional `magentic-one` extra
+is declared.
+
+### 2026-09-23
+The four AutoGen classes construct, and one live browser smoke wrote gold and packs.
+Recorded runs write D0, D1, and D2. `--team magentic_one` runs the stand-in.
+The capital campaign did not favour DOAgent. The judge knew Paris.
+The crate campaign `attribution_campaign_20260923_004741` scored at the ceiling.
+The plan text stated the grading rule, and every pack contained it.
+Next session designs a case as close as possible to a Who&When dataset execution.
+Whether a fully described execution can be reproduced here is still open.
+Gold mode `none` is still open.

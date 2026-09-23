@@ -1,7 +1,7 @@
-"""Scripted policies for the addition-team example.
+"""Build scripted policies for the addition team.
 
-Each factory returns a ``decide(request)`` callable that the Session wraps.
-Policies are deterministic so a run can inject a known wrong sum and a known missed check without calling a language model.
+Each factory returns a decide callable.
+A planted value can replace the honest sum or the honest accept decision.
 """
 
 from __future__ import annotations
@@ -10,7 +10,20 @@ from typing import Any, Dict, List, Optional
 
 
 def _assignment_from_choice(action: Any) -> Optional[Dict[str, Any]]:
-    """Return ``{assignee, op, a, b}`` if *action* is an assign payload."""
+    """Return the assignment fields when the action assigns a task.
+
+    Args:
+        action:
+            Choice action from a decision.
+
+    Returns:
+        A mapping with assignee, op, a, and b.
+        None for any other action.
+
+    Raises:
+        KeyError:
+            If the action assigns a task but omits a or b.
+    """
     if isinstance(action, dict) and action.get("type") == "assign":
         return {
             "assignee": action.get("assignee", "solver"),
@@ -22,9 +35,18 @@ def _assignment_from_choice(action: Any) -> Optional[Dict[str, Any]]:
 
 
 def latest_assignment(records: List[Any]) -> Optional[Dict[str, Any]]:
-    """Find the most recent addition assignment in visible ``agent_update`` records.
+    """Return the latest assignment found in the given records.
 
-    Looks at decision actions first, then at ``local_knowledge['assignment']`` (used when the orchestrator republishes the task for other agents).
+    The search checks each decision action first.
+    It then checks an assignment stored on the record.
+
+    Args:
+        records:
+            Records to search, newest last.
+
+    Returns:
+        The assignment mapping.
+        None when no assignment is present.
     """
     for record in reversed(records):
         decision = record.payload.get("decision") or {}
@@ -40,9 +62,18 @@ def latest_assignment(records: List[Any]) -> Optional[Dict[str, Any]]:
 
 
 def latest_solver_value(records: List[Any]) -> Optional[Any]:
-    """Find the most recent solver result in visible records.
+    """Return the latest solver value found in the given records.
 
-    Prefers a hub republish (``local_knowledge['solver_value']``), then a solver decision whose action type is ``solve``.
+    The search checks a stored solver value first.
+    It then checks a solve action on a decision.
+
+    Args:
+        records:
+            Records to search, newest last.
+
+    Returns:
+        The reported value.
+        None when no solver value is present.
     """
     for record in reversed(records):
         local = record.payload.get("local_knowledge") or {}
@@ -57,12 +88,27 @@ def latest_solver_value(records: List[Any]) -> Optional[Any]:
 
 
 def orchestrator_policy_factory(params: Dict[str, Any]):
-    """Build a policy that assigns the solver to add the two query values.
+    """Build a policy that assigns the solver to add two numbers.
 
-    The query is taken from request['inputs']['query'], or from params if the inputs omit it.
+    Args:
+        params:
+            Optional query with keys a and b.
+
+    Returns:
+        A decide callable.
     """
 
     def decide(request: Dict[str, Any]) -> Dict[str, Any]:
+        """Assign the solver to add the two query numbers.
+
+        Args:
+            request:
+                Decision request.
+                The query is read from inputs, then from the factory params.
+
+        Returns:
+            A choice that assigns the solver, plus a short explanation.
+        """
         inputs = request.get("inputs") or {}
         query = inputs.get("query") or params.get("query") or {}
         a, b = int(query["a"]), int(query["b"])
@@ -82,13 +128,28 @@ def orchestrator_policy_factory(params: Dict[str, Any]):
 
 
 def solver_policy_factory(params: Dict[str, Any]):
-    """Build a policy that returns a sum for the assigned pair.
+    """Build a policy that reports a sum for the assigned pair.
 
-    If ``params['plant_wrong_sum']`` is set, that value is returned instead of ``a + b``.
+    Args:
+        params:
+            Optional plant_wrong_sum.
+            When set, that value is reported instead of the true sum.
+
+    Returns:
+        A decide callable.
     """
     planted = params.get("plant_wrong_sum")
 
     def decide(request: Dict[str, Any]) -> Dict[str, Any]:
+        """Report a sum for the assigned pair.
+
+        Args:
+            request:
+                Decision request with the assignment in inputs.
+
+        Returns:
+            A choice whose action holds the reported value, plus a short explanation.
+        """
         inputs = request.get("inputs") or {}
         assignment = inputs.get("assignment") or {}
         a, b = int(assignment["a"]), int(assignment["b"])
@@ -103,14 +164,29 @@ def solver_policy_factory(params: Dict[str, Any]):
 
 
 def checker_policy_factory(params: Dict[str, Any]):
-    """Build a policy that accepts or rejects the solver's value.
+    """Build a policy that accepts or rejects the reported sum.
 
-    The honest rule is ``accept`` only when the reported value equals ``a + b``.
-    If ``params['plant_accept_wrong']`` is true (the default for this example), the checker always accepts, including a wrong sum.
+    Args:
+        params:
+            Optional plant_accept_wrong, true by default.
+            A true value accepts every report.
+            A false value accepts only when the report equals the true sum.
+
+    Returns:
+        A decide callable.
     """
     plant_accept_wrong = bool(params.get("plant_accept_wrong", True))
 
     def decide(request: Dict[str, Any]) -> Dict[str, Any]:
+        """Accept or reject the reported sum.
+
+        Args:
+            request:
+                Decision request with the assignment and the solver value.
+
+        Returns:
+            A choice that records the accept decision, plus a short explanation.
+        """
         inputs = request.get("inputs") or {}
         assignment = inputs.get("assignment") or {}
         reported = int(inputs["solver_value"])

@@ -1,4 +1,4 @@
-"""TraceElephant-static collector: persist step input and output."""
+"""Record step inputs and outputs for a TraceElephant-style pack."""
 
 from __future__ import annotations
 
@@ -10,12 +10,16 @@ from experiments.attribution.baselines.protocol import step_input, step_output
 
 
 class StepIOCollector:
-    """Record each scored step's task-facing input and output."""
+    """Record each step's input and output.
+
+    Each stored step has a step index, an agent, an input, and an output.
+    """
 
     name = "t"
     filename = "trace_elephant.json"
 
     def __init__(self) -> None:
+        """Start with an empty step list."""
         self._steps: List[Dict[str, Any]] = []
 
     def on_step(
@@ -26,7 +30,18 @@ class StepIOCollector:
         request: Dict[str, Any],
         response: Dict[str, Any],
     ) -> None:
-        """Keep the intercepted input and output of one scored decision."""
+        """Store the input and output of one decision.
+
+        Args:
+            step:
+                Step index on the shared clock.
+            agent:
+                Agent that decided.
+            request:
+                What the policy received.
+            response:
+                What the policy returned.
+        """
         self._steps.append(
             {
                 "step": step,
@@ -37,11 +52,23 @@ class StepIOCollector:
         )
 
     def steps(self) -> List[Dict[str, Any]]:
-        """Return input-and-output steps in order."""
+        """Return the stored steps in order.
+
+        Returns:
+            One dict per decision, with step, agent, input, and output.
+        """
         return list(self._steps)
 
     def write(self, path: str | Path) -> str:
-        """Write the TraceElephant-static pack as JSON."""
+        """Write the pack as JSON.
+
+        Args:
+            path:
+                File to write.
+
+        Returns:
+            Path of the written file.
+        """
         target = Path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(self.steps(), indent=2) + "\n", encoding="utf-8")

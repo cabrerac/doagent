@@ -8,13 +8,10 @@ from pathlib import Path
 from time import perf_counter
 from typing import Callable, Dict
 
-# NoOpSharedData lives in doagent.core.noop_adapter for Session.from_config;
-# experiment scripts can import it from doagent.core if needed.
-
 
 @dataclass(frozen=True)
 class BaselineMetrics:
-    """Summary metrics for baseline comparison runs."""
+    """Hold elapsed time and output size for one baseline run."""
 
     elapsed_seconds: float
     output_bytes: int
@@ -23,7 +20,14 @@ class BaselineMetrics:
 def output_bytes_from_path(path: str | Path | None) -> int:
     """Return the size of a file, or of every file under a directory.
 
-    Run folders store records and analysis in subfolders, so a top-level listing would under-count recording cost.
+    Args:
+        path:
+            File or directory to measure.
+            Zero is returned when the path is missing.
+
+    Returns:
+        Size in bytes.
+        A directory total includes every file in subfolders.
     """
     if path is None:
         return 0
@@ -42,7 +46,17 @@ def measure_baseline(
     *,
     output_path: str | Path | None = None,
 ) -> BaselineMetrics:
-    """Measure elapsed time for a baseline run."""
+    """Time one run and count the bytes it leaves.
+
+    Args:
+        run_fn:
+            Callable that performs the run.
+        output_path:
+            File or directory whose size is counted after the run.
+
+    Returns:
+        Elapsed seconds and output bytes.
+    """
     start = perf_counter()
     run_fn()
     elapsed = perf_counter() - start
@@ -53,7 +67,14 @@ def measure_baseline(
 
 
 def write_summary(path: str | Path, payload: Dict[str, object]) -> None:
-    """Write summary metrics to a JSON file."""
+    """Write a JSON summary.
+
+    Args:
+        path:
+            File to write.
+        payload:
+            Mapping to store.
+    """
     file_path = Path(path)
     file_path.parent.mkdir(parents=True, exist_ok=True)
     with file_path.open("w", encoding="utf-8") as handle:

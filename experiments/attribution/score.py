@@ -1,7 +1,7 @@
-"""Score attribution predictions against planted gold labels.
+"""Score attribution predictions against gold labels.
 
-Lookup is reported beside the LLM judges, not as a fourth prompting style.
-It has no judge-token cost.
+Lookup is scored beside the judge methods.
+Its token counts are zero.
 """
 
 from __future__ import annotations
@@ -13,7 +13,18 @@ def score_who_when(
     prediction: Optional[Dict[str, Any]],
     gold: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Compare one who/when prediction with gold labels."""
+    """Compare one who and when prediction with the gold labels.
+
+    Args:
+        prediction:
+            Predicted who and when.
+            An empty prediction is used when this is omitted.
+        gold:
+            Gold labels with gold_who and gold_when.
+
+    Returns:
+        The predicted who and when, and whether each matches gold.
+    """
     predicted = prediction or {}
     return {
         "who": predicted.get("who"),
@@ -29,7 +40,20 @@ def score_attribution_results(
     lookup: Optional[Dict[str, Any]],
     judges: Dict[str, Dict[str, Dict[str, Any]]],
 ) -> Dict[str, Any]:
-    """Build the accuracy and token table for one judged run."""
+    """Score every judge result and the lookup for one run.
+
+    Args:
+        gold:
+            Gold labels with gold_who and gold_when.
+        lookup:
+            Lookup who and when.
+            An empty prediction is used when this is omitted.
+        judges:
+            Judge results keyed by method, then by view.
+
+    Returns:
+        Gold who and when, the lookup score, and the scored judge results.
+    """
     scored_judges: Dict[str, Dict[str, Any]] = {}
     for method, views in judges.items():
         scored_judges[method] = {}

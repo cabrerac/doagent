@@ -27,7 +27,23 @@ def evaluate_attribution(
     output_base: str = "./output",
     logging_level: int = 2,
 ) -> EvaluationResult:
-    """Run and measure one live DOAgent capture at a logging level."""
+    """Run and time one live capture at a logging level.
+
+    Args:
+        query:
+            The numbers to add, as a and b.
+        plant:
+            Optional plant_wrong_sum and plant_accept_wrong.
+        storage:
+            Storage name, such as memory or file.
+        output_base:
+            Root folder for the run.
+        logging_level:
+            Session recording level, 0, 1, or 2.
+
+    Returns:
+        Elapsed time, record bytes, gold labels, and the lookup result.
+    """
     started = perf_counter()
     result = run_addition_team(
         query,
@@ -87,7 +103,25 @@ def evaluate_baseline_cost(
     capture: str,
     output_base: str = "./output",
 ) -> EvaluationResult:
-    """Time a no-DOAgent host loop and the write of that collector pack."""
+    """Time the direct host loop and the write of one collector pack.
+
+    Args:
+        query:
+            The numbers to add, as a and b.
+        plant:
+            Optional plant_wrong_sum and plant_accept_wrong.
+        capture:
+            Either w or t.
+        output_base:
+            Root folder for the run.
+
+    Returns:
+        Elapsed time, pack bytes, and the gold labels.
+
+    Raises:
+        ValueError:
+            If capture is outside w and t.
+    """
     if capture == "w":
         collector = OutputLogCollector()
     elif capture == "t":

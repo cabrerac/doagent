@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from examples._shared.llm_client import LLMResponse
-from experiments.attribution.judge import SYSTEM_PROMPT, judge_view, run_judges
+from experiments.attribution.judge import judge_view, run_judges, system_prompt
 from experiments.attribution.score import score_attribution_results
 
 
@@ -33,6 +33,8 @@ class FakeClient:
             },
         )
 
+
+ADDITION_ROSTER = ["orchestrator", "solver", "checker"]
 
 EVIDENCE = [
     {"step": 0, "agent": "orchestrator", "output": {"action": "assign"}},
@@ -78,6 +80,7 @@ class TestAttributionJudge(unittest.TestCase):
             task={"a": 3, "b": 4, "correct": 7},
             evidence=EVIDENCE,
             client=client,
+            roster=ADDITION_ROSTER,
         )
         self.assertEqual(result["prediction"]["who"], "checker")
         self.assertEqual(result["prediction"]["when"], 2)
@@ -93,6 +96,7 @@ class TestAttributionJudge(unittest.TestCase):
             task={"a": 3, "b": 4, "correct": 7},
             evidence=D_EVIDENCE,
             client=client,
+            roster=ADDITION_ROSTER,
         )
         self.assertEqual(result["prediction"]["who"], "checker")
         prompt = client.messages[0][1]["content"]
@@ -115,6 +119,7 @@ class TestAttributionJudge(unittest.TestCase):
             task={"a": 3, "b": 4},
             evidence=EVIDENCE,
             client=client,
+            roster=ADDITION_ROSTER,
         )
         self.assertEqual(result["prediction"]["who"], "checker")
         self.assertEqual(len(result["calls"]), 3)
@@ -134,6 +139,7 @@ class TestAttributionJudge(unittest.TestCase):
             task={"a": 3, "b": 4},
             evidence=EVIDENCE,
             client=client,
+            roster=ADDITION_ROSTER,
         )
         self.assertEqual(result["prediction"]["when"], 2)
         self.assertEqual(len(result["calls"]), 2)
@@ -148,16 +154,18 @@ class TestAttributionJudge(unittest.TestCase):
             task={"a": 3, "b": 4},
             evidence=EVIDENCE,
             client=client,
+            roster=ADDITION_ROSTER,
         )
         prompt = json.dumps(client.messages)
         self.assertNotIn("gold_who", prompt)
         self.assertNotIn("gold_when", prompt)
         self.assertNotIn("plant_wrong_sum", prompt)
-        self.assertIn("orchestrator", SYSTEM_PROMPT)
-        self.assertIn("solver", SYSTEM_PROMPT)
-        self.assertIn("checker", SYSTEM_PROMPT)
-        self.assertIn("inevitable", SYSTEM_PROMPT)
-        self.assertNotIn("correcting that error", SYSTEM_PROMPT)
+        prompt = system_prompt(ADDITION_ROSTER)
+        self.assertIn("orchestrator", prompt)
+        self.assertIn("solver", prompt)
+        self.assertIn("checker", prompt)
+        self.assertIn("inevitable", prompt)
+        self.assertNotIn("correcting that error", prompt)
 
     def test_scores_compare_judges_and_lookup_to_gold(self):
         scores = score_attribution_results(
@@ -198,6 +206,7 @@ class TestAttributionJudge(unittest.TestCase):
                         "gold_who": "checker",
                         "gold_when": 2,
                         "query": {"a": 3, "b": 4, "correct": 7},
+                        "roster": ADDITION_ROSTER,
                     }
                 ),
                 encoding="utf-8",
@@ -257,6 +266,7 @@ class TestJudgeSelection(unittest.TestCase):
                     "gold_who": "checker",
                     "gold_when": 2,
                     "query": {"a": 3, "b": 4, "correct": 7},
+                    "roster": ADDITION_ROSTER,
                 }
             ),
             encoding="utf-8",

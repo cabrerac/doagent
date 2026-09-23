@@ -120,6 +120,7 @@ def measure_capture_condition(
     condition: str,
     *,
     output_base: str,
+    capture_runner: Optional[Callable[..., EvaluationResult]] = None,
 ) -> EvaluationResult:
     """Execute and time one capture condition.
 
@@ -128,13 +129,16 @@ def measure_capture_condition(
 
     Args:
         query:
-            The numbers to add, as a and b.
+            Task fields for this run.
         plant:
-            Optional plant_wrong_sum and plant_accept_wrong.
+            Planted fault for this run.
         condition:
             One of w, t, d0, d1, or d2.
         output_base:
             Folder for that execution's files.
+        capture_runner:
+            Callable that times one condition.
+            The addition-team measurement is used when this is omitted.
 
     Returns:
         Timed result with elapsed seconds and bytes on disk.
@@ -143,6 +147,13 @@ def measure_capture_condition(
         ValueError:
             If condition is not a known capture name.
     """
+    if capture_runner is not None:
+        return capture_runner(
+            dict(query),
+            dict(plant),
+            condition,
+            output_base=output_base,
+        )
     if condition in ("w", "t"):
         return evaluate_baseline_cost(
             dict(query),
@@ -168,6 +179,7 @@ def run_cost_campaign(
     campaign_dir: str | Path,
     repeats: int,
     conditions: Sequence[str] = CAPTURE_CONDITIONS,
+    capture_runner: Optional[Callable[..., EvaluationResult]] = None,
 ) -> List[Dict[str, Any]]:
     """Execute every capture condition the requested number of times.
 
@@ -185,6 +197,9 @@ def run_cost_campaign(
             How many times to run each condition.
         conditions:
             Capture names to run. Defaults to w, t, d0, d1, and d2.
+        capture_runner:
+            Callable that times one condition.
+            The addition-team measurement is used when this is omitted.
 
     Returns:
         One row per execution.
@@ -207,6 +222,7 @@ def run_cost_campaign(
                 plant,
                 condition,
                 output_base=output_base,
+                capture_runner=capture_runner,
             )
             rows.append(
                 {
@@ -361,6 +377,7 @@ def run_accuracy_campaign(
     judge_passes: int,
     judge: Optional[Mapping[str, Any]] = None,
     judge_runner: Optional[Callable[..., Dict[str, Any]]] = None,
+    team_runner: Optional[Callable[..., Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """Run paired executions, then judge each one's stored packs repeatedly.
 
@@ -382,6 +399,9 @@ def run_accuracy_campaign(
             Optional judge block from the experiment config.
         judge_runner:
             Optional callable used in place of the default judge.
+        team_runner:
+            Callable that runs one paired execution.
+            The addition team is used when this is omitted.
 
     Returns:
         One accuracy row per judged view, method, and pass.
@@ -397,6 +417,7 @@ def run_accuracy_campaign(
     if judge_passes < 1:
         raise ValueError("Judge passes must be at least 1.")
     runner = judge_runner or run_judges
+    execute = team_runner or run_addition_team
     settings = _judge_settings(judge)
     output_base = runs_base(campaign_dir)
     rows: List[Dict[str, Any]] = []
@@ -406,7 +427,7 @@ def run_accuracy_campaign(
     for execution in range(1, executions + 1):
         _progress(f"  execution {execution}/{executions}: running team")
         collectors = (OutputLogCollector(), StepIOCollector())
-        result = run_addition_team(
+        result = execute(
             dict(query),
             dict(plant),
             storage="file",

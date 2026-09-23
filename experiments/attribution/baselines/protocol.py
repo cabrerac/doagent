@@ -1,4 +1,4 @@
-"""Shared observer hook for W and T collectors."""
+"""Define the observer hook shared by the W and T collectors."""
 
 from __future__ import annotations
 
@@ -6,7 +6,11 @@ from typing import Any, Dict, Iterable, Protocol
 
 
 class StepCollector(Protocol):
-    """Record one scored decision. Must not send data back to the team."""
+    """Record one scored decision.
+
+    name is the collector label.
+    filename is the pack file written later.
+    """
 
     name: str
     filename: str
@@ -19,14 +23,37 @@ class StepCollector(Protocol):
         request: Dict[str, Any],
         response: Dict[str, Any],
     ) -> None:
-        """See one decision. ``request`` is what the policy received."""
+        """Record one decision.
+
+        Args:
+            step:
+                Step index on the shared clock.
+            agent:
+                Agent that decided.
+            request:
+                What the policy received.
+            response:
+                What the policy returned.
+        """
 
     def steps(self) -> list[Dict[str, Any]]:
-        """Return collected steps in order."""
+        """Return the collected steps in order.
+
+        Returns:
+            One dict per recorded decision.
+        """
 
 
 def step_input(request: Dict[str, Any]) -> Dict[str, Any]:
-    """Return the task-facing step input, without Session observation blobs."""
+    """Return the task fields from a decision request.
+
+    Args:
+        request:
+            What the policy received.
+
+    Returns:
+        The inputs mapping, with the observation field left out.
+    """
     inputs = request.get("inputs") if isinstance(request, dict) else None
     if not isinstance(inputs, dict):
         return {}
@@ -34,7 +61,17 @@ def step_input(request: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def step_output(response: Dict[str, Any]) -> Any:
-    """Return the action or utterance, not the Session decide envelope."""
+    """Return the action the policy chose.
+
+    Args:
+        response:
+            What the policy returned.
+
+    Returns:
+        The action field when one is present.
+        The original value when the response is not a mapping.
+        The remaining fields when no action is present.
+    """
     if not isinstance(response, dict):
         return response
     choice = response.get("choice")
@@ -53,7 +90,20 @@ def notify(
     request: Dict[str, Any],
     response: Dict[str, Any],
 ) -> None:
-    """Fan a decision out to observe-only collectors."""
+    """Send one decision to each collector.
+
+    Args:
+        collectors:
+            Observers to notify.
+        step:
+            Step index on the shared clock.
+        agent:
+            Agent that decided.
+        request:
+            What the policy received.
+        response:
+            What the policy returned.
+    """
     for collector in collectors:
         collector.on_step(
             step=step,

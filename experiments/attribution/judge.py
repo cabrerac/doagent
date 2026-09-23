@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Sequence
 
 from doagent.analysis.views import decision_steps
 from examples._shared.llm_client import (
@@ -20,15 +20,36 @@ from examples._shared.llm_client import (
 from experiments.attribution.score import score_attribution_results
 
 
-SYSTEM_PROMPT = (
-    "You diagnose failed multi-agent runs. "
-    "The team is an orchestrator, a solver, and a checker. "
-    "Name the agent accountable for the failed outcome and the step of that decision. "
-    "The decisive step is the earliest point at which the failure becomes inevitable. "
-    "An earlier mistake is not decisive if a later agent is still expected to recover. "
-    "The failure becomes decisive when that recovery is missed. "
-    "Return JSON only."
-)
+def system_prompt(roster: Sequence[str]) -> str:
+    """Build the judge system prompt for one team.
+
+    Args:
+        roster:
+            Agent names in team order.
+
+    Returns:
+        The shared attribution question with that team named.
+
+    Raises:
+        ValueError:
+            If roster is empty.
+    """
+    names = [str(name) for name in roster]
+    if not names:
+        raise ValueError("The team roster must name at least one agent.")
+    if len(names) == 1:
+        listed = names[0]
+    else:
+        listed = ", ".join(names[:-1]) + ", and " + names[-1]
+    return (
+        "You diagnose failed multi-agent runs. "
+        f"The team is {listed}. "
+        "Name the agent accountable for the failed outcome and the step of that decision. "
+        "The decisive step is the earliest point at which the failure becomes inevitable. "
+        "An earlier mistake is not decisive if a later agent is still expected to recover. "
+        "The failure becomes decisive when that recovery is missed. "
+        "Return JSON only."
+    )
 
 
 def _parse_json(text: str) -> Dict[str, Any]:
@@ -65,6 +86,7 @@ def _call(
     model: str,
     temperature: float,
     instruction: str,
+    roster: Sequence[str],
 ) -> tuple[Dict[str, Any], Dict[str, Any]]:
     """Call the judge model and parse its JSON reply.
 
@@ -77,6 +99,8 @@ def _call(
             Sampling temperature.
         instruction:
             User prompt for this call.
+        roster:
+            Agent names in team order.
 
     Returns:
         The parsed reply and a dict that records the raw call.
@@ -85,7 +109,7 @@ def _call(
         model=model,
         temperature=temperature,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt(roster)},
             {"role": "user", "content": instruction},
         ],
     )
@@ -103,11 +127,11 @@ def _task_text(task: Dict[str, Any]) -> str:
             Task dict, which may contain extra keys.
 
     Returns:
-        JSON text with a, b, and correct when those keys are present.
+        JSON text of the task fields the judge may see.
     """
     allowed = {
         key: task[key]
-        for key in ("a", "b", "correct")
+        for key in ("id", "text", "a", "b", "correct")
         if key in task
     }
     return json.dumps(allowed, sort_keys=True)
@@ -158,6 +182,7 @@ def _all_at_once(
     evidence: List[Dict[str, Any]],
     model: str,
     temperature: float,
+    roster: Sequence[str],
 ) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """Judge the full evidence list in one call.
 
@@ -172,6 +197,8 @@ def _all_at_once(
             Judge model name.
         temperature:
             Sampling temperature.
+        roster:
+            Agent names in team order.
 
     Returns:
         The prediction and the list of recorded calls.
@@ -186,6 +213,7 @@ def _all_at_once(
         model=model,
         temperature=temperature,
         instruction=instruction,
+        roster=roster,
     )
     return prediction, [call]
 
@@ -197,6 +225,7 @@ def _step_by_step(
     steps: List[Dict[str, Any]],
     model: str,
     temperature: float,
+    roster: Sequence[str],
 ) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """Judge steps in order and stop at the first inevitable failure.
 
@@ -211,6 +240,8 @@ def _step_by_step(
             Judge model name.
         temperature:
             Sampling temperature.
+        roster:
+            Agent names in team order.
 
     Returns:
         The prediction and the list of recorded calls.
@@ -229,6 +260,7 @@ def _step_by_step(
             model=model,
             temperature=temperature,
             instruction=instruction,
+            roster=roster,
         )
         calls.append(call)
         if parsed.get("failure_found") is True:
@@ -251,6 +283,7 @@ def _binary_search(
     steps: List[Dict[str, Any]],
     model: str,
     temperature: float,
+    roster: Sequence[str],
 ) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """Narrow the step list by halves, then judge the remaining step.
 
@@ -265,6 +298,8 @@ def _binary_search(
             Judge model name.
         temperature:
             Sampling temperature.
+        roster:
+            Agent names in team order.
 
     Returns:
         The prediction and the list of recorded calls.
@@ -290,6 +325,7 @@ def _binary_search(
             model=model,
             temperature=temperature,
             instruction=instruction,
+            roster=roster,
         )
         calls.append(call)
         half = parsed.get("half")
@@ -307,6 +343,7 @@ def _binary_search(
         model=model,
         temperature=temperature,
         instruction=instruction,
+        roster=roster,
     )
     calls.append(call)
     return prediction, calls
@@ -319,6 +356,7 @@ def judge_view(
     task: Dict[str, Any],
     evidence: List[Dict[str, Any]],
     client: LLMClient,
+    roster: Sequence[str],
     model: str = "gpt-4o",
     temperature: float = 0.0,
 ) -> Dict[str, Any]:
@@ -335,6 +373,8 @@ def judge_view(
             Stored pack contents.
         client:
             Callable that returns text and token usage.
+        roster:
+            Agent names in team order.
         model:
             Judge model name.
         temperature:
@@ -345,7 +385,7 @@ def judge_view(
 
     Raises:
         ValueError:
-            If the method or view is unknown.
+            If the method or view is unknown, or the roster is empty.
     """
     if view not in {"w", "t", *D_VIEWS}:
         raise ValueError(f"Unknown view: {view!r}")
@@ -357,6 +397,7 @@ def judge_view(
             evidence=packed,
             model=model,
             temperature=temperature,
+            roster=roster,
         )
     elif method == "step_by_step":
         prediction, calls = _step_by_step(
@@ -365,6 +406,7 @@ def judge_view(
             steps=_steps(packed),
             model=model,
             temperature=temperature,
+            roster=roster,
         )
     elif method == "binary_search":
         prediction, calls = _binary_search(
@@ -373,6 +415,7 @@ def judge_view(
             steps=_steps(packed),
             model=model,
             temperature=temperature,
+            roster=roster,
         )
     else:
         raise ValueError(f"Unknown judging method: {method!r}")
@@ -462,6 +505,10 @@ def run_judges(
 
     Returns:
         The raw predictions with token usage, the scores against gold, and the paths of the two written files.
+
+    Raises:
+        ValueError:
+            If a method or view is unknown, or gold has no team roster.
     """
     selected_methods = tuple(methods)
     selected_views = tuple(views)
@@ -476,6 +523,9 @@ def run_judges(
     artifact_dir = run_dir / "analysis" / "attribution"
     gold = json.loads((run_dir / "gold.json").read_text(encoding="utf-8"))
     task = dict(gold.get("query") or {})
+    roster = gold.get("roster")
+    if not roster:
+        raise ValueError("Gold must include the team roster.")
     client = create_llm_client(provider=provider)
     results: Dict[str, Any] = {}
     for method in selected_methods:
@@ -488,6 +538,7 @@ def run_judges(
                 task=task,
                 evidence=evidence,
                 client=client,
+                roster=roster,
                 model=model,
                 temperature=temperature,
             )

@@ -1,0 +1,13 @@
+# Accept-last Magentic-One run. The orchestrator accepts the web code.
+query:
+  id: crate-4817
+  text: What is the shelf code for crate 4817?
+plant:
+  mode: accept_last
+  wrong_fact: M-19
+  ledger_fact: M-17
+run_config:
+  logging_level: 2
+storage: file
+output_base: ./output
+model: gpt-4o

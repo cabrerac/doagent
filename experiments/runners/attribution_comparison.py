@@ -1,10 +1,12 @@
 """Run the attribution experiments as repeated campaigns.
 
-There are two experiments.
-Capture cost re-executes W, T, D0, D1, and D2 and records the time each execution takes and the bytes it leaves on disk, with no judge involved.
-Attribution runs one or more paired executions, where DOAgent writes D2 records while observe-only W and T collectors write their own packs, then judges those stored packs repeatedly.
+Capture cost runs W, T, D0, D1, and D2.
+Each run records elapsed time and the bytes left on disk.
+Attribution runs one or more paired executions.
+Each execution writes D2 records and observe-only W and T packs.
+Judges then score those stored packs.
 
-Both write long-format CSV and aggregated JSON into one campaign folder.
+Both tables write long-format CSV and aggregated JSON into one campaign folder.
 Figures are drawn into the plots folder when the chosen tables finish.
 
 From the repository root:
@@ -16,9 +18,10 @@ From the repository root:
     python -m experiments.runners.attribution_comparison --judge-passes 1
     python -m experiments.runners.attribution_comparison --campaign <folder>
 
-Repeat counts come from the repeats block of the config, and the command-line options override them for a quicker or cheaper run.
-The cost table needs no API key.
-The attribution table calls the judge model, so it does.
+Repeat counts come from the config.
+Command-line options override those counts.
+The cost table runs offline.
+The attribution table calls the judge model.
 """
 
 from __future__ import annotations
@@ -46,7 +49,16 @@ DEFAULT_REPEATS = {"cost": 10, "executions": 1, "judge": 10}
 
 
 def _config_path(explicit: Optional[str]) -> Path:
-    """Locate the experiment config, defaulting to the one beside the team."""
+    """Return the experiment config path.
+
+    Args:
+        explicit:
+            Config path given on the command line.
+            The attribution config is used when this is omitted.
+
+    Returns:
+        Path of the YAML file to load.
+    """
     root = Path(__file__).resolve().parents[2]
     if explicit:
         return Path(explicit)
@@ -54,7 +66,15 @@ def _config_path(explicit: Optional[str]) -> Path:
 
 
 def _repeat_counts(config: Mapping[str, Any]) -> Dict[str, int]:
-    """Read the repeats block, filling in defaults for missing keys."""
+    """Read the repeat counts from the config.
+
+    Args:
+        config:
+            Experiment config mapping.
+
+    Returns:
+        Cost repeats, paired executions, and judge passes.
+    """
     configured = config.get("repeats") or {}
     return {
         key: int(configured.get(key, default))
@@ -63,7 +83,17 @@ def _repeat_counts(config: Mapping[str, Any]) -> Dict[str, int]:
 
 
 def _provenance(config: Mapping[str, Any], repeats: Mapping[str, int]) -> Dict[str, Any]:
-    """Settings worth fingerprinting alongside the results."""
+    """Collect the settings stored beside the results.
+
+    Args:
+        config:
+            Experiment config mapping.
+        repeats:
+            Repeat counts used for this campaign.
+
+    Returns:
+        Query, plant, repeats, and judge settings.
+    """
     return {
         "query": config.get("query"),
         "plant": config.get("plant") or {},
@@ -77,13 +107,30 @@ def capture_cost_table(
     *,
     campaign_dir: Path,
     repeats: int,
+    capture_runner: Optional[Any] = None,
 ) -> Path:
-    """Time every capture condition repeatedly and write cost.csv."""
+    """Time every capture condition and write cost.csv.
+
+    Args:
+        config:
+            Experiment config mapping.
+        campaign_dir:
+            Campaign folder.
+        repeats:
+            How many times to run each condition.
+        capture_runner:
+            Callable that times one condition.
+            The addition-team measurement is used when this is omitted.
+
+    Returns:
+        Path of the written CSV file.
+    """
     rows = run_cost_campaign(
         config["query"],
         config.get("plant") or {},
         campaign_dir=campaign_dir,
         repeats=repeats,
+        capture_runner=capture_runner,
     )
     csv_path = write_rows(campaign_dir / "cost.csv", rows, COST_FIELDS)
     summary = summarise_cost(rows)
@@ -111,8 +158,26 @@ def attribution_table(
     campaign_dir: Path,
     executions: int,
     judge_passes: int,
+    team_runner: Optional[Any] = None,
 ) -> Path:
-    """Judge paired executions repeatedly and write accuracy.csv."""
+    """Judge paired executions and write accuracy.csv.
+
+    Args:
+        config:
+            Experiment config mapping.
+        campaign_dir:
+            Campaign folder.
+        executions:
+            How many paired trajectories to run.
+        judge_passes:
+            How many times to judge each execution.
+        team_runner:
+            Callable that runs one paired execution.
+            The addition team is used when this is omitted.
+
+    Returns:
+        Path of the written CSV file.
+    """
     rows = run_accuracy_campaign(
         config["query"],
         config.get("plant") or {},
@@ -121,6 +186,7 @@ def attribution_table(
         judge_passes=judge_passes,
         judge=config.get("judge"),
         judge_runner=run_judges,
+        team_runner=team_runner,
     )
     csv_path = write_rows(campaign_dir / "accuracy.csv", rows, ACCURACY_FIELDS)
     summary = summarise_accuracy(rows)
@@ -147,6 +213,30 @@ def attribution_table(
     return csv_path
 
 
+def _runners_for_team(team: str):
+    """Return the cost and paired runners for one team.
+
+    Args:
+        team:
+            Either addition or magentic_one.
+
+    Returns:
+        A capture runner and a paired-execution runner.
+        Both are None for the addition team, which keeps the campaign defaults.
+
+    Raises:
+        ValueError:
+            If team is unknown.
+    """
+    if team == "addition":
+        return None, None
+    if team == "magentic_one":
+        from experiments.magentic_one.run import measure_magentic_capture, run_recorded
+
+        return measure_magentic_capture, run_recorded
+    raise ValueError(f"Unknown team {team!r}")
+
+
 def main(argv: Optional[list[str]] = None) -> None:
     """Produce the cost table, the attribution table, or both.
 
@@ -158,15 +248,16 @@ def main(argv: Optional[list[str]] = None) -> None:
     """
     parser = argparse.ArgumentParser(
         description=(
-            "Attribution experiments. Cost repeats executions and needs no "
-            "API key. Attribution repeats judge passes over stored evidence."
+            "Run the attribution experiments. "
+            "The cost table repeats executions. "
+            "The attribution table repeats judge passes over stored packs."
         )
     )
     parser.add_argument(
         "--table",
         choices=("cost", "accuracy", "both"),
         default="cost",
-        help="Which table to produce. Default: cost (no API key).",
+        help="Which table to produce. The default is the cost table.",
     )
     parser.add_argument(
         "--cost-repeats",
@@ -187,6 +278,12 @@ def main(argv: Optional[list[str]] = None) -> None:
         help="Override repeats.judge from the config.",
     )
     parser.add_argument(
+        "--team",
+        choices=("addition", "magentic_one"),
+        default="addition",
+        help="Team to run. addition is the default. magentic_one uses the stand-in specialists.",
+    )
+    parser.add_argument(
         "--campaign",
         default=None,
         help="Existing campaign folder to add results to.",
@@ -202,6 +299,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     config = load_yaml(_config_path(args.config))
     repeats = _repeat_counts(config)
     output_base = str(config.get("output_base", "./output"))
+    capture_runner, team_runner = _runners_for_team(args.team)
     campaign_dir = (
         Path(args.campaign) if args.campaign else new_campaign_dir(output_base)
     )
@@ -212,6 +310,7 @@ def main(argv: Optional[list[str]] = None) -> None:
             config,
             campaign_dir=campaign_dir,
             repeats=args.cost_repeats or repeats["cost"],
+            capture_runner=capture_runner,
         )
     if args.table in {"accuracy", "both"}:
         attribution_table(
@@ -219,6 +318,7 @@ def main(argv: Optional[list[str]] = None) -> None:
             campaign_dir=campaign_dir,
             executions=args.executions or repeats["executions"],
             judge_passes=args.judge_passes or repeats["judge"],
+            team_runner=team_runner,
         )
     written = render_campaign(campaign_dir)
     if written:

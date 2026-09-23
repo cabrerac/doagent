@@ -3,6 +3,8 @@ pettingzoo[mpe]
 mpe2
 pygame
 openai
+autogen-agentchat
+autogen-ext[magentic-one,openai]
 
 # Visualization and analysis dependencies
 matplotlib

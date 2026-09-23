@@ -1,7 +1,7 @@
-"""Generic environment factory for DOAgent.
+"""Create an environment from a callable or an import path.
 
-Resolves an entry point (string or callable) and calls it with the given params to create an environment instance.
-The library contains no scenario-specific env code; all env creation logic lives in user/example code.
+make_env resolves the entry point and calls it with the given params.
+Scenario environments live in user code.
 """
 
 from __future__ import annotations
@@ -14,39 +14,63 @@ def make_env(entry_point: Union[str, Callable[..., Any]], **params: Any) -> Any:
     """Create an environment from an entry point.
 
     Args:
-        entry_point: Either a callable that returns an env, or a string in the format "module.path:callable_name" that will be resolved via importlib.
-        **params: Keyword arguments passed to the resolved callable.
+        entry_point:
+            A callable, or a string of the form module.path:callable_name.
+        **params:
+            Keyword arguments passed to that callable.
 
     Returns:
-        The environment instance returned by the callable.
+        The environment instance.
 
-    Examples:
-
-        # String entry point (config-friendly, works in YAML)
-        env = make_env("my_project.envs:create_grid", width=10, height=10)
-
-        # Callable entry point (programmatic, type-safe)
-        env = make_env(create_grid, width=10, height=10)
+    Raises:
+        TypeError:
+            If entry_point is neither a string nor a callable.
+            Also raised when the resolved object is not callable.
+        ValueError:
+            If a string entry point contains no colon.
+        ImportError:
+            If the named module cannot be imported.
+        AttributeError:
+            If the module has no attribute with that name.
     """
     factory = _resolve_entry_point(entry_point)
     return factory(**params)
 
 
 def _resolve_entry_point(entry_point: Union[str, Callable[..., Any]]) -> Callable[..., Any]:
-    """Resolve an entry point to a callable."""
+    """Resolve an entry point to a callable.
+
+    Args:
+        entry_point:
+            A callable, or a string of the form module.path:callable_name.
+
+    Returns:
+        The callable that creates the environment.
+
+    Raises:
+        TypeError:
+            If entry_point is neither a string nor a callable.
+            Also raised when the resolved object is not callable.
+        ValueError:
+            If a string entry point contains no colon.
+        ImportError:
+            If the named module cannot be imported.
+        AttributeError:
+            If the module has no attribute with that name.
+    """
     if callable(entry_point):
         return entry_point
 
     if not isinstance(entry_point, str):
         raise TypeError(
-            f"entry_point must be a string ('module:callable') or a callable; "
-            f"got {type(entry_point).__name__}"
+            "entry_point must be a string of the form module:callable, or a callable. "
+            f"Got {type(entry_point).__name__}."
         )
 
     if ":" not in entry_point:
         raise ValueError(
-            f"String entry_point must be in 'module.path:callable_name' format; "
-            f"got {entry_point!r}"
+            "A string entry point must use the form module.path:callable_name. "
+            f"Got {entry_point!r}."
         )
 
     module_path, attr_name = entry_point.rsplit(":", 1)

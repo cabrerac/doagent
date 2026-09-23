@@ -1,6 +1,7 @@
-"""D-level views and lookup from one DOAgent run.
+"""Build D0, D1, and D2 views and a lookup from one run.
 
-This module downsamples native D2 records to D0 and D1, and recovers the planted checker fault.
+D0 and D1 are thinner copies of the native records.
+Lookup names a checker that accepted a wrong value.
 """
 
 from __future__ import annotations
@@ -26,7 +27,16 @@ D1_KINDS = frozenset({"participation", "agent_update", "outcome", "trace"})
 
 
 def _decision_step(record: SimpleRecord) -> Optional[Dict[str, Any]]:
-    """Return the input and output of an agent decision, if present."""
+    """Return the step fields of an agent decision.
+
+    Args:
+        record:
+            One stored record.
+
+    Returns:
+        Step, record id, agent, input, and output.
+        None when the record has no round decision.
+    """
     decision = record.payload.get("decision") or {}
     request = decision.get("request")
     response = decision.get("response")
@@ -50,7 +60,21 @@ def project_logging_level(
     records: Iterable[Dict[str, Any]],
     level: int,
 ) -> List[Dict[str, Any]]:
-    """Downsample a D2 record list to the fields a live D0 or D1 run would keep."""
+    """Keep the fields a live run at this logging level would store.
+
+    Args:
+        records:
+            Native records from a level 2 run.
+        level:
+            Logging level, 0, 1, or 2.
+
+    Returns:
+        A copy of the records with fields outside that level removed.
+
+    Raises:
+        ValueError:
+            If level is outside 0, 1, and 2.
+    """
     if level not in (0, 1, 2):
         raise ValueError(f"logging_level must be 0, 1, or 2; got {level!r}")
     projected: List[Dict[str, Any]] = []
@@ -80,10 +104,15 @@ def project_logging_level(
 def lookup_planted_failure(
     agent_updates: Iterable[SimpleRecord],
 ) -> Optional[Dict[str, Any]]:
-    """Find a checker that accepted a reported value known to be wrong.
+    """Return the checker step that accepted a wrong value.
 
-    This is an explicit rule for the addition example, not a general attribution algorithm.
-    It uses structured fields already present in D.
+    Args:
+        agent_updates:
+            Agent decision records, in time order.
+
+    Returns:
+        Who, when, and the record id.
+        None when no checker accepted a wrong value.
     """
     for record in agent_updates:
         step = _decision_step(record)
@@ -112,7 +141,15 @@ def lookup_planted_failure(
 
 
 def build_attribution_artifacts(session: Any) -> Dict[str, Any]:
-    """Build D0, D1, D2, and lookup output from a completed Session."""
+    """Build D0, D1, D2, and lookup from a finished session.
+
+    Args:
+        session:
+            Session whose records are already written.
+
+    Returns:
+        The three views and the lookup result.
+    """
     records: List[SimpleRecord] = []
     for kind in RUN_RECORD_KINDS:
         records.extend(session.inspect(kind))
@@ -134,7 +171,17 @@ def write_attribution_artifacts(
     session: Any,
     run_path: str | Path,
 ) -> Dict[str, str]:
-    """Write D0, D1, D2, and lookup JSON under a run's analysis folder."""
+    """Write D0, D1, D2, and lookup JSON under the run folder.
+
+    Args:
+        session:
+            Session whose records are already written.
+        run_path:
+            Folder that holds the run.
+
+    Returns:
+        Written path for each artifact.
+    """
     artifacts = build_attribution_artifacts(session)
     output_dir = Path(run_path) / "analysis" / "attribution"
     output_dir.mkdir(parents=True, exist_ok=True)

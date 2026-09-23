@@ -38,7 +38,7 @@ Validation scenarios we implement (e.g. gridworld, push, Magentic-One–style LL
 
 ---
 
-## AAMAS 2027 paper evaluation (updated 2026-09-20)
+## AAMAS 2027 paper evaluation (updated 2026-09-23)
 
 The paper reports a **current multi-agent** setting hosted on DOAgent, not the in-repo games as the lead story. Gridworld and push stay **development / fast runs**. Do not use OpenAI multi-agent emergence as the paper env (classic RL, not 2026 LLM MAS).
 
@@ -47,8 +47,14 @@ The paper reports a **current multi-agent** setting hosted on DOAgent, not the i
 **What goes in the paper**
 
 - **Phase 1 (paper-minimum):** a **small** addition team in `experiments/attribution/` (gold = checker / step 2). **Attribution (paired):** one D2 run writes full records; observe-only Who&When and TraceElephant-static collectors write from that same run; D0/D1 are projected from D2; judges score W, T, D0, D1, and D2; lookup uses D2. **Capture cost (unpaired):** live W, T, D0, D1, and D2. Time includes writing the capture log; bytes count only `who_when.json`, `trace_elephant.json`, or `records/`. Run `python -m experiments.runners.attribution_comparison` for cost and `--table accuracy` for judges.
-- **Phase 2 (stretch; design 2026-09-20):** five Magentic-One roles on a Session. Specialists are AutoGen `MultimodalWebSurfer`, `FileSurfer`, `MagenticOneCoderAgent`, and `CodeExecutorAgent`. Do not run `MagenticOneGroupChat`. Same W/T/D protocol. New gold (planted or annotated). If it lands, it leads the paper and Phase 1 is the proof of concept.
+- **Phase 2 (in progress):** five Magentic-One roles in `experiments/magentic_one/`. The judge reads that team's roster from `gold.json`. A stand-in answers through `on_messages`, and the Session stores the action. The four AutoGen specialist classes construct, and one live browser smoke wrote gold and collector packs. Do not run `MagenticOneGroupChat`. Same W/T/D protocol. Campaign `--team magentic_one` runs the stand-in team.
 - Not Who&When / TraceElephant published gold or published accuracies as the controlled arm. Not a task-success bake-off against AutoGen or AgentScope.
+
+**Runs on 2026-09-23.** `attribution_campaign_20260923_000112` used the capital question and a planted web fact of Lyon. DOAgent levels did not beat Who&When. The judge already knew Paris, and a level-1 link moved the blame onto WebSurfer. `attribution_campaign_20260923_004741` used crate 4817 (web code M-19, file code M-17, accept at step 4). Almost every pack scored 1.00. Who&When was as accurate and cheaper. The plan text said to accept a code only when the two sources agree, and every pack contained that sentence.
+
+**Restart next session.** Build a who and when case as close as possible to an execution in the Who&When dataset. The trajectory should be long, with distractor steps. The accept note should state only the code the orchestrator believes. The plan should not contain the grading rule. New gold stays on the missed check. Published `mistake_agent` and `mistake_step` values are not copied onto a log we did not replay.
+
+**Open question, discuss before coding.** If a dataset execution is fully described, it is not yet clear why this implementation cannot reproduce that execution. Settle that before writing another plant.
 
 Zhang et al. (Who&When) and Chen et al. (TraceElephant) share the who/when question and the W/T observability regimes. Bib: `doagent-paper/references.bib`.
 
@@ -59,6 +65,68 @@ Zhang et al. (Who&When) and Chen et al. (TraceElephant) share the who/when quest
 Possible environments to evaluate DOAgent, in addition to the in-repo gridworld and push demos. None of these is a committed validation requirement.
 
 - [Multi-agent emergence environments](https://github.com/openai/multi-agent-emergence-environments)
+
+---
+
+## Candidate: network-change detection (recorded 2026-09-23)
+
+This is a proposal for a second experiment. It is not implemented, and it is not a paper result.
+
+The attribution campaign asks who made one failure inevitable. This experiment asks when the shape of the whole network changes. A ledger fits the second question because the signal is a pattern across many agents.
+
+Agentic services computing is the message-interface neighbour. A service call exists in flight, and a later reader depends on a log kept beside the service. That is the hypothesis for the transient side. It is not a result. Service systems already keep bus logs. If both sides retain the same edges, detection can tie, and the data-oriented gain is that the detector reads the interface.
+
+### Visibility regimes
+
+These are four ways the detector is allowed to see edges. They are not four steps of "more data."
+
+| Regime | What the detector may read |
+| --- | --- |
+| Current tick | Messages from this tick only. The buffer is wiped afterwards. |
+| Siloed ledger | Records inside one visibility silo. Cross-silo edges can be missing. |
+| Global ledger | The append-only history of state changes. |
+| Ledger plus notes | That history, plus the note each agent stored with its action. |
+
+A siloed ledger can see less than one full tick. Plot the four regimes as categories.
+
+A fair run keeps three checks.
+
+- The traditional side may retain the same edges the ledger retains. A win with no retained log only shows that memory helps.
+- The injected change must be too small to see in one tick. A cartel that rewires every edge inside the trigger tick is already visible without a ledger.
+- Agent notes record a local belief, such as a price. They do not announce the cartel or the echo chamber.
+
+The sample generators switch the rules at a chosen step. That is an injected change. It is ground truth for the detector. It is not spontaneous emergence.
+
+Count alarms on the random phase, over many repeats, before reporting lead time. Lead time is the tick of the first alarm minus the trigger tick. An alarm before the trigger is a false alarm.
+
+### What the library already provides
+
+Read records with `Session.inspect`. Logging levels are 0, 1, and 2. Shared storage is `memory`, `file`, `mongo`, or `noop`. Mongo needs `pymongo`. There is no `get_accessible_records()` method. Provenance on a record is a list of source ids. It is not an intent vector.
+
+### Reusable pieces
+
+Check the entropy number on a random graph and on a star before any agent run. Build the graph with NetworkX. Take the eigenvalues of the symmetric normalized Laplacian with `numpy.linalg.eigvalsh`. That exact step is cubic in the number of nodes.
+
+`networkx.spectral_graph_forge` generates a graph. It does not compute this entropy. `algebraic_connectivity` is a different single number. Do not use either as the detector.
+
+FINGER is a published linear-time approximation for von Neumann graph entropy. It is a candidate once the exact eigenvalue check is in place. Confirm the paper and the code before depending on them. An empty tick must not be scored as a collapse.
+
+Compare the entropy alarm with other detectors on the same edges. Candidates are dynamic betweenness (`networkx.betweenness_centrality`), the distance between successive adjacency matrices, and, for the opinion case, Louvain modularity (`networkx.community.louvain_communities`). These are controls. They are not a proof that entropy is better.
+
+Agent behaviour can be generated outside DOAgent and then written into a session.
+
+- Resource trading: adapt a Mesa trade or resource model. Mesa's own scheduler stays outside the run. Each trade is either a transient message or a session record.
+- Opinion change: the Hegselmann-Krause model in NDlib (`ndlib.models.opinions.HegselmannKrauseModel`). Convert each step into read and post records. The bounded-confidence cutoff is the injected rule, and it belongs in the generator, not in an agent note that confesses the split.
+
+Public graphs are a later check, after the synthetic runs. The Enron email corpus is a real temporal network. Confirm how it is loaded. Do not assume `networkx.enron_graph()` exists. A Moltbook observatory archive was named with the citation arXiv:2605.13860. Confirm that citation before use.
+
+### Order of work
+
+1. Toy graphs: random graph versus star, with false alarms counted.
+2. Trading generator, current-tick window versus the same edges retained.
+3. The same trades written through `Session`, read back with `inspect`.
+4. Opinion generator, only if the trading case still shows a difference once memory is fair.
+5. Plots of lead time, false alarms, and the time to build the spectrum. One series per visibility regime.
 
 ---
 
