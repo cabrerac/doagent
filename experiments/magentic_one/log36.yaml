@@ -1,0 +1,15 @@
+# Free orchestrator loop for Who&When hand-crafted log 36.
+# WebSurfer is the only specialist. Gold who and when stay empty until this run is labeled.
+query:
+  id: c7afe00869f98cf363fd83677ac41757ed5e57f03eacc3d1304feb0a92084bd1
+  text: >-
+    What is the highest rated (according to IMDB) Daniel Craig movie
+    that is less than 150 minutes and is available on Netflix (US)?
+max_turns: 20
+max_stalls: 3
+base_url: https://llm.hpc.cam.ac.uk
+model: Qwen/Qwen3.6-35B
+storage: file
+output_base: ./output
+run_config:
+  logging_level: 2

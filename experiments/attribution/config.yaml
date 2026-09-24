@@ -19,10 +19,10 @@ repeats:
   executions: 1
   judge: 10
 
-# GPT-4o is the main attribution judge used by Who&When and TraceElephant.
+# Judge on the university proxy. Scores are not comparable with GPT-4o tables.
 judge:
   provider: openai
-  model: gpt-4o
+  model: moonshotai/Kimi-K3
   temperature: 0
   methods:
     - all_at_once

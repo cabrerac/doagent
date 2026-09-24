@@ -1,4 +1,4 @@
-"""GPT-4o failure-attribution judges for W, T, and D views.
+"""Failure-attribution judges for W, T, and D views.
 
 The three prompting styles are all-at-once, step-by-step, and binary search.
 The question is when the failure becomes inevitable.
@@ -15,6 +15,7 @@ from doagent.analysis.views import decision_steps
 from examples._shared.llm_client import (
     LLMClient,
     LLMResponse,
+    PROXY_MODEL,
     create_llm_client,
 )
 from experiments.attribution.score import score_attribution_results
@@ -357,7 +358,7 @@ def judge_view(
     evidence: List[Dict[str, Any]],
     client: LLMClient,
     roster: Sequence[str],
-    model: str = "gpt-4o",
+    model: str = PROXY_MODEL,
     temperature: float = 0.0,
 ) -> Dict[str, Any]:
     """Judge one W, T, or D view and return the prediction plus token usage.
@@ -478,7 +479,7 @@ def run_judges(
     run_path: str | Path,
     *,
     provider: str = "openai",
-    model: str = "gpt-4o",
+    model: str = PROXY_MODEL,
     temperature: float = 0.0,
     methods: Iterable[str] = JUDGE_METHODS,
     views: Iterable[str] = JUDGE_VIEWS,
@@ -579,7 +580,7 @@ def main(argv: List[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Judge an attribution run")
     parser.add_argument("run_path", help="Path to output/<run_id>")
     parser.add_argument("--provider", default="openai")
-    parser.add_argument("--model", default="gpt-4o")
+    parser.add_argument("--model", default=PROXY_MODEL)
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument(
         "--methods",

@@ -67,9 +67,9 @@ python -m experiments.runners.attribution_comparison --table accuracy \
 `--campaign` adds results to a campaign folder that already exists, so the
 cost and attribution tables can be produced by separate commands.
 
-The judge command reads `OPENAI_API_KEY` or `DOAGENT_OPENAI_API_KEY` from
-the environment or from a `.env` file at the repository root, and
-accepts `--methods`, `--views`, and `--label` for a single cheaper pass.
+The judge command reads `LITE-LLM_API_KEY` from the environment or from a
+`.env` file at the repository root, and sends it to the university proxy.
+It accepts `--methods`, `--views`, and `--label` for a single cheaper pass.
 Tests use a fake client and make no network calls.
 
 ## Output

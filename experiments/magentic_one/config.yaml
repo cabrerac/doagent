@@ -10,4 +10,5 @@ run_config:
   logging_level: 2
 storage: file
 output_base: ./output
-model: gpt-4o
+base_url: https://llm.hpc.cam.ac.uk
+model: moonshotai/Kimi-K3

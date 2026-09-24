@@ -13,11 +13,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
 from time import perf_counter
 from typing import Any, Dict, Iterable, Optional
 
+from examples._shared.llm_client import PROXY_BASE_URL, PROXY_MODEL, proxy_api_key
 from experiments.attribution.baselines.protocol import StepCollector
 from experiments.attribution.projections import write_attribution_artifacts
 from experiments._shared import EvaluationResult, output_bytes_from_path
@@ -256,12 +256,51 @@ def _measure_session_capture(
     )
 
 
-def live_specialists(model: str) -> Dict[str, Any]:
+def proxy_chat_client(model: str, base_url: str | None = None) -> Any:
+    """Build a chat client for the university proxy.
+
+    Args:
+        model:
+            Model name sent to the proxy.
+        base_url:
+            Proxy address. Defaults to the university host.
+
+    Returns:
+        A client that accepts images and tool calls.
+
+    Raises:
+        RuntimeError:
+            If the university API key is missing after loading .env.
+    """
+    from autogen_core.models import ModelFamily
+    from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+    return OpenAIChatCompletionClient(
+        model=model,
+        api_key=proxy_api_key(),
+        base_url=base_url or PROXY_BASE_URL,
+        model_info={
+            "vision": True,
+            "function_calling": True,
+            "json_output": True,
+            "family": ModelFamily.UNKNOWN,
+            "structured_output": False,
+            "multiple_system_messages": True,
+        },
+    )
+
+
+def live_specialists(
+    model: str,
+    base_url: str | None = None,
+) -> Dict[str, Any]:
     """Build the four AutoGen specialists for one live run.
 
     Args:
         model:
-            OpenAI model name passed to the shared client.
+            Model name sent to the university proxy.
+        base_url:
+            Proxy address. Defaults to the university LiteLLM host.
 
     Returns:
         Specialists keyed by agent id.
@@ -270,35 +309,13 @@ def live_specialists(model: str) -> Dict[str, Any]:
         ImportError:
             If the magentic-one packages are not installed.
         RuntimeError:
-            If no OpenAI API key is available after loading .env.
+            If the university API key is missing after loading .env.
     """
     from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
-    from autogen_ext.models.openai import OpenAIChatCompletionClient
 
-    from examples._shared.env_file import load_dotenv
-
-    load_dotenv()
-    client = OpenAIChatCompletionClient(model=model, api_key=_openai_api_key())
+    client = proxy_chat_client(model, base_url)
     executor = LocalCommandLineCodeExecutor()
     return build_specialists(client, executor)
-
-
-def _openai_api_key() -> str:
-    """Return the OpenAI key from the process environment.
-
-    Returns:
-        The value of DOAGENT_OPENAI_API_KEY, or OPENAI_API_KEY when that is absent.
-
-    Raises:
-        RuntimeError:
-            If neither variable is set.
-    """
-    key = os.environ.get("DOAGENT_OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
-    if not key:
-        raise RuntimeError(
-            "No OpenAI API key found. Set OPENAI_API_KEY or DOAGENT_OPENAI_API_KEY."
-        )
-    return key
 
 
 def main(argv: Optional[list[str]] = None) -> None:
@@ -337,7 +354,10 @@ def main(argv: Optional[list[str]] = None) -> None:
         cfg.get("query") or FROZEN_QUERY,
         cfg.get("plant") or {},
         collectors,
-        live_specialists(str(cfg.get("model", "gpt-4o"))),
+        live_specialists(
+            str(cfg.get("model") or PROXY_MODEL),
+            base_url=str(cfg.get("base_url") or PROXY_BASE_URL),
+        ),
         storage=args.storage or str(cfg.get("storage", "file")),
         output_base=str(cfg.get("output_base", "./output")),
         logging_level=logging_level,

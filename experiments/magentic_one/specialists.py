@@ -30,6 +30,7 @@ def specialist_policy_factory(params: Dict[str, Any]):
     Returns:
         A decide callable.
         The callable has a close method that shuts the specialist and its event loop.
+        It also has a reset method that clears the specialist.
 
     Raises:
         ValueError:
@@ -79,7 +80,19 @@ def specialist_policy_factory(params: Dict[str, Any]):
             if not loop.is_closed():
                 loop.close()
 
+    def reset() -> None:
+        """Reset the specialist on the same event loop."""
+        if loop.is_closed():
+            return
+        resetter = getattr(agent, "on_reset", None)
+        if not callable(resetter):
+            return
+        result = resetter(_cancellation_token())
+        if asyncio.iscoroutine(result):
+            loop.run_until_complete(result)
+
     decide.close = close
+    decide.reset = reset
     return decide
 
 
@@ -233,11 +246,44 @@ def _reply_text(reply: Any) -> str:
         The reply text.
     """
     chat_message = getattr(reply, "chat_message", None)
-    if chat_message is not None and getattr(chat_message, "content", None):
-        return str(chat_message.content)
-    if getattr(reply, "content", None):
-        return str(reply.content)
+    content = None
+    if chat_message is not None:
+        content = getattr(chat_message, "content", None)
+    if not content:
+        content = getattr(reply, "content", None)
+    text = _content_text(content)
+    if text:
+        return text
     return str(reply)
+
+
+def _content_text(content: Any) -> str:
+    """Read the text parts of a specialist reply.
+
+    Args:
+        content:
+            A string, or a list of text and image parts.
+
+    Returns:
+        The joined text.
+        An empty string when the reply has no text.
+    """
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, list):
+        return ""
+    parts: list[str] = []
+    for item in content:
+        if isinstance(item, str):
+            parts.append(item)
+            continue
+        if isinstance(item, dict) and item.get("type") == "text":
+            parts.append(str(item.get("text") or ""))
+            continue
+        text = getattr(item, "text", None)
+        if text:
+            parts.append(str(text))
+    return "\n".join(part for part in parts if part)
 
 
 def _action(action_type: str, text: str) -> Dict[str, str]:

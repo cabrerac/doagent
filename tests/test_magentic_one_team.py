@@ -12,7 +12,6 @@ from experiments.attribution.baselines import OutputLogCollector, StepIOCollecto
 from experiments.attribution.campaign import run_cost_campaign
 from experiments.magentic_one.query import FROZEN_QUERY
 from experiments.magentic_one.run import (
-    _openai_api_key,
     measure_magentic_capture,
     run_recorded,
 )
@@ -285,21 +284,21 @@ class TestMagenticStandIn(unittest.TestCase):
             self.assertEqual(gold["gold_when"], 4)
             self.assertEqual(len(rows), 1)
 
-    def test_openai_key_is_read_from_dotenv(self):
-        """A .env file supplies the OpenAI key."""
+    def test_proxy_key_is_read_from_dotenv(self):
+        """A .env file supplies the university proxy key."""
         from examples._shared.env_file import load_dotenv
+        from examples._shared.llm_client import proxy_api_key
 
-        names = ("OPENAI_API_KEY", "DOAGENT_OPENAI_API_KEY")
-        saved = {name: os.environ.pop(name, None) for name in names}
+        name = "LITE-LLM_API_KEY"
+        saved = os.environ.pop(name, None)
         try:
             with tempfile.TemporaryDirectory() as folder:
                 path = Path(folder) / ".env"
-                path.write_text("OPENAI_API_KEY=from-file\n", encoding="utf-8")
+                path.write_text(f"{name}=from-file\n", encoding="utf-8")
                 load_dotenv(path)
-                self.assertEqual(_openai_api_key(), "from-file")
+                self.assertEqual(proxy_api_key(), "from-file")
         finally:
-            for name, value in saved.items():
-                if value is None:
-                    os.environ.pop(name, None)
-                else:
-                    os.environ[name] = value
+            if saved is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = saved

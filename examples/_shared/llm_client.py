@@ -12,6 +12,32 @@ from typing import Any, Callable, Dict, Optional
 
 from .env_file import load_dotenv
 
+PROXY_BASE_URL = "https://llm.hpc.cam.ac.uk"
+PROXY_MODEL = "moonshotai/Kimi-K3"
+PROXY_API_KEY_ENV = "LITE_LLM_API_KEY"
+
+
+def proxy_api_key() -> str:
+    """Return the university proxy key from the process environment.
+
+    A .env file at the repository root is loaded first if it exists.
+    A key already set in the environment is left unchanged.
+
+    Returns:
+        The value of LITE_LLM_API_KEY.
+
+    Raises:
+        RuntimeError:
+            If that variable is not set.
+    """
+    load_dotenv()
+    key = os.environ.get(PROXY_API_KEY_ENV)
+    if not key:
+        raise RuntimeError(
+            f"No university API key found. Set {PROXY_API_KEY_ENV}."
+        )
+    return key
+
 
 @dataclass(frozen=True)
 class LLMResponse:
@@ -45,7 +71,8 @@ def create_llm_client(
 ) -> LLMClient:
     """Create a provider client returning text, model identity, and token usage.
 
-    The key is taken from the api_key argument, then from the environment.
+    The OpenAI-compatible provider talks to the university proxy.
+    The key is taken from the api_key argument, then from LITE_LLM_API_KEY.
     A .env file at the repository root is loaded first if it exists.
     Variables already set in the environment are left unchanged.
 
@@ -53,7 +80,7 @@ def create_llm_client(
         api_key:
             Provider key. When omitted, the matching environment variable is used.
         provider:
-            openai or gemini.
+            openai for the university proxy, or gemini.
         timeout:
             Request timeout in seconds.
 
@@ -64,16 +91,7 @@ def create_llm_client(
     load_dotenv()
     normalized_provider = provider.lower()
     if normalized_provider == "openai":
-        key = (
-            api_key
-            or os.environ.get("DOAGENT_OPENAI_API_KEY")
-            or os.environ.get("OPENAI_API_KEY")
-        )
-        if not key:
-            raise RuntimeError(
-                "No OpenAI API key found. Set OPENAI_API_KEY or "
-                "DOAGENT_OPENAI_API_KEY."
-            )
+        key = api_key or proxy_api_key()
         try:
             from openai import OpenAI  # type: ignore[import-untyped]
         except ImportError as exc:
@@ -81,7 +99,11 @@ def create_llm_client(
                 "The OpenAI SDK is required. Install it with: pip install openai"
             ) from exc
 
-        sdk_client = OpenAI(api_key=key, timeout=timeout)
+        sdk_client = OpenAI(
+            api_key=key,
+            base_url=PROXY_BASE_URL,
+            timeout=timeout,
+        )
 
         def _openai_call(
             *,

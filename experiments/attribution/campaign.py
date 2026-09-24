@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence
 
+from examples._shared.llm_client import PROXY_MODEL
 from experiments._shared import EvaluationResult
 from experiments.attribution.baselines import (
     OutputLogCollector,
@@ -251,7 +252,7 @@ def _judge_settings(judge: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
     settings = dict(judge or {})
     return {
         "provider": str(settings.get("provider", "openai")),
-        "model": str(settings.get("model", "gpt-4o")),
+        "model": str(settings.get("model", PROXY_MODEL)),
         "temperature": float(settings.get("temperature", 0.0)),
         "methods": tuple(settings.get("methods") or JUDGE_METHODS),
         "views": tuple(settings.get("views") or JUDGE_VIEWS),
