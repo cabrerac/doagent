@@ -8,6 +8,7 @@ Both sides use one university model.
 from __future__ import annotations
 
 import argparse
+import builtins
 import os
 import sys
 import time
@@ -128,7 +129,7 @@ def _install_prompt_paths(agent_module: Any) -> None:
     Args:
         agent_module: Module that loads the prompt files.
     """
-    original_open = agent_module.open
+    original_open = builtins.open
 
     def open_prompt(file: Any, *args: Any, **kwargs: Any) -> Any:
         if isinstance(file, str):
