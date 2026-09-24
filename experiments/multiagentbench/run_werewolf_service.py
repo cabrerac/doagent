@@ -51,9 +51,11 @@ def main(argv: Optional[list[str]] = None) -> None:
         raise ValueError("Rounds must be at least 1.")
     config_path = _write_service_config()
     WerewolfEnv = _load_werewolf_env()
+    from marble.agent import werewolf_agent as werewolf_agent_module
     from marble.agent.werewolf_agent import WerewolfAgent
 
     _install_call_retry(WerewolfAgent)
+    _install_prompt_paths(werewolf_agent_module)
 
     previous = Path.cwd()
     os.chdir(MARBLE_ROOT)
@@ -106,6 +108,34 @@ def call_with_retry(
             pause(delay)
             delay = min(delay * 2, 60)
     raise RuntimeError("model call was not attempted")
+
+
+def posix_path(path: str) -> str:
+    """Return a path with forward slashes.
+
+    Args:
+        path: A file path that may use backslashes.
+
+    Returns:
+        The same path using forward slashes.
+    """
+    return path.replace("\\", "/")
+
+
+def _install_prompt_paths(agent_module: Any) -> None:
+    """Open the agent's prompt files with forward slashes.
+
+    Args:
+        agent_module: Module that loads the prompt files.
+    """
+    original_open = agent_module.open
+
+    def open_prompt(file: Any, *args: Any, **kwargs: Any) -> Any:
+        if isinstance(file, str):
+            file = posix_path(file)
+        return original_open(file, *args, **kwargs)
+
+    agent_module.open = open_prompt
 
 
 def _install_call_retry(agent_cls: Any) -> None:

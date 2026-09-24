@@ -2,7 +2,16 @@
 
 import unittest
 
-from experiments.multiagentbench.run_werewolf_service import call_with_retry
+from experiments.multiagentbench.run_werewolf_service import (
+    call_with_retry,
+    posix_path,
+)
+
+
+class PromptPathTests(unittest.TestCase):
+    def test_backslash_prompt_path_uses_forward_slashes(self) -> None:
+        path = posix_path(r"marble\agent\werewolf_prompts\seer_prompt.yaml")
+        self.assertEqual(path, "marble/agent/werewolf_prompts/seer_prompt.yaml")
 
 
 class CallRetryTests(unittest.TestCase):
