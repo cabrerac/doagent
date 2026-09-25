@@ -4,7 +4,7 @@ title: "Confirm the published MultiAgentBench Werewolf setup"
 status: "Completed"
 priority: "High"
 created: "2026-09-24"
-last_updated: "2026-09-24"
+last_updated: "2026-09-25"
 category: "features"
 related_cips:
 - "0014"
@@ -62,7 +62,8 @@ The paper's coordination graphs belong to other scenarios, not to this Werewolf 
 
 Model.
 The yaml sets `gpt-4o` for `villager_config` and for `werewolf_config`.
-Both of our runs use `Qwen/Qwen3.8-27B-FP8` instead.
+The scored pilot used `Qwen/Qwen3.8-27B-FP8`.
+The running pair uses `moonshotai/Kimi-K3`.
 That substitution is in CIP-0014.
 
 Read paths.
@@ -75,8 +76,8 @@ Cannot match as published.
 `scripts/werewolf/run_simulation.sh` is truncated in the repository and is not a valid command.
 The code default `--config_path` points at `werewolf_config_4o.yaml`, which is not in the repository tree.
 The yaml the readme names, and the one recorded above, is the file to load.
-The service runner has been started.
-No finished scored game is recorded yet.
+One service game has been scored.
+The gap is recorded on CIP-0014.
 
 ## Implementation Notes
 
@@ -91,6 +92,11 @@ This task does not implement those measures.
 - CIP: 0014
 
 ## Progress Updates
+
+### 2026-09-25
+
+The Qwen service pilot is scored on CIP-0014.
+The running pair uses moonshotai/Kimi-K3.
 
 ### 2026-09-24
 

@@ -80,7 +80,9 @@ Do not drop roles.
 Do not invent a two-agent stand-in and call it Werewolf.
 
 Their config names gpt-4o for the village and for the wolves.
-Both runs in this CIP use one university model instead, Qwen/Qwen3.8-27B-FP8, through the university proxy.
+Both runs in a pair use one university model instead, through the university proxy.
+The scored pilot used Qwen/Qwen3.8-27B-FP8.
+The pair that is running uses moonshotai/Kimi-K3.
 The village side and the wolf side use that same model.
 Published gpt-4o scores are not comparable with these runs.
 The substitution is the model name only.
@@ -100,7 +102,8 @@ This CIP does not invent a new label for who failed.
 Play stays private in both systems.
 A player reads only messages addressed to that player.
 Roles, night order, day vote, and prompts stay as published.
-Both systems use Qwen/Qwen3.8-27B-FP8.
+Both systems in a pair use the same model.
+The running pair uses moonshotai/Kimi-K3.
 
 Run n service games and n DOAgent games.
 The games do not have to be the same nights.
@@ -220,20 +223,35 @@ Outcome lines feed entropy.
 Exile votes on `agent_update` feed modularity.
 Both runners write `cost.json` with storage, file count, tokens, and wall time.
 Tests cover visibility, the night, the day, the badge, the truth timing, the modularity gap, and the cost file.
-No live DOAgent model game has been scored.
+The Qwen service pilot has been scored.
+No live DOAgent model game has been scored yet.
 
-One service game is running on the VM on `Qwen/Qwen3.8-27B-FP8`.
-That process started before the cost file existed, so it will not write `cost.json`.
-The log shows `Request timed out` during day speeches, then later speeches succeed.
-The paste has no clock times, so the wait is not measured.
-The next service run prefixes each log line with the local time and prints the elapsed seconds of each model call.
-The current VM process does not have that code.
-Do not restart it to collect times.
-A second game is not started on that endpoint while those timeouts continue.
-On 2026-09-26, check that service game, then probe `Qwen/Qwen3.6-35B` with one tool call.
-If that call times out, probe `zai-org/GLM-5.3`.
-Both arms keep the same model name.
-The current game stays on `Qwen/Qwen3.8-27B-FP8`.
+The Qwen pilot finished on the VM as `game_20260924_210523_Werewolves_win`.
+Werewolves won on day 4.
+It has no `cost.json` and no per-call times, because that process started before those writers.
+MARBLE renamed the game folder at the end, so the gap writer missed `truth.json` on the VM.
+`game_directory` follows that renamed folder.
+The local score is entropy gap about 0.118 and modularity gap 0.
+Exile votes for days 1 to 4 match the truth file.
+Modularity is 0 because each day has one voting bloc.
+Operators say Qwen/Qwen3.8-27B-FP8 is the slowest model on the proxy.
+The pair uses moonshotai/Kimi-K3 on both arms.
+
+On the evening of 2026-09-25 a pair is running on the VM.
+`run_werewolf_pair.sh` starts the DOAgent game, then the service game, with `.wvenv/bin/python`.
+Each game writes its own log under `experiments/multiagentbench/werewolf_runs/`.
+Do not restart that pair.
+The DOAgent truth file has reached night 2 with all nine players alive.
+Night 1 had no wolf target and no protection.
+Day 1 elected no sheriff and exiled nobody.
+Most day-1 votes are abstentions.
+Night 2 targeted Priscilla, Stephanie was protected, and the deaths list is empty, so the witch saved herself.
+Some model calls return in about a minute.
+Others return in 0.1 seconds with no tool call, and `call_model` stores an empty action.
+The service runner retries those failures.
+The DOAgent runner does not.
+Session records are flushed when the DOAgent game closes.
+Until then, `latest/truth.json` is the progress file.
 
 ### 2026-09-24
 

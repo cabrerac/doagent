@@ -32,7 +32,7 @@ Do not import their environment class or their agent class.
 
 `run_werewolf_doagent.py`, `werewolf_doagent.py`, `werewolf_session.py`, and `werewolf_player.py` are the DOAgent side.
 The environment plays the night and the day.
-A live model game has not been scored yet.
+A live model game is running on the VM and has not been scored yet.
 
 ## Acceptance Criteria
 
@@ -66,6 +66,17 @@ The published prompt files stay unchanged.
 
 ### 2026-09-25
 
+A Kimi pair is running on the VM.
+The DOAgent game is first.
+Its truth file has reached night 2.
+All nine players are still alive.
+Night 1 and most day-1 votes look like empty model replies.
+Night 2 shows a real wolf target, a real guard, and a witch save.
+`call_model` does not retry an empty tool response.
+The session files appear when that game closes.
+The service game has not started.
+The Qwen service pilot is scored on CIP-0014 and is not this task.
+
 The night, the day, the sheriff, the badge, and the exile vote are in the environment.
 The truth file is rewritten while the game runs.
 Entropy uses outcome lines.
@@ -73,9 +84,7 @@ Modularity uses exile votes stored on `agent_update`.
 `cost.json` is written for a DOAgent run and for a service run.
 Tests pass.
 The next service run stamps each log line and each model call.
-The VM game is left running without that change.
-A live model game is still open.
-The service game on the VM is ahead of this task and is tracked on CIP-0014.
+The DOAgent runner now stamps lines the same way.
 
 ### 2026-09-24
 
