@@ -13,6 +13,7 @@ import os
 import sys
 import time
 import types
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
@@ -62,6 +63,7 @@ def main(argv: Optional[list[str]] = None) -> None:
 
     previous = Path.cwd()
     os.chdir(MARBLE_ROOT)
+    originals = install_timestamps()
     try:
         for index in range(args.rounds):
             game_name = args.name if args.rounds == 1 else f"{args.name}_{index + 1}"
@@ -78,6 +80,7 @@ def main(argv: Optional[list[str]] = None) -> None:
                 _write_game_gap(env)
                 _write_game_cost(env, wall_seconds, usage)
     finally:
+        restore_timestamps(originals)
         os.chdir(previous)
 
 
@@ -155,9 +158,104 @@ def _install_call_retry(agent_cls: Any) -> None:
     original = agent_cls.gpt_tool_call
 
     def gpt_tool_call(self: Any, messages: Any, tools: Any) -> Any:
-        return call_with_retry(lambda: original(self, messages, tools))
+        print("Model call started.", flush=True)
+        started = time.perf_counter()
+        try:
+            return call_with_retry(lambda: original(self, messages, tools))
+        finally:
+            elapsed = time.perf_counter() - started
+            print(f"Model call finished in {elapsed:.1f}s.", flush=True)
 
     agent_cls.gpt_tool_call = gpt_tool_call
+
+
+def stamp_line(line: str, now: datetime) -> str:
+    """Prefix one log line with the local time.
+
+    Args:
+        line: Text written by the game.
+        now: Clock time for this line.
+
+    Returns:
+        The line with an hour-minute-second prefix.
+    """
+    return f"{now.strftime('%H:%M:%S')} {line}"
+
+
+def timed_call(operation: Callable[[], Any], clock: Callable[[], float] = time.perf_counter) -> tuple:
+    """Run one call and return its value with the elapsed seconds.
+
+    Args:
+        operation: The call to time.
+        clock: Monotonic clock. Tests pass a fake clock.
+
+    Returns:
+        The operation value and the elapsed seconds.
+
+    Raises:
+        Exception: The exception raised by operation.
+    """
+    started = clock()
+    value = operation()
+    return value, clock() - started
+
+
+class StampingStream:
+    """Write each complete line with a time prefix."""
+
+    def __init__(self, underlying: Any, clock: Callable[[], datetime] = datetime.now) -> None:
+        """Store the real stream and the clock.
+
+        Args:
+            underlying: Stream that receives stamped lines.
+            clock: Returns the local time for a line.
+        """
+        self._underlying = underlying
+        self._clock = clock
+        self._pending = ""
+
+    def write(self, text: str) -> int:
+        """Stamp each full line and keep a partial line in the buffer.
+
+        Args:
+            text: Text passed to print or write.
+
+        Returns:
+            The number of characters accepted.
+        """
+        self._pending += text
+        while "\n" in self._pending:
+            line, self._pending = self._pending.split("\n", 1)
+            self._underlying.write(stamp_line(line, self._clock()) + "\n")
+        return len(text)
+
+    def flush(self) -> None:
+        """Flush the underlying stream."""
+        self._underlying.flush()
+
+
+def install_timestamps(clock: Callable[[], datetime] = datetime.now) -> tuple:
+    """Prefix stdout and stderr lines with the local time.
+
+    Args:
+        clock: Returns the local time for a line.
+
+    Returns:
+        The previous stdout and stderr.
+    """
+    originals = (sys.stdout, sys.stderr)
+    sys.stdout = StampingStream(sys.stdout, clock)
+    sys.stderr = StampingStream(sys.stderr, clock)
+    return originals
+
+
+def restore_timestamps(originals: tuple) -> None:
+    """Put the original stdout and stderr back.
+
+    Args:
+        originals: The pair returned by install_timestamps.
+    """
+    sys.stdout, sys.stderr = originals
 
 
 def note_usage(response: Any, sink: Dict[str, Any]) -> None:

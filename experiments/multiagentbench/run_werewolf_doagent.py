@@ -313,6 +313,8 @@ def call_model(messages: list, tools: list) -> Dict[str, Any]:
     """
     from openai import OpenAI
 
+    print("Model call started.", flush=True)
+    started = time.perf_counter()
     client = OpenAI(api_key=proxy_api_key(), base_url=PROXY_BASE_URL)
     response = client.chat.completions.create(
         model=SERVICE_MODEL,
@@ -320,6 +322,7 @@ def call_model(messages: list, tools: list) -> Dict[str, Any]:
         tools=tools,
         tool_choice="required",
     )
+    print(f"Model call finished in {time.perf_counter() - started:.1f}s.", flush=True)
     message = response.choices[0].message
     arguments: Dict[str, Any] = {}
     if message.tool_calls:

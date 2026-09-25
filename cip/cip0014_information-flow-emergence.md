@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-09-24"
 id: "0014"
-last_updated: "2026-09-24"
+last_updated: "2026-09-25"
 status: "Accepted"
 compressed: false
 related_requirements: []
@@ -209,24 +209,37 @@ The attribution study this paper is not doing is CIP-0012.
 - [ ] Mean gap and spread of gaps for both sets
 - [ ] Discussion note on information topography
 
+### 2026-09-25
+
+The DOAgent environment owns the night, the day, the sheriff, the badge, and the exile vote.
+It does not import the MARBLE environment or agent.
+Prompts, tool schemas, and the model name are loaded as data.
+The truth file is rewritten after every step.
+Recovery reads the session records and does not read the truth file to find those points.
+Outcome lines feed entropy.
+Exile votes on `agent_update` feed modularity.
+Both runners write `cost.json` with storage, file count, tokens, and wall time.
+Tests cover visibility, the night, the day, the badge, the truth timing, the modularity gap, and the cost file.
+No live DOAgent model game has been scored.
+
+One service game is running on the VM on `Qwen/Qwen3.8-27B-FP8`.
+That process started before the cost file existed, so it will not write `cost.json`.
+The log shows `Request timed out` during day speeches, then later speeches succeed.
+The paste has no clock times, so the wait is not measured.
+The next service run prefixes each log line with the local time and prints the elapsed seconds of each model call.
+The current VM process does not have that code.
+Do not restart it to collect times.
+A second game is not started on that endpoint while those timeouts continue.
+On 2026-09-26, check that service game, then probe `Qwen/Qwen3.6-35B` with one tool call.
+If that call times out, probe `zai-org/GLM-5.3`.
+Both arms keep the same model name.
+The current game stays on `Qwen/Qwen3.8-27B-FP8`.
+
 ### 2026-09-24
 
 Entropy, modularity, the truth file, log recovery, model-call retries, and Linux prompt paths are in the service runner.
 One service game on the group VM wrote about 8.1G during Night 1 and stopped with no space left on the disk.
 That game is discarded.
-A later service game was started after the prompt-path fix.
-It is not a finished scored game.
-
-`run_werewolf_doagent.py`, `werewolf_doagent.py`, `werewolf_session.py`, and `werewolf_player.py` no longer call MARBLE's environment or agent.
-The first slice asks the living wolves for one target.
-That line is stored on the outcome.
-A villager's read does not contain it.
-The environment code owns the rules.
-The published prompt files, tool schemas, and model name are loaded as data.
-The game line is a field on the outcome.
-The decision, and at logging level 2 the explanation, stay on the agent update.
-The first code slice is one wolf ask and the visibility test.
-The rest of the night and the day are not in that slice.
 
 ## References
 

@@ -4,11 +4,15 @@ import builtins
 import types
 import unittest
 
+from datetime import datetime
+
 from experiments.multiagentbench.run_werewolf_service import (
     _install_prompt_paths,
     call_with_retry,
     note_usage,
     posix_path,
+    stamp_line,
+    timed_call,
 )
 
 
@@ -67,6 +71,17 @@ class CallRetryTests(unittest.TestCase):
         note_usage(types.SimpleNamespace(usage=None), sink)
         self.assertEqual(sink["tokens"], 12)
         self.assertTrue(sink["reported"])
+
+    def test_stamped_line_starts_with_the_time(self) -> None:
+        text = stamp_line("Night 1 begins", datetime(2026, 9, 25, 1, 55, 1))
+        self.assertTrue(text.startswith("01:55:01 "))
+        self.assertIn("Night 1 begins", text)
+
+    def test_finished_call_reports_elapsed_seconds(self) -> None:
+        ticks = iter([10.0, 12.5])
+        value, elapsed = timed_call(lambda: "ok", clock=lambda: next(ticks))
+        self.assertEqual(value, "ok")
+        self.assertEqual(elapsed, 2.5)
 
     def test_raises_after_the_last_attempt(self) -> None:
         def operation() -> None:

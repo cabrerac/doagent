@@ -4,7 +4,7 @@ title: "Implement Werewolf as a DOAgent game"
 status: "In Progress"
 priority: "High"
 created: "2026-09-24"
-last_updated: "2026-09-24"
+last_updated: "2026-09-25"
 category: "features"
 related_cips:
 - "0014"
@@ -31,16 +31,18 @@ The published prompt files, tool schemas, and model name are loaded as data.
 Do not import their environment class or their agent class.
 
 `run_werewolf_doagent.py`, `werewolf_doagent.py`, `werewolf_session.py`, and `werewolf_player.py` are the DOAgent side.
-The first slice asks the living wolves for one target and records that line on the outcome.
+The environment plays the night and the day.
+A live model game has not been scored yet.
 
 ## Acceptance Criteria
 
-- [ ] Night order, day vote, roles, and prompts match the published Werewolf game.
-- [ ] A player reads a line only from the session, and only when that line names the player.
-- [ ] No event bus from MARBLE is on the path a player uses to read or send a line.
-- [ ] The truth file is written while the game runs.
-- [ ] The curves are rebuilt from the session after the game.
+- [x] Night order, day vote, roles, and prompts match the published Werewolf game.
+- [x] A player reads a line only from the session, and only when that line names the player.
+- [x] No event bus from MARBLE is on the path a player uses to read or send a line.
+- [x] The truth file is written while the game runs.
+- [x] The curves are rebuilt from the session after the game.
 - [x] A test shows a wolf line in the wolves' session view and absent from a villager's view.
+- [ ] One live model game writes truth, gap, and cost.
 
 ## Implementation Notes
 
@@ -61,6 +63,19 @@ The published prompt files stay unchanged.
 - CIP: 0014
 
 ## Progress Updates
+
+### 2026-09-25
+
+The night, the day, the sheriff, the badge, and the exile vote are in the environment.
+The truth file is rewritten while the game runs.
+Entropy uses outcome lines.
+Modularity uses exile votes stored on `agent_update`.
+`cost.json` is written for a DOAgent run and for a service run.
+Tests pass.
+The next service run stamps each log line and each model call.
+The VM game is left running without that change.
+A live model game is still open.
+The service game on the VM is ahead of this task and is tracked on CIP-0014.
 
 ### 2026-09-24
 
