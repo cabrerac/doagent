@@ -78,3 +78,4 @@ docs/protocol_tree_circular.png
 # Upstream MultiAgentBench checkout used by the service run
 experiments/multiagentbench/MARBLE/
 experiments/multiagentbench/*.generated.yaml
+experiments/multiagentbench/werewolf_runs/*
