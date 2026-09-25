@@ -27,7 +27,7 @@ title: "Information Flow on MultiAgentBench (Service vs DOAgent)"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [ ] In Progress - Actively being implemented
+- [x] In Progress - Actively being implemented
 - [ ] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
@@ -152,8 +152,16 @@ Do not treat graph entropy as a reproduction of Lawrence's Fisher geometry.
    - Rebuild the entropy curve and the modularity curve from the player logs only.
 
 3. **DOAgent runs.**
-   - Run the same roles and rules, n times, with each decision appended to the session.
-   - Players still read only messages addressed to them.
+   - The environment owns the rules: roles, who is alive, night order, and the day vote.
+   - Load the published prompt files, tool schemas, and model name as data.
+   - Do not import their environment class or their agent class.
+   - Run the same roles and rules, n times.
+   - Each player reads earlier outcome lines from the session, and only lines whose recipient list names that player.
+   - The environment writes that line on the outcome: speaker, recipients, and the text the rules allow.
+   - The player writes the decision on the agent update.
+   - Logging levels follow the library. Level 0 keeps the outcome and the decision. Level 1 adds the trace, provenance, and accountability. Level 2 also keeps the explanation and the reasoning.
+   - At level 2 the player adds one explanation instruction beside the loaded prompt. The published prompt files stay unchanged.
+   - The explanation stays on the agent update. It is not copied onto the outcome line.
    - While the game plays, write the same kind of truth file.
    - Rebuild the curves from the session only.
    - The session has to be the record that run wrote, not a copy of the truth file made afterwards.
@@ -200,6 +208,25 @@ The attribution study this paper is not doing is CIP-0012.
 - [ ] DOAgent runs with a truth file and session-only recovery
 - [ ] Mean gap and spread of gaps for both sets
 - [ ] Discussion note on information topography
+
+### 2026-09-24
+
+Entropy, modularity, the truth file, log recovery, model-call retries, and Linux prompt paths are in the service runner.
+One service game on the group VM wrote about 8.1G during Night 1 and stopped with no space left on the disk.
+That game is discarded.
+A later service game was started after the prompt-path fix.
+It is not a finished scored game.
+
+`run_werewolf_doagent.py`, `werewolf_doagent.py`, `werewolf_session.py`, and `werewolf_player.py` no longer call MARBLE's environment or agent.
+The first slice asks the living wolves for one target.
+That line is stored on the outcome.
+A villager's read does not contain it.
+The environment code owns the rules.
+The published prompt files, tool schemas, and model name are loaded as data.
+The game line is a field on the outcome.
+The decision, and at logging level 2 the explanation, stay on the agent update.
+The first code slice is one wolf ask and the visibility test.
+The rest of the night and the day are not in that slice.
 
 ## References
 

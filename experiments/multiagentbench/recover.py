@@ -1,7 +1,8 @@
-"""Rebuild entropy and modularity from participant logs.
+"""Rebuild entropy and modularity from the records a run left.
 
-A fact missing from every log counts as a total miss.
-A participant with no vote line counts as a total miss.
+A fact missing from every record counts as a total miss.
+A participant with no vote in those records counts as a total miss.
+The truth file is not one of those records.
 """
 
 from __future__ import annotations
@@ -139,6 +140,63 @@ def entropy_from_logs(
     if not holders:
         return None
     return entropy(len(holders), population_size)
+
+
+def choice_from_update(record: Any) -> Optional[tuple[str, str]]:
+    """Return one exile vote stored on an agent update.
+
+    Args:
+        record: An agent_update record.
+
+    Returns:
+        The actor and the vote label.
+        None when the record is not an exile vote.
+    """
+    payload = record.payload if hasattr(record, "payload") else record
+    if not isinstance(payload, Mapping):
+        return None
+    decision = payload.get("decision") or {}
+    request = decision.get("request") or {}
+    inputs = request.get("inputs") or {}
+    observation = inputs.get("observation") or {}
+    if observation.get("action") != "vote_action":
+        return None
+    response = decision.get("response") or {}
+    action = (response.get("choice") or {}).get("action") or {}
+    nested = action.get("action")
+    source = nested if isinstance(nested, Mapping) else action
+    vote = source.get("action_vote") if isinstance(source, Mapping) else None
+    if not vote:
+        return None
+    actor = getattr(record, "actor", None) or payload.get("actor")
+    if not actor:
+        return None
+    return str(actor), str(vote)
+
+
+def vote_rounds(updates: Sequence[Any]) -> list[dict[str, str]]:
+    """Return each exile vote grouped into one round.
+
+    Args:
+        updates: Agent update records in the order they were written.
+
+    Returns:
+        One map of actor to vote label per day vote.
+    """
+    rounds: list[dict[str, str]] = []
+    current: dict[str, str] = {}
+    for record in updates:
+        picked = choice_from_update(record)
+        if picked is None:
+            if current:
+                rounds.append(current)
+                current = {}
+            continue
+        actor, vote = picked
+        current[actor] = vote
+    if current:
+        rounds.append(current)
+    return rounds
 
 
 def choices_from_logs(

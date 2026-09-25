@@ -57,6 +57,8 @@ def main(argv: Optional[list[str]] = None) -> None:
 
     _install_call_retry(WerewolfAgent)
     _install_prompt_paths(werewolf_agent_module)
+    usage: Dict[str, Any] = {"tokens": 0, "reported": False}
+    _install_token_counter(werewolf_agent_module, usage)
 
     previous = Path.cwd()
     os.chdir(MARBLE_ROOT)
@@ -66,10 +68,15 @@ def main(argv: Optional[list[str]] = None) -> None:
             env = WerewolfEnv(name=game_name, config_path=str(config_path))
             _attach_truth(env)
             print(f"Starting game: {game_name}", flush=True)
+            usage["tokens"] = 0
+            usage["reported"] = False
+            started = time.perf_counter()
             try:
                 env.start()
             finally:
+                wall_seconds = time.perf_counter() - started
                 _write_game_gap(env)
+                _write_game_cost(env, wall_seconds, usage)
     finally:
         os.chdir(previous)
 
@@ -151,6 +158,62 @@ def _install_call_retry(agent_cls: Any) -> None:
         return call_with_retry(lambda: original(self, messages, tools))
 
     agent_cls.gpt_tool_call = gpt_tool_call
+
+
+def note_usage(response: Any, sink: Dict[str, Any]) -> None:
+    """Add one completion's token total to the running sum.
+
+    Args:
+        response: Model response. Usage may be missing.
+        sink: Mutable totals with tokens and reported.
+    """
+    usage = getattr(response, "usage", None)
+    total = getattr(usage, "total_tokens", None) if usage is not None else None
+    if total is None:
+        return
+    sink["tokens"] = int(sink.get("tokens", 0)) + int(total)
+    sink["reported"] = True
+
+
+def _install_token_counter(agent_module: Any, sink: Dict[str, Any]) -> None:
+    """Count tokens on each client the agent module builds.
+
+    Args:
+        agent_module: Module that constructs the model client.
+        sink: Mutable totals updated by note_usage.
+    """
+    original = agent_module.OpenAI
+
+    def counting_client(*args: Any, **kwargs: Any) -> Any:
+        client = original(*args, **kwargs)
+        create = client.chat.completions.create
+
+        def wrapped(*call_args: Any, **call_kwargs: Any) -> Any:
+            response = create(*call_args, **call_kwargs)
+            note_usage(response, sink)
+            return response
+
+        client.chat.completions.create = wrapped
+        return client
+
+    agent_module.OpenAI = counting_client
+
+
+def _write_game_cost(env: Any, wall_seconds: float, usage: Dict[str, Any]) -> None:
+    """Write the cost file for one service game.
+
+    Args:
+        env: The Werewolf environment for this game.
+        wall_seconds: Seconds spent in the game.
+        usage: Token totals collected during the game.
+    """
+    from experiments.multiagentbench.run_werewolf_doagent import write_cost
+
+    path = getattr(env, "shared_memory_path", None)
+    if not path:
+        return
+    tokens = usage["tokens"] if usage.get("reported") else None
+    write_cost(Path(path).parent, wall_seconds, tokens)
 
 
 def _attach_truth(env: Any) -> None:

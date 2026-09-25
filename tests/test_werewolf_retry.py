@@ -7,6 +7,7 @@ import unittest
 from experiments.multiagentbench.run_werewolf_service import (
     _install_prompt_paths,
     call_with_retry,
+    note_usage,
     posix_path,
 )
 
@@ -58,6 +59,14 @@ class CallRetryTests(unittest.TestCase):
         self.assertEqual(result, "ok")
         self.assertEqual(tries["count"], 3)
         self.assertEqual(waits, [20, 40])
+
+    def test_completion_usage_adds_to_the_token_sum(self) -> None:
+        sink = {"tokens": 0, "reported": False}
+        response = types.SimpleNamespace(usage=types.SimpleNamespace(total_tokens=12))
+        note_usage(response, sink)
+        note_usage(types.SimpleNamespace(usage=None), sink)
+        self.assertEqual(sink["tokens"], 12)
+        self.assertTrue(sink["reported"])
 
     def test_raises_after_the_last_attempt(self) -> None:
         def operation() -> None:

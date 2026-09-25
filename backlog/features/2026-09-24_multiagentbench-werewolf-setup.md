@@ -75,7 +75,8 @@ Cannot match as published.
 `scripts/werewolf/run_simulation.sh` is truncated in the repository and is not a valid command.
 The code default `--config_path` points at `werewolf_config_4o.yaml`, which is not in the repository tree.
 The yaml the readme names, and the one recorded above, is the file to load.
-No game has been started.
+The service runner has been started.
+No finished scored game is recorded yet.
 
 ## Implementation Notes
 
@@ -98,4 +99,7 @@ The published config names gpt-4o.
 Both runs will use Qwen/Qwen3.8-27B-FP8 instead, and that is recorded in CIP-0014.
 The published launch script is truncated.
 Werewolf has no coordination graph in code.
-The settings are recorded above, and no game was started.
+The settings are recorded above.
+A service game was started later.
+The DOAgent files added the same day still call MARBLE's bus.
+They do not implement the DOAgent read path described above.
