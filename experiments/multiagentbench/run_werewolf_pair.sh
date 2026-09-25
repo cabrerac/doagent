@@ -6,6 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 export PYTHONUNBUFFERED=1
+PYTHON="${ROOT}/.wvenv/bin/python"
 
 MODEL="${1:-moonshotai/Kimi-K3}"
 NAME="${2:-werewolf_kimi_1}"
@@ -17,7 +18,7 @@ note() {
 }
 
 note "DOAgent started. Model ${MODEL}."
-if ! python -m experiments.multiagentbench.run_werewolf_doagent \
+if ! "$PYTHON" -m experiments.multiagentbench.run_werewolf_doagent \
   --model "$MODEL" \
   --logging-level 2 \
   > "${LOG_DIR}/${NAME}_doagent.log" \
@@ -29,7 +30,7 @@ fi
 note "DOAgent finished."
 
 note "Service started. Name ${NAME}."
-if ! python -m experiments.multiagentbench.run_werewolf_service \
+if ! "$PYTHON" -m experiments.multiagentbench.run_werewolf_service \
   --name "$NAME" \
   --model "$MODEL" \
   > "${LOG_DIR}/${NAME}_service.log" \
