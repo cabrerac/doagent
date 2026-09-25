@@ -13,6 +13,7 @@ from experiments.multiagentbench.run_werewolf_service import (
     posix_path,
     stamp_line,
     timed_call,
+    game_directory,
 )
 
 
@@ -82,6 +83,17 @@ class CallRetryTests(unittest.TestCase):
         value, elapsed = timed_call(lambda: "ok", clock=lambda: next(ticks))
         self.assertEqual(value, "ok")
         self.assertEqual(elapsed, 2.5)
+
+    def test_renamed_folder_is_used_when_the_original_is_gone(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        root = Path(tempfile.mkdtemp())
+        renamed = root / "game_1_Werewolves_win"
+        renamed.mkdir()
+        (renamed / "truth.json").write_text("{}", encoding="utf-8")
+        stored = root / "game_1" / "shared_memory.json"
+        self.assertEqual(game_directory(str(stored)), renamed)
 
     def test_raises_after_the_last_attempt(self) -> None:
         def operation() -> None:

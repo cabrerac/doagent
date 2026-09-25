@@ -33,7 +33,7 @@ PUBLISHED_CONFIG = (
     / "werewolf_config"
     / "werewolf_config.yaml"
 )
-SERVICE_MODEL = "Qwen/Qwen3.8-27B-FP8"
+SERVICE_MODEL = "moonshotai/Kimi-K3"
 
 
 def main(argv: Optional[list[str]] = None) -> None:
@@ -48,10 +48,11 @@ def main(argv: Optional[list[str]] = None) -> None:
     )
     parser.add_argument("--rounds", type=int, default=1)
     parser.add_argument("--name", default="werewolf_service")
+    parser.add_argument("--model", default=SERVICE_MODEL)
     args = parser.parse_args(argv)
     if args.rounds < 1:
         raise ValueError("Rounds must be at least 1.")
-    config_path = _write_service_config()
+    config_path = _write_service_config(args.model)
     WerewolfEnv = _load_werewolf_env()
     from marble.agent import werewolf_agent as werewolf_agent_module
     from marble.agent.werewolf_agent import WerewolfAgent
@@ -297,6 +298,29 @@ def _install_token_counter(agent_module: Any, sink: Dict[str, Any]) -> None:
     agent_module.OpenAI = counting_client
 
 
+def game_directory(shared_memory_path: str) -> Path:
+    """Return the folder that holds the finished game.
+
+    Args:
+        shared_memory_path: Path MARBLE stored. It may name the folder from before the rename.
+
+    Returns:
+        The folder that contains truth.json.
+        The stored folder when that file is still there.
+    """
+    stored = Path(shared_memory_path).parent
+    if (stored / "truth.json").is_file():
+        return stored
+    matches = [
+        item
+        for item in stored.parent.glob(stored.name + "_*")
+        if item.is_dir() and (item / "truth.json").is_file()
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    return stored
+
+
 def _write_game_cost(env: Any, wall_seconds: float, usage: Dict[str, Any]) -> None:
     """Write the cost file for one service game.
 
@@ -311,7 +335,7 @@ def _write_game_cost(env: Any, wall_seconds: float, usage: Dict[str, Any]) -> No
     if not path:
         return
     tokens = usage["tokens"] if usage.get("reported") else None
-    write_cost(Path(path).parent, wall_seconds, tokens)
+    write_cost(game_directory(path), wall_seconds, tokens)
 
 
 def _attach_truth(env: Any) -> None:
@@ -345,7 +369,7 @@ def _write_game_gap(env: Any) -> None:
     Args:
         env: The Werewolf environment for this game.
     """
-    directory = Path(env.shared_memory_path).parent
+    directory = game_directory(env.shared_memory_path)
     truth_path = directory / "truth.json"
     if not truth_path.is_file():
         return
@@ -358,8 +382,11 @@ def _write_game_gap(env: Any) -> None:
     )
 
 
-def _write_service_config() -> Path:
+def _write_service_config(model: str = SERVICE_MODEL) -> Path:
     """Copy their yaml and set the university model on both sides.
+
+    Args:
+        model: Model name written into both sides of the config.
 
     Returns:
         Path of the generated config, next to the MARBLE checkout.
@@ -381,7 +408,7 @@ def _write_service_config() -> Path:
         block: Dict[str, Any] = dict(published.get(side) or {})
         block["base_url"] = base_url
         block["api_key"] = key
-        block["model_name"] = SERVICE_MODEL
+        block["model_name"] = model
         published[side] = block
     published["openai_api_key"] = key
     published["system_prompt_path"] = (

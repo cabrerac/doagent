@@ -26,7 +26,11 @@ from experiments.multiagentbench.recover import (
     vote_rounds,
     write_gap,
 )
-from experiments.multiagentbench.run_werewolf_service import SERVICE_MODEL
+from experiments.multiagentbench.run_werewolf_service import (
+    SERVICE_MODEL,
+    install_timestamps,
+    restore_timestamps,
+)
 from experiments.multiagentbench.truth import read_truth, write_truth
 from experiments.multiagentbench.werewolf_doagent import WerewolfEnv
 from experiments.multiagentbench.werewolf_player import werewolf_policy
@@ -266,47 +270,53 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--logging-level", type=int, default=2, choices=(0, 1, 2))
     parser.add_argument("--max-days", type=int, default=10)
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument("--model", default=SERVICE_MODEL)
     args = parser.parse_args(argv)
     roles = assign_roles(args.seed)
     latest = OUTPUT_BASE / "latest"
     usage = {"tokens": 0, "reported": False}
 
     def counted(messages: list, tools: list) -> Dict[str, Any]:
-        raw = call_model(messages, tools)
+        raw = call_model(messages, tools, args.model)
         if raw.get("tokens") is not None:
             usage["tokens"] += int(raw["tokens"])
             usage["reported"] = True
         return raw
 
+    originals = install_timestamps()
     started = time.perf_counter()
-    session = play(
-        roles,
-        args.logging_level,
-        counted,
-        max_days=args.max_days,
-        shared_data={"type": "file"},
-        scenario_name="werewolf_doagent",
-        output_base=str(OUTPUT_BASE),
-        truth_path=latest / "truth.json",
-    )
-    wall_seconds = time.perf_counter() - started
     try:
-        write_run_artifacts(session, roles, latest)
-        write_cost(
-            OUTPUT_BASE,
-            wall_seconds,
-            usage["tokens"] if usage["reported"] else None,
+        session = play(
+            roles,
+            args.logging_level,
+            counted,
+            max_days=args.max_days,
+            shared_data={"type": "file"},
+            scenario_name="werewolf_doagent",
+            output_base=str(OUTPUT_BASE),
+            truth_path=latest / "truth.json",
         )
+        wall_seconds = time.perf_counter() - started
+        try:
+            write_run_artifacts(session, roles, latest)
+            write_cost(
+                OUTPUT_BASE,
+                wall_seconds,
+                usage["tokens"] if usage["reported"] else None,
+            )
+        finally:
+            session.close()
     finally:
-        session.close()
+        restore_timestamps(originals)
 
 
-def call_model(messages: list, tools: list) -> Dict[str, Any]:
+def call_model(messages: list, tools: list, model: str = SERVICE_MODEL) -> Dict[str, Any]:
     """Call the university model with the published tools.
 
     Args:
         messages: System and user messages.
         tools: Tool schemas from the published prompt file.
+        model: Model name sent to the proxy.
 
     Returns:
         The tool arguments, and the message text as the explanation.
@@ -317,7 +327,7 @@ def call_model(messages: list, tools: list) -> Dict[str, Any]:
     started = time.perf_counter()
     client = OpenAI(api_key=proxy_api_key(), base_url=PROXY_BASE_URL)
     response = client.chat.completions.create(
-        model=SERVICE_MODEL,
+        model=model,
         messages=messages,
         tools=tools,
         tool_choice="required",
