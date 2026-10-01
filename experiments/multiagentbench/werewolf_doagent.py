@@ -8,6 +8,7 @@ A sheriff who dies at night or is exiled decides who receives the badge.
 
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Mapping, Optional
 
 
@@ -133,7 +134,7 @@ class WerewolfEnv:
                 self.asked = players
                 self.action_name = _ACTION_NAMES[self._phase]
                 return {
-                    player_id: {"action": self.action_name}
+                    player_id: self._observation(player_id)
                     for player_id in players
                 }
             self._phase = _next_phase(self._phase)
@@ -141,6 +142,53 @@ class WerewolfEnv:
         self.action_name = ""
         self.finished = True
         return {}
+
+    def _observation(self, player_id: str) -> Dict[str, Any]:
+        """Return the action name, the game state, and any role-specific facts.
+
+        Args:
+            player_id: Player who will receive this ask.
+
+        Returns:
+            Fields the published prompt placeholders expect.
+        """
+        return {
+            "action": self.action_name,
+            "game_state": json.dumps(self._game_state(), indent=2),
+            "player_info": self._player_info(player_id),
+        }
+
+    def _game_state(self) -> Dict[str, Any]:
+        """Return the day, the period, the living players, and the sheriff."""
+        return {
+            "days": self._day,
+            "day/night": self._period(),
+            "alive_players": list(self._alive),
+            "sheriff": self._sheriff,
+        }
+
+    def _period(self) -> str:
+        """Return night or day for the current phase."""
+        if self._phase in _NIGHT_PHASES:
+            return "night"
+        if self._phase == "badge_flow" and self._after_badge == "day":
+            return "night"
+        return "day"
+
+    def _player_info(self, player_id: str) -> str:
+        """Return the living roster for a wolf, and an empty string otherwise.
+
+        Args:
+            player_id: Player who will receive this ask.
+
+        Returns:
+            Alive players and alive wolves, for a wolf.
+        """
+        if self._roles.get(player_id) != "wolf":
+            return ""
+        alive = ", ".join(self._alive)
+        wolves = ", ".join(self.living("wolf"))
+        return f"Alive players: {alive}\nAlive werewolves: {wolves}"
 
     def _players_for_phase(self) -> list[str]:
         """Return the player ids the current phase asks."""
@@ -568,6 +616,15 @@ class WerewolfEnv:
         self._final_target = None
         self._dead = []
         self._speech_order = []
+
+
+_NIGHT_PHASES = {
+    "guard",
+    "werewolf_action",
+    "werewolf_discussion",
+    "seer",
+    "witch",
+}
 
 
 _ACTION_NAMES = {

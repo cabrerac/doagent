@@ -105,7 +105,12 @@ def werewolf_policy(
             observation = request["inputs"].get("observation") or {}
             action_name = observation.get("action", "werewolf_action")
             prompt = load_prompt(action_name)
-            user = fill_prompt(prompt["user"], read_lines(), "", "")
+            user = fill_prompt(
+                prompt["user"],
+                read_lines(),
+                str(observation.get("game_state", "")),
+                str(observation.get("player_info", "")),
+            )
             if logging_level >= 2:
                 user = f"{user}\n\n{EXPLANATION_INSTRUCTION}"
             messages = [

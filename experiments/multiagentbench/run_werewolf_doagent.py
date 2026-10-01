@@ -28,6 +28,7 @@ from experiments.multiagentbench.recover import (
 )
 from experiments.multiagentbench.run_werewolf_service import (
     SERVICE_MODEL,
+    call_with_retry,
     install_timestamps,
     restore_timestamps,
 )
@@ -310,8 +311,32 @@ def main(argv: list[str] | None = None) -> None:
         restore_timestamps(originals)
 
 
+def accept_model_reply(
+    has_tool_call: bool,
+    elapsed: float,
+    minimum_seconds: float = 1.0,
+) -> None:
+    """Raise when a model reply cannot be stored.
+
+    Args:
+        has_tool_call: Whether the reply included a tool call.
+        elapsed: Seconds the round trip took.
+        minimum_seconds: Fastest reply that can be kept.
+
+    Raises:
+        RuntimeError: The reply had no tool call, or it returned too quickly.
+    """
+    if not has_tool_call:
+        raise RuntimeError("model reply had no tool call")
+    if elapsed < minimum_seconds:
+        raise RuntimeError(f"model reply returned in {elapsed:.1f}s")
+
+
 def call_model(messages: list, tools: list, model: str = SERVICE_MODEL) -> Dict[str, Any]:
     """Call the university model with the published tools.
+
+    A reply with no tool call is tried again.
+    A reply that returns in under a second is tried again.
 
     Args:
         messages: System and user messages.
@@ -320,27 +345,34 @@ def call_model(messages: list, tools: list, model: str = SERVICE_MODEL) -> Dict[
 
     Returns:
         The tool arguments, and the message text as the explanation.
+
+    Raises:
+        RuntimeError: Every attempt was rejected.
     """
     from openai import OpenAI
 
-    print("Model call started.", flush=True)
-    started = time.perf_counter()
     client = OpenAI(api_key=proxy_api_key(), base_url=PROXY_BASE_URL)
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        tools=tools,
-        tool_choice="required",
-    )
-    print(f"Model call finished in {time.perf_counter() - started:.1f}s.", flush=True)
-    message = response.choices[0].message
-    arguments: Dict[str, Any] = {}
-    if message.tool_calls:
+
+    def once() -> Dict[str, Any]:
+        print("Model call started.", flush=True)
+        started = time.perf_counter()
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            tools=tools,
+            tool_choice="required",
+        )
+        elapsed = time.perf_counter() - started
+        print(f"Model call finished in {elapsed:.1f}s.", flush=True)
+        message = response.choices[0].message
+        accept_model_reply(bool(message.tool_calls), elapsed)
         arguments = json.loads(message.tool_calls[0].function.arguments)
-    total = None
-    if response.usage is not None:
-        total = response.usage.total_tokens
-    return {"action": arguments, "explanation": message.content or "", "tokens": total}
+        total = None
+        if response.usage is not None:
+            total = response.usage.total_tokens
+        return {"action": arguments, "explanation": message.content or "", "tokens": total}
+
+    return call_with_retry(once)
 
 
 if __name__ == "__main__":

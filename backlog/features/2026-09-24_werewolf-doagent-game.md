@@ -4,7 +4,7 @@ title: "Implement Werewolf as a DOAgent game"
 status: "In Progress"
 priority: "High"
 created: "2026-09-24"
-last_updated: "2026-09-25"
+last_updated: "2026-10-01"
 category: "features"
 related_cips:
 - "0014"
@@ -63,6 +63,12 @@ The published prompt files stay unchanged.
 - CIP: 0014
 
 ## Progress Updates
+
+### 2026-10-01
+
+The AAMAS 2027 abstract was submitted.
+This task is still the live DOAgent game.
+That game had not been scored by the night-2 snapshot on 2026-09-25.
 
 ### 2026-09-25
 

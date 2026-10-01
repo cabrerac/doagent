@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-09-24"
 id: "0014"
-last_updated: "2026-09-25"
+last_updated: "2026-10-01"
 status: "Accepted"
 compressed: false
 related_requirements: []
@@ -211,6 +211,15 @@ The attribution study this paper is not doing is CIP-0012.
 - [ ] DOAgent runs with a truth file and session-only recovery
 - [ ] Mean gap and spread of gaps for both sets
 - [ ] Discussion note on information topography
+
+### 2026-10-01
+
+The AAMAS 2027 abstract was submitted.
+It proposes Data-Oriented Architecture for multi-agent systems.
+DOAgent is the library, and agents coordinate through shared data.
+The evaluation compares a service-style Werewolf deployment with a DOAgent session.
+The paper deadline is 2026-10-08.
+The Kimi pair had not been checked since the night-2 snapshot on 2026-09-25.
 
 ### 2026-09-25
 

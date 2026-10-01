@@ -5,6 +5,7 @@ from __future__ import annotations
 import unittest
 
 from experiments.multiagentbench.run_werewolf_doagent import (
+    accept_model_reply,
     assign_roles,
     play,
     write_cost,
@@ -12,7 +13,7 @@ from experiments.multiagentbench.run_werewolf_doagent import (
 )
 from experiments.multiagentbench.truth import read_truth
 from experiments.multiagentbench.werewolf_doagent import WerewolfEnv, _speech_order
-from experiments.multiagentbench.werewolf_player import fill_prompt, load_prompt
+from experiments.multiagentbench.werewolf_player import fill_prompt, load_prompt, werewolf_policy
 from experiments.multiagentbench.werewolf_session import lines_for
 
 ROLES = {"Lacy": "wolf", "John": "wolf", "Ethel": "villager"}
@@ -183,6 +184,53 @@ class PromptTests(unittest.TestCase):
         self.assertIn("night opens", filled)
         self.assertNotIn("<<public_chat>>", filled)
         self.assertTrue(prompt["tools"])
+
+    def test_wolf_observation_names_the_living_players(self) -> None:
+        env = WerewolfEnv(NIGHT_ROLES)
+        env.reset()
+        env._phase = "werewolf_action"
+        obs = env._open_ask()
+        self.assertIn("Lacy", obs["Lacy"]["game_state"])
+        self.assertIn("night", obs["Lacy"]["game_state"])
+        self.assertIn("Alive werewolves: Lacy, John", obs["Lacy"]["player_info"])
+        self.assertEqual(obs["Lacy"]["player_info"].count("Ethel"), 1)
+
+    def test_policy_fills_game_state_from_the_observation(self) -> None:
+        seen = {}
+
+        def complete(messages, tools):
+            del tools
+            seen["user"] = messages[1]["content"]
+            return {"action": {"attack": True, "target": "Ethel"}, "explanation": "pack"}
+
+        policy = werewolf_policy("Lacy", lambda: "chat", 0, complete)({})
+        policy(
+            {
+                "inputs": {
+                    "observation": {
+                        "action": "werewolf_action",
+                        "game_state": '{"days": 1}',
+                        "player_info": "Alive players: Ethel",
+                    }
+                }
+            }
+        )
+        self.assertIn("chat", seen["user"])
+        self.assertIn('{"days": 1}', seen["user"])
+        self.assertIn("Alive players: Ethel", seen["user"])
+        self.assertNotIn("<<game_state>>", seen["user"])
+        self.assertNotIn("<<player info>>", seen["user"])
+
+    def test_fast_reply_is_rejected(self) -> None:
+        with self.assertRaises(RuntimeError):
+            accept_model_reply(True, 0.1)
+
+    def test_missing_tool_call_is_rejected(self) -> None:
+        with self.assertRaises(RuntimeError):
+            accept_model_reply(False, 30.0)
+
+    def test_slow_tool_call_is_kept(self) -> None:
+        accept_model_reply(True, 12.0)
 
 
 class VisibilityTests(unittest.TestCase):
