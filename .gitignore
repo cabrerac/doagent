@@ -79,3 +79,6 @@ docs/protocol_tree_circular.png
 experiments/multiagentbench/MARBLE/
 experiments/multiagentbench/*.generated.yaml
 experiments/multiagentbench/werewolf_runs/*
+
+# logs
+logs/
