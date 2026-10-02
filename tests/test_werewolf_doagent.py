@@ -16,7 +16,12 @@ from experiments.multiagentbench.run_werewolf_doagent import (
 )
 from experiments.multiagentbench.truth import read_truth
 from experiments.multiagentbench.werewolf_doagent import WerewolfEnv, _speech_order
-from experiments.multiagentbench.werewolf_player import fill_prompt, load_prompt, werewolf_policy
+from experiments.multiagentbench.werewolf_player import (
+    fill_prompt,
+    label_player_messages,
+    load_prompt,
+    werewolf_policy,
+)
 from experiments.multiagentbench.werewolf_session import lines_for
 
 ROLES = {"Lacy": "wolf", "John": "wolf", "Ethel": "villager"}
@@ -234,8 +239,21 @@ class PromptTests(unittest.TestCase):
         self.assertIn("chat", seen["user"])
         self.assertIn('{"days": 1}', seen["user"])
         self.assertIn("Alive players: Ethel", seen["user"])
+        self.assertTrue(seen["user"].startswith("You are Lacy."))
         self.assertNotIn("<<game_state>>", seen["user"])
         self.assertNotIn("<<player info>>", seen["user"])
+
+    def test_service_messages_name_the_acting_player(self) -> None:
+        messages = label_player_messages(
+            [
+                {"role": "system", "content": "night"},
+                {"role": "user", "content": "Alive players: Ethel"},
+            ],
+            "Nicole",
+        )
+        self.assertEqual(messages[0]["content"], "night")
+        self.assertTrue(messages[1]["content"].startswith("You are Nicole."))
+        self.assertIn("Alive players: Ethel", messages[1]["content"])
 
     def test_fast_reply_is_rejected(self) -> None:
         with self.assertRaises(RuntimeError):

@@ -22,6 +22,7 @@ import yaml
 from examples._shared.llm_client import PROXY_BASE_URL, proxy_api_key
 from experiments.multiagentbench.recover import compare, logs_for_phases, write_gap
 from experiments.multiagentbench.truth import read_truth, write_truth
+from experiments.multiagentbench.werewolf_player import label_player_messages
 from experiments.multiagentbench.werewolf_truth import day_phase, night_phase
 
 MARBLE_ROOT = Path(__file__).resolve().parent / "MARBLE"
@@ -153,12 +154,17 @@ def _install_prompt_paths(agent_module: Any) -> None:
 def _install_call_retry(agent_cls: Any) -> None:
     """Retry the agent's model call after its own attempts are exhausted.
 
+    The user message names the acting player before the call is sent.
+
     Args:
         agent_cls: Agent class whose model method should be wrapped.
     """
     original = agent_cls.gpt_tool_call
 
     def gpt_tool_call(self: Any, messages: Any, tools: Any) -> Any:
+        player_id = str(getattr(self, "agent_id", "") or "")
+        if player_id:
+            messages = label_player_messages(list(messages), player_id)
         print("Model call started.", flush=True)
         started = time.perf_counter()
         try:

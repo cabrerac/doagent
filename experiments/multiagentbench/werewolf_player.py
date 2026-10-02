@@ -1,6 +1,7 @@
 """Load a published Werewolf prompt and call the model.
 
 The prompt files stay in the MARBLE checkout.
+The user text starts with the name of the player who is being asked.
 At logging level 2 the player adds an explanation instruction beside that text.
 """
 
@@ -79,6 +80,40 @@ def fill_prompt(template: str, history: str, game_state: str, player_info: str) 
     return text
 
 
+def label_player(user: str, player_id: str) -> str:
+    """Prefix the user prompt with the acting player's name.
+
+    Args:
+        user: Filled user prompt.
+        player_id: Player who is being asked.
+
+    Returns:
+        The prompt, starting with who is deciding.
+    """
+    return f"You are {player_id}.\n\n{user}"
+
+
+def label_player_messages(messages: list, player_id: str) -> list:
+    """Return a copy of the messages with the acting player named.
+
+    Args:
+        messages: System and user messages about to be sent.
+        player_id: Player who is being asked.
+
+    Returns:
+        A new message list.
+        The user text starts with who is deciding.
+    """
+    labeled = []
+    for message in messages:
+        if isinstance(message, dict) and message.get("role") == "user":
+            content = label_player(str(message.get("content", "")), player_id)
+            labeled.append({**message, "content": content})
+        else:
+            labeled.append(message)
+    return labeled
+
+
 def werewolf_policy(
     player_id: str,
     read_lines: Callable[[], str],
@@ -88,7 +123,7 @@ def werewolf_policy(
     """Build the decision function for one player.
 
     Args:
-        player_id: Player id. Present so the caller can tell policies apart.
+        player_id: Player who is being asked.
         read_lines: Returns the session lines addressed to this player.
         logging_level: 0, 1, or 2. Level 2 asks for an explanation.
         complete: Calls the model with messages and tools.
@@ -98,7 +133,6 @@ def werewolf_policy(
         A factory that returns the decision function.
         The action name comes from the observation on the request.
     """
-    del player_id
 
     def factory(_params: Dict[str, Any]) -> Any:
         def policy(request: Dict[str, Any]) -> Dict[str, Any]:
@@ -113,6 +147,7 @@ def werewolf_policy(
             )
             if logging_level >= 2:
                 user = f"{user}\n\n{EXPLANATION_INSTRUCTION}"
+            user = label_player(user, player_id)
             messages = [
                 {"role": "system", "content": prompt["system"]},
                 {"role": "user", "content": user},
