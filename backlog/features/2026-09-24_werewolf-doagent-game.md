@@ -4,7 +4,7 @@ title: "Implement Werewolf as a DOAgent game"
 status: "In Progress"
 priority: "High"
 created: "2026-09-24"
-last_updated: "2026-10-01"
+last_updated: "2026-10-02"
 category: "features"
 related_cips:
 - "0014"
@@ -63,6 +63,15 @@ The published prompt files stay unchanged.
 - CIP: 0014
 
 ## Progress Updates
+
+### 2026-10-02
+
+The first Kimi DOAgent game was scored.
+It reached day 10 with many abstentions because the prompt omitted the game state.
+That is fixed.
+A reply under one second is retried.
+`werewolf_kimi_2` is running on the VM with the fix.
+The live model acceptance box stays open until that game writes truth, gap, and cost.
 
 ### 2026-10-01
 

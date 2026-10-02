@@ -332,6 +332,26 @@ def accept_model_reply(
         raise RuntimeError(f"model reply returned in {elapsed:.1f}s")
 
 
+def log_model_request(messages: list, tools: list, kind: str, detail: str) -> None:
+    """Print the user prompt sent for one model reply.
+
+    Args:
+        messages: System and user messages that were sent.
+        tools: Tool schemas sent with the request.
+        kind: Kept or Rejected.
+        detail: Elapsed seconds, or why the reply was rejected.
+    """
+    name = ""
+    if tools:
+        name = str(tools[0].get("function", {}).get("name", ""))
+    user = ""
+    for message in messages:
+        if message.get("role") == "user":
+            user = str(message.get("content", ""))
+    print(f"{kind} model request. Tool {name}. {detail}", flush=True)
+    print(user, flush=True)
+
+
 def call_model(messages: list, tools: list, model: str = SERVICE_MODEL) -> Dict[str, Any]:
     """Call the university model with the published tools.
 
@@ -365,7 +385,12 @@ def call_model(messages: list, tools: list, model: str = SERVICE_MODEL) -> Dict[
         elapsed = time.perf_counter() - started
         print(f"Model call finished in {elapsed:.1f}s.", flush=True)
         message = response.choices[0].message
-        accept_model_reply(bool(message.tool_calls), elapsed)
+        try:
+            accept_model_reply(bool(message.tool_calls), elapsed)
+        except RuntimeError as exc:
+            log_model_request(messages, tools, "Rejected", str(exc))
+            raise
+        log_model_request(messages, tools, "Kept", f"{elapsed:.1f}s")
         arguments = json.loads(message.tool_calls[0].function.arguments)
         total = None
         if response.usage is not None:

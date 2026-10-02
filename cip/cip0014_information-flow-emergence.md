@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-09-24"
 id: "0014"
-last_updated: "2026-10-01"
+last_updated: "2026-10-02"
 status: "Accepted"
 compressed: false
 related_requirements: []
@@ -211,6 +211,29 @@ The attribution study this paper is not doing is CIP-0012.
 - [ ] DOAgent runs with a truth file and session-only recovery
 - [ ] Mean gap and spread of gaps for both sets
 - [ ] Discussion note on information topography
+
+### 2026-10-02
+
+The first Kimi pair finished and was scored.
+DOAgent entropy gap is about 0.047 and modularity gap is 0.
+Service entropy gap is about 0.015 and modularity gap is 0.
+The service game is `game_20260925_220822_Werewolves_win`.
+Werewolves won on day 4.
+The DOAgent game reached day 10 with many abstentions.
+Of 266 model calls, 152 returned in under a second and still contained a tool call.
+The published prompts expect game state and player info.
+The DOAgent policy was sending empty strings for both.
+That is fixed in the environment and the player.
+A reply under one second, or a reply with no tool call, is tried again up to five times.
+`werewolf_kimi_2` was started on the VM with that fix and is still running.
+The first kept replies took 28.7, 19.9, and 30.1 seconds.
+Fast replies are rejected.
+The log does not print the prompt that was sent.
+Service storage for the comparison is the nine player logs, about 2.3 MB.
+The checkpoints and shared memory, about 12.7 MB, stay out of that comparison.
+The DOAgent session is about 1.9 MB.
+The current entropy score is a normalized holder count, not a Shannon entropy.
+Next is to read `werewolf_kimi_2`, to print the rejected prompt, and to define easier recovery and one joint-audience measure.
 
 ### 2026-10-01
 

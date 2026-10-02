@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import io
 import unittest
+from contextlib import redirect_stdout
 
 from experiments.multiagentbench.run_werewolf_doagent import (
     accept_model_reply,
     assign_roles,
+    log_model_request,
     play,
     write_cost,
     write_run_artifacts,
@@ -177,6 +180,19 @@ class BadgeTests(unittest.TestCase):
         self.assertEqual(env.action_name, "player_speech")
 
 
+def _printed_request(kind: str, detail: str) -> str:
+    """Return the stdout from one logged model request."""
+    buffer = io.StringIO()
+    with redirect_stdout(buffer):
+        log_model_request(
+            [{"role": "user", "content": "Alive players: Ethel"}],
+            [{"function": {"name": "werewolf_action"}}],
+            kind,
+            detail,
+        )
+    return buffer.getvalue()
+
+
 class PromptTests(unittest.TestCase):
     def test_published_wolf_prompt_fills_history(self) -> None:
         prompt = load_prompt("werewolf_action")
@@ -231,6 +247,19 @@ class PromptTests(unittest.TestCase):
 
     def test_slow_tool_call_is_kept(self) -> None:
         accept_model_reply(True, 12.0)
+
+    def test_rejected_request_prints_the_user_prompt(self) -> None:
+        text = _printed_request("Rejected", "model reply returned in 0.1s")
+        self.assertIn(
+            "Rejected model request. Tool werewolf_action. model reply returned in 0.1s",
+            text,
+        )
+        self.assertIn("Alive players: Ethel", text)
+
+    def test_kept_request_prints_the_user_prompt(self) -> None:
+        text = _printed_request("Kept", "12.0s")
+        self.assertIn("Kept model request. Tool werewolf_action. 12.0s", text)
+        self.assertIn("Alive players: Ethel", text)
 
 
 class VisibilityTests(unittest.TestCase):
