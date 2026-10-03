@@ -38,6 +38,26 @@ EXPLANATION_INSTRUCTION = (
     "Also give a short explanation of this decision. "
     "Put that explanation only in the explanation field."
 )
+_TASK_DESCRIPTIONS = {
+    "protect_seer": "Keep the seer alive by focusing on their safety.",
+    "rescue_villager": "Use antidote or supportive actions to save a villager.",
+    "run_for_sheriff": "Attempt to become the elected sheriff for additional influence.",
+    "exile_werewolf": "Coordinate with others to vote out a suspected werewolf.",
+    "poison_werewolf": "Use poison to eliminate a werewolf during the night phase.",
+}
+_WITCH_TASKS = (
+    "protect_seer",
+    "rescue_villager",
+    "run_for_sheriff",
+    "exile_werewolf",
+    "poison_werewolf",
+)
+_OTHER_TASKS = ("protect_seer", "run_for_sheriff", "exile_werewolf")
+_COOPERATIVE = (
+    "\n\nRemember, you are using a cooperative strategy. "
+    "In your decisions, prioritize teamwork and collaboration "
+    "with other villagers to increase your chances of success."
+)
 
 
 def load_prompt(action_name: str) -> Dict[str, Any]:
@@ -62,22 +82,52 @@ def load_prompt(action_name: str) -> Dict[str, Any]:
     }
 
 
-def fill_prompt(template: str, history: str, game_state: str, player_info: str) -> str:
-    """Fill the published placeholders.
+def fill_prompt(template: str, fields: Mapping[str, str]) -> str:
+    """Replace each published placeholder.
 
     Args:
         template: User prompt text from the published file.
-        history: Lines this player is allowed to read.
-        game_state: Current day, phase, and living players.
-        player_info: Facts this action's prompt asks for.
+        fields: Placeholder name to the text that replaces it.
+            The name is the token inside the angle brackets.
 
     Returns:
-        The user prompt with placeholders replaced.
+        The user prompt with those placeholders replaced.
     """
-    text = template.replace("<<public_chat>>", history)
-    text = text.replace("<<game_state>>", game_state)
-    text = text.replace("<<player info>>", player_info)
+    text = template
+    for name, value in fields.items():
+        text = text.replace(f"<<{name}>>", value)
     return text
+
+
+def task_suffix(role: str, public_tasks: list, villager: bool) -> str:
+    """Return the task block and the villager strategy line.
+
+    Args:
+        role: The acting player's role.
+        public_tasks: Task names published for this day.
+        villager: True for every role except wolf.
+
+    Returns:
+        Text appended to the user prompt.
+        Empty when there is no task and the player is a wolf.
+    """
+    allowed = _WITCH_TASKS if role == "witch" else _OTHER_TASKS
+    chosen = [name for name in allowed if name in public_tasks]
+    parts = []
+    if chosen:
+        lines = [
+            f"{name}: {_TASK_DESCRIPTIONS.get(name, 'No description available.')}"
+            for name in chosen
+        ]
+        parts.append(
+            "\n\n=============================[Optional Daily Tasks]=============================\n"
+            "Here are the tasks relevant to you:\n"
+            + "\n".join(lines)
+            + "\nYou may incorporate them if appropriate."
+        )
+    if villager:
+        parts.append(_COOPERATIVE)
+    return "".join(parts)
 
 
 def label_player(user: str, player_id: str) -> str:
@@ -139,11 +189,24 @@ def werewolf_policy(
             observation = request["inputs"].get("observation") or {}
             action_name = observation.get("action", "werewolf_action")
             prompt = load_prompt(action_name)
-            user = fill_prompt(
-                prompt["user"],
-                read_lines(),
-                str(observation.get("game_state", "")),
-                str(observation.get("player_info", "")),
+            fields = {
+                "public_chat": read_lines(),
+                "game_state": str(observation.get("game_state", "")),
+                "player info": str(observation.get("player_info", "")),
+            }
+            extra = observation.get("fields") or {}
+            if isinstance(extra, dict):
+                for name, value in extra.items():
+                    fields[str(name)] = str(value)
+            user = fill_prompt(prompt["user"], fields)
+            role = str(observation.get("role", ""))
+            tasks = observation.get("public_tasks") or []
+            if not isinstance(tasks, list):
+                tasks = []
+            user = user + task_suffix(
+                role,
+                [str(item) for item in tasks],
+                role in ("villager", "seer", "witch", "guard"),
             )
             if logging_level >= 2:
                 user = f"{user}\n\n{EXPLANATION_INSTRUCTION}"

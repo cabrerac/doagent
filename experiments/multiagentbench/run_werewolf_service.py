@@ -50,6 +50,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     parser.add_argument("--rounds", type=int, default=1)
     parser.add_argument("--name", default="werewolf_service")
     parser.add_argument("--model", default=SERVICE_MODEL)
+    parser.add_argument("--output", default=None)
     args = parser.parse_args(argv)
     if args.rounds < 1:
         raise ValueError("Rounds must be at least 1.")
@@ -63,24 +64,47 @@ def main(argv: Optional[list[str]] = None) -> None:
     usage: Dict[str, Any] = {"tokens": 0, "reported": False}
     _install_token_counter(werewolf_agent_module, usage)
 
+    from experiments.multiagentbench.run_werewolf_doagent import (
+        OUTPUT_BASE,
+        keep_going,
+        prepare_game_dir,
+    )
+
+    log_dir = str(prepare_game_dir(args.output, OUTPUT_BASE / "service"))
+    print(f"Service game directory: {log_dir}", flush=True)
     previous = Path.cwd()
     os.chdir(MARBLE_ROOT)
     originals = install_timestamps()
     try:
         for index in range(args.rounds):
             game_name = args.name if args.rounds == 1 else f"{args.name}_{index + 1}"
-            env = WerewolfEnv(name=game_name, config_path=str(config_path))
+            env = WerewolfEnv(
+                name=game_name,
+                config_path=str(config_path),
+                log_dir=log_dir,
+            )
             _attach_truth(env)
             print(f"Starting game: {game_name}", flush=True)
             usage["tokens"] = 0
             usage["reported"] = False
             started = time.perf_counter()
             try:
-                env.start()
+                try:
+                    env.start()
+                except Exception as exc:
+                    print(
+                        f"Service game failed: {type(exc).__name__}: {exc}",
+                        flush=True,
+                    )
+                    raise
+                print(f"Service game finished. Data in {log_dir}.", flush=True)
             finally:
                 wall_seconds = time.perf_counter() - started
-                _write_game_gap(env)
-                _write_game_cost(env, wall_seconds, usage)
+                keep_going("Gap scoring", lambda: _write_game_gap(env))
+                keep_going(
+                    "Cost scoring",
+                    lambda: _write_game_cost(env, wall_seconds, usage),
+                )
     finally:
         restore_timestamps(originals)
         os.chdir(previous)

@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-09-24"
 id: "0014"
-last_updated: "2026-10-02"
+last_updated: "2026-10-04"
 status: "Accepted"
 compressed: false
 related_requirements: []
@@ -82,7 +82,7 @@ Do not invent a two-agent stand-in and call it Werewolf.
 Their config names gpt-4o for the village and for the wolves.
 Both runs in a pair use one university model instead, through the university proxy.
 The scored pilot used Qwen/Qwen3.8-27B-FP8.
-The pair that is running uses moonshotai/Kimi-K3.
+Both arms use moonshotai/Kimi-K3.
 The village side and the wolf side use that same model.
 Published gpt-4o scores are not comparable with these runs.
 The substitution is the model name only.
@@ -103,7 +103,7 @@ Play stays private in both systems.
 A player reads only messages addressed to that player.
 Roles, night order, day vote, and prompts stay as published.
 Both systems in a pair use the same model.
-The running pair uses moonshotai/Kimi-K3.
+Each pair uses moonshotai/Kimi-K3.
 
 Run n service games and n DOAgent games.
 The games do not have to be the same nights.
@@ -212,6 +212,30 @@ The attribution study this paper is not doing is CIP-0012.
 - [ ] Mean gap and spread of gaps for both sets
 - [ ] Discussion note on information topography
 
+### 2026-10-04
+
+The two arms now follow the same rules.
+Temperature is 0.7 on both.
+Each prompt names the acting player.
+A thrown model call is tried four times, five seconds apart, and that whole attempt is tried up to five more times.
+A reply with no tool call, or arguments that are not JSON, becomes no_action and the game continues.
+A speech with no speech text is stored as the service error sentence.
+A seer check with no living target does not invent a result.
+A sheriff candidate stays on the ballot only when continue_running is true.
+Otherwise the game publishes a withdrawal line.
+A failed gap or cost write is printed and does not fail the game process.
+Two differences stay on purpose.
+Level 2 still asks for an explanation and keeps it on the agent update.
+Each arm still builds its own history text.
+Each repetition writes to werewolf_runs/<name>/<index>/doagent and werewolf_runs/<name>/<index>/service.
+The console log stays in that arm's folder.
+pair.log records which repetition failed.
+The MARBLE environment and agent files were copied to the VM.
+The tracked runners still have to be there before the pair starts.
+The repeat count is not chosen.
+Do not replay kimi_4.
+The joint-audience measure stays deferred until a clean pair exists.
+
 ### 2026-10-02
 
 The first Kimi pair finished and was scored.
@@ -225,7 +249,8 @@ The published prompts expect game state and player info.
 The DOAgent policy was sending empty strings for both.
 That is fixed in the environment and the player.
 A reply under one second, or a reply with no tool call, is tried again up to five times.
-`werewolf_kimi_2` was started on the VM with that fix and is still running.
+`werewolf_kimi_2` was the planned VM run.
+It was not left running.
 The first kept replies took 28.7, 19.9, and 30.1 seconds.
 Fast replies are rejected.
 The log does not print the prompt that was sent.
@@ -233,7 +258,8 @@ Service storage for the comparison is the nine player logs, about 2.3 MB.
 The checkpoints and shared memory, about 12.7 MB, stay out of that comparison.
 The DOAgent session is about 1.9 MB.
 The current entropy score is a normalized holder count, not a Shannon entropy.
-Next is to read `werewolf_kimi_2`, to print the rejected prompt, and to define easier recovery and one joint-audience measure.
+The rejected prompt is now printed.
+The joint-audience measure stays deferred.
 
 ### 2026-10-01
 

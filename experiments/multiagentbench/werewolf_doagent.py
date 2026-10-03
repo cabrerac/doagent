@@ -46,9 +46,13 @@ class WerewolfEnv:
         self._badge_from: Optional[str] = None
         self._after_badge = ""
         self._candidates: List[str] = []
+        self._final_candidates: List[str] = []
         self._candidate_index = 0
         self._speaker_index = 0
         self._speech_order: List[str] = []
+        self._election_speeches: List[tuple] = []
+        self._day_speeches: List[tuple] = []
+        self._seer_checks: List[Dict[str, str]] = []
         self._use_daily_tasks = True
         self.phases: List[Dict[str, Any]] = []
 
@@ -98,9 +102,13 @@ class WerewolfEnv:
         self._badge_from = None
         self._after_badge = ""
         self._candidates = []
+        self._final_candidates = []
         self._candidate_index = 0
         self._speaker_index = 0
         self._speech_order = []
+        self._election_speeches = []
+        self._day_speeches = []
+        self._seer_checks = []
         self.phases = []
         return self._open_ask()
 
@@ -156,6 +164,9 @@ class WerewolfEnv:
             "action": self.action_name,
             "game_state": json.dumps(self._game_state(), indent=2),
             "player_info": self._player_info(player_id),
+            "fields": self._prompt_fields(),
+            "role": self._roles.get(player_id, ""),
+            "public_tasks": self._public_tasks(),
         }
 
     def _game_state(self) -> Dict[str, Any]:
@@ -190,6 +201,96 @@ class WerewolfEnv:
         wolves = ", ".join(self.living("wolf"))
         return f"Alive players: {alive}\nAlive werewolves: {wolves}"
 
+    def _prompt_fields(self) -> Dict[str, str]:
+        """Return the action-specific placeholder values.
+
+        Returns:
+            Placeholder name to the text that replaces it.
+            Empty when the action only uses the shared placeholders.
+        """
+        alive = ", ".join(self._alive)
+        if self._phase == "guard":
+            blocked = self._last_protected or "nobody"
+            return {
+                "night info": (
+                    "Tonight, you can protect one player from the werewolves. "
+                    f"You cannot protect {blocked} if you protected them last night."
+                ),
+                "player_alive_info": alive,
+            }
+        if self._phase == "werewolf_discussion":
+            targets = "\n".join(
+                f"{wolf_id}: {target}" for wolf_id, target in self._wolf_votes.items()
+            )
+            return {
+                "allies_target_info": (
+                    f"{self._player_info(next(iter(self.living('wolf')), ''))}\n"
+                    f"Last round targets:\n{targets}"
+                ),
+                "rounds_remaining": str(self._rounds_left),
+            }
+        if self._phase == "seer":
+            notes = [
+                f"Night {index}: Checked {item['player']} - {item['result']}"
+                for index, item in enumerate(self._seer_checks, start=1)
+            ]
+            return {
+                "night info": "\n".join(notes),
+                "player_alive_info": alive,
+            }
+        if self._phase == "witch":
+            target = self._final_target or "nobody"
+            return {
+                "night info": f"Tonight, {target} was killed.",
+                "poison info": f"You have {self._poison} poison potion(s) left.",
+                "antidote info": f"You have {self._antidote} antidote potion(s) left.",
+                "Player alive info": alive,
+            }
+        if self._phase == "sheriff_speech":
+            if self._election_speeches:
+                election = "\n".join(
+                    f"{speaker}: {speech}" for speaker, speech in self._election_speeches
+                )
+            else:
+                election = "No speeches available yet. You are the first one."
+            return {
+                "election_info": election,
+                "speech_position": str(self._candidate_index + 1),
+                "speech_sequence": ", ".join(self._candidates),
+            }
+        if self._phase == "vote_for_sheriff":
+            return {
+                "election_log": "\n".join(
+                    f"{speaker}: {speech}" for speaker, speech in self._election_speeches
+                ),
+                "candidate_list": ", ".join(self._final_candidates),
+            }
+        if self._phase == "decide_speech_sequence":
+            dead = ", ".join(self._dead)
+            names = list(self._dead)
+            if self._sheriff:
+                names.append(self._sheriff)
+            return {
+                "dead player_list": dead,
+                "beginning candidates list": ", ".join(names),
+            }
+        if self._phase == "player_speech":
+            if self._day_speeches:
+                history = "\n".join(
+                    f"{speaker}: {speech}" for speaker, speech in self._day_speeches
+                )
+            else:
+                history = "unknown"
+            return {
+                "speech_info": history,
+                "speech_position": str(self._speaker_index + 1),
+            }
+        return {}
+
+    def _eligible(self) -> List[str]:
+        """Return living players who are not waiting for the morning announcement."""
+        return [player_id for player_id in self._alive if player_id not in self._dead]
+
     def _players_for_phase(self) -> list[str]:
         """Return the player ids the current phase asks."""
         if self._phase == "guard":
@@ -201,13 +302,17 @@ class WerewolfEnv:
         if self._phase == "witch":
             return self.living("witch")
         if self._phase == "run_for_sheriff":
-            return list(self._alive)
+            return self._eligible()
         if self._phase == "sheriff_speech":
             if self._candidate_index < len(self._candidates):
                 return [self._candidates[self._candidate_index]]
             return []
         if self._phase == "vote_for_sheriff":
-            return [player_id for player_id in self._alive if player_id not in self._candidates]
+            return [
+                player_id
+                for player_id in self._eligible()
+                if player_id not in self._candidates
+            ]
         if self._phase == "last_words":
             if self._day == 1 and self._dead:
                 return [self._dead[0]]
@@ -224,7 +329,7 @@ class WerewolfEnv:
                 return [speakers[self._speaker_index]]
             return []
         if self._phase == "vote_action":
-            return list(self._alive)
+            return self._eligible()
         if self._phase == "badge_flow" and self._badge_from:
             return [self._badge_from]
         return []
@@ -260,6 +365,7 @@ class WerewolfEnv:
             lines = []
         if self._phase == "resolve":
             lines.extend(self._resolve())
+        lines.extend(self._close_unattended_night())
         return lines
 
     def _apply_guard(self, actions: Mapping[str, Any]) -> List[Dict[str, Any]]:
@@ -343,10 +449,30 @@ class WerewolfEnv:
         """Tell the seer whether the checked player is a wolf."""
         seer_id = self.living("seer")[0]
         target = _field(actions.get(seer_id), "check_target")
-        if target in self._roles and self._roles[target] == "wolf":
+        public = _line(
+            "system",
+            list(self._alive),
+            "Seer has checked a player's identity.",
+        )
+        if target not in self._alive:
+            shown = target if target else "None"
+            self._phase = "witch"
+            return [
+                _line(
+                    seer_id,
+                    [seer_id],
+                    (
+                        f"Seer action failed. Invalid check target: {shown}. "
+                        f"Not in alive players: {', '.join(self._alive)}."
+                    ),
+                ),
+                public,
+            ]
+        if self._roles.get(target) == "wolf":
             result = "werewolf"
         else:
             result = "not a werewolf"
+        self._seer_checks.append({"player": target, "result": result})
         self._phase = "witch"
         return [
             _line(
@@ -354,11 +480,7 @@ class WerewolfEnv:
                 [seer_id],
                 f"Seer checked {target}. The result is {result}.",
             ),
-            _line(
-                "system",
-                list(self._alive),
-                "Seer has checked a player's identity.",
-            ),
+            public,
         ]
 
     def _apply_witch(self, actions: Mapping[str, Any]) -> List[Dict[str, Any]]:
@@ -392,15 +514,57 @@ class WerewolfEnv:
             ),
         ]
 
-    def _resolve(self) -> List[Dict[str, Any]]:
-        """Remove the night's dead and either stop or start the day."""
-        for player_id in self._dead:
-            if player_id in self._alive:
-                self._alive.remove(player_id)
+    def _close_unattended_night(self) -> List[Dict[str, Any]]:
+        """Close the night when the seer and the witch are not asked.
+
+        Returns:
+            Lines from the night close.
+            Empty when a living seer or witch still has a turn.
+        """
+        if self._phase not in ("seer", "witch", "resolve"):
+            return []
+        lines: List[Dict[str, Any]] = []
+        while self._phase in ("seer", "witch", "resolve") and not self._players_for_phase():
+            if self._phase == "resolve":
+                lines.extend(self._resolve())
+                break
+            self._phase = _next_phase(self._phase)
+        return lines
+
+    def _death_line(self) -> Dict[str, Any]:
+        """Return the public line that names the night's dead."""
         if self._dead:
             content = "Night deaths: " + ", ".join(self._dead)
         else:
             content = "Night deaths: nobody."
+        return _line("system", list(self._roles), content)
+
+    def _drop_night_dead(self) -> None:
+        """Remove the night's dead from the published alive list."""
+        for player_id in list(self._dead):
+            if player_id in self._alive:
+                self._alive.remove(player_id)
+
+    def _announce_night(self) -> List[Dict[str, Any]]:
+        """Publish the night's deaths after the day-1 sheriff election.
+
+        The dead player stays on the published alive list through last words.
+
+        Returns:
+            The public death line.
+        """
+        line = self._death_line()
+        if self._day == 1 and self._dead:
+            self._phase = "last_words"
+            return [line]
+        self._drop_night_dead()
+        if self._offer_badge(self._sheriff if self._sheriff in self._dead else None, "day"):
+            return [line]
+        self._open_speeches()
+        return [line]
+
+    def _resolve(self) -> List[Dict[str, Any]]:
+        """Record the night and either stop or open the morning."""
         self.phases.append(
             {
                 "phase": f"night-{self._day}",
@@ -409,47 +573,81 @@ class WerewolfEnv:
                 "deaths": list(self._dead),
             }
         )
-        if _side_wiped(self._alive, self._roles):
+        remaining = self._eligible()
+        if _side_wiped(remaining, self._roles):
+            self._drop_night_dead()
             self._phase = "done"
-        elif self._offer_badge(self._sheriff if self._sheriff in self._dead else None, "day"):
-            pass
-        elif self._day == 1:
+            lines = [self._death_line()]
+            lines.extend(self._daily_task_lines())
+            return lines
+        if self._day == 1:
             self._phase = "run_for_sheriff"
+            return self._daily_task_lines()
+        self._drop_night_dead()
+        if self._offer_badge(self._sheriff if self._sheriff in self._dead else None, "day"):
+            pass
         else:
             self._open_speeches()
-        lines = [_line("system", list(self._roles), content)]
+        lines = [self._death_line()]
         lines.extend(self._daily_task_lines())
         return lines
 
     def _apply_run_for_sheriff(self, actions: Mapping[str, Any]) -> List[Dict[str, Any]]:
         """Collect who stands for sheriff."""
         self._candidates = []
-        for player_id in self._alive:
+        self._final_candidates = []
+        self._election_speeches = []
+        for player_id in self._eligible():
             if _flag(_body(actions.get(player_id)), "run_for_sheriff"):
                 self._candidates.append(player_id)
         self._candidate_index = 0
         if self._candidates:
             content = "Sheriff election candidates: " + ", ".join(self._candidates)
             self._phase = "sheriff_speech"
-        else:
-            content = "No candidates decided to run for sheriff."
-            self._phase = "last_words"
-        return [_line("system", list(self._alive), content)]
+            return [_line("system", list(self._alive), content)]
+        content = "No candidates decided to run for sheriff."
+        lines = [_line("system", list(self._alive), content)]
+        lines.extend(self._announce_night())
+        return lines
 
     def _apply_sheriff_speech(self, actions: Mapping[str, Any]) -> List[Dict[str, Any]]:
-        """Publish one sheriff candidate's speech."""
+        """Publish one sheriff candidate's speech.
+
+        A candidate who does not continue is withdrawn.
+        """
         speaker = self._candidates[self._candidate_index]
-        speech = _field(actions.get(speaker), "speech") or "..."
+        speech = _spoken(actions.get(speaker), speaker)
+        self._election_speeches.append((speaker, speech))
         self._candidate_index += 1
-        if self._candidate_index >= len(self._candidates):
+        lines = [_line(speaker, list(self._alive), speech)]
+        if _flag(_body(actions.get(speaker)), "continue_running"):
+            self._final_candidates.append(speaker)
+        else:
+            lines.append(
+                _line(
+                    "system",
+                    list(self._alive),
+                    f"{speaker} has withdrawn from the sheriff election.",
+                )
+            )
+        if self._candidate_index < len(self._candidates):
+            return lines
+        voters = [
+            player_id
+            for player_id in self._eligible()
+            if player_id not in self._candidates
+        ]
+        if voters:
             self._phase = "vote_for_sheriff"
-        return [_line(speaker, list(self._alive), speech)]
+            return lines
+        lines.extend(self._announce_night())
+        return lines
 
     def _apply_sheriff_vote(self, actions: Mapping[str, Any]) -> List[Dict[str, Any]]:
         """Elect a sheriff when one candidate has a majority."""
         votes = {
             player_id: _field(actions.get(player_id), "action_vote") or "abstain"
-            for player_id in self._alive
+            for player_id in self._eligible()
             if player_id not in self._candidates
         }
         self._sheriff = _majority(votes, None)
@@ -457,20 +655,23 @@ class WerewolfEnv:
             content = f"Sheriff elected: {self._sheriff}."
         else:
             content = "No sheriff was elected."
-        self._phase = "last_words"
-        return [_line("system", list(self._alive), content)]
+        lines = [_line("system", list(self._alive), content)]
+        lines.extend(self._announce_night())
+        return lines
 
     def _apply_last_words(self, actions: Mapping[str, Any]) -> List[Dict[str, Any]]:
         """Publish the night victim's last words."""
         speaker = self._dead[0]
-        speech = _field(actions.get(speaker), "speech") or "..."
+        speech = _spoken(actions.get(speaker), speaker)
+        self._drop_night_dead()
         self._open_speeches()
         return [_line(speaker, list(self._roles), speech)]
 
     def _apply_player_speech(self, actions: Mapping[str, Any]) -> List[Dict[str, Any]]:
         """Publish one living player's day speech."""
         speaker = self._speech_order[self._speaker_index]
-        speech = _field(actions.get(speaker), "speech") or "..."
+        speech = _spoken(actions.get(speaker), speaker)
+        self._day_speeches.append((speaker, speech))
         self._speaker_index += 1
         if self._speaker_index >= len(self._speech_order):
             self._phase = "vote_action"
@@ -560,6 +761,7 @@ class WerewolfEnv:
         """Ask the sheriff for the order, or sort the living players by name."""
         self._speaker_index = 0
         self._speech_order = []
+        self._day_speeches = []
         if self._sheriff in self._alive:
             self._phase = "decide_speech_sequence"
         else:
@@ -583,29 +785,35 @@ class WerewolfEnv:
         order_text = ", ".join(self._speech_order)
         return [_line("system", list(self._alive), f"Speech order: {order_text}")]
 
-    def _daily_task_lines(self) -> List[Dict[str, Any]]:
-        """Return the public daily-task line when the published config leaves tasks on."""
+    def _public_tasks(self) -> List[str]:
+        """Return the task names added to each prompt.
+
+        Returns:
+            Task names for this day.
+            Empty when tasks are turned off.
+        """
         if not self._use_daily_tasks:
             return []
-        private = []
         public = []
-        if self.living("seer"):
-            private.append("protect_seer")
         if self._poison:
-            private.append("poison_werewolf")
             public.append("poison_werewolf")
         if self._antidote:
-            private.append("rescue_villager")
             public.append("rescue_villager")
         if self._day == 1:
-            private.append("run_for_sheriff")
             public.append("run_for_sheriff")
-        private.append("exile_werewolf")
-        public.extend(["exile_werewolf", "protect_seer"])
-        return [
-            _line("system", [], "Daily tasks private: " + ", ".join(private)),
-            _line("system", list(self._alive), "Daily tasks: " + ", ".join(public)),
-        ]
+        public.append("exile_werewolf")
+        public.append("protect_seer")
+        return public
+
+    def _daily_task_lines(self) -> List[Dict[str, Any]]:
+        """Return no public task line.
+
+        The task text is added to the player's own prompt.
+
+        Returns:
+            An empty list.
+        """
+        return []
 
     def _begin_night(self) -> None:
         """Clear the night counters and keep the previous guard target."""
@@ -707,7 +915,7 @@ def _side_wiped(alive: List[str], roles: Mapping[str, str]) -> bool:
 def _body(action: Any) -> Mapping[str, Any]:
     """Return the mapping that holds the tool fields."""
     if not isinstance(action, Mapping):
-        return {}
+            return {}
     nested = action.get("action")
     if isinstance(nested, Mapping):
         return nested
@@ -720,7 +928,19 @@ def _flag(source: Mapping[str, Any], name: str) -> bool:
 
 
 def _majority(votes: Mapping[str, str], sheriff: Optional[str]) -> Optional[str]:
-    """Return the choice with more than half the weight, or None on a tie."""
+    """Return the unique highest choice.
+
+    Abstentions are ignored.
+    The sheriff's vote weighs one and a half.
+    A tie returns no winner.
+
+    Args:
+        votes: Voter to chosen player, or abstain.
+        sheriff: Player whose vote weighs one and a half.
+
+    Returns:
+        The winning choice, or None when there is no unique winner.
+    """
     weights: Dict[str, float] = {}
     for voter, choice in votes.items():
         if not choice or choice == "abstain":
@@ -729,15 +949,28 @@ def _majority(votes: Mapping[str, str], sheriff: Optional[str]) -> Optional[str]
         weights[choice] = weights.get(choice, 0.0) + weight
     if not weights:
         return None
-    winner = max(weights, key=lambda choice: weights[choice])
-    top = weights[winner]
-    tied = [choice for choice, weight in weights.items() if weight == top]
-    if len(tied) != 1:
+    top = max(weights.values())
+    leaders = [choice for choice, weight in weights.items() if weight == top]
+    if len(leaders) != 1:
         return None
-    cast = sum(1.5 if voter == sheriff else 1.0 for voter in votes)
-    if top > cast / 2:
-        return winner
-    return None
+    return leaders[0]
+
+
+def _spoken(action: Any, speaker: str) -> str:
+    """Return the speech text, or the service error sentence.
+
+    Args:
+        action: Tool arguments for this player.
+        speaker: Player who was asked to speak.
+
+    Returns:
+        The speech text when the reply has it.
+        The error sentence when the reply has no speech.
+    """
+    text = _field(action, "speech_content") or _field(action, "speech")
+    if text:
+        return text
+    return f"Error during generation for player {speaker}."
 
 
 def _field(action: Any, name: str) -> Optional[str]:

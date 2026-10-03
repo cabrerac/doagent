@@ -60,6 +60,22 @@ NAME_POOL = (
 OUTPUT_BASE = Path(__file__).resolve().parent / "werewolf_runs"
 
 
+def prepare_game_dir(path: Optional[str], default: Path) -> Path:
+    """Create the folder that will hold one game.
+
+    Args:
+        path: Folder chosen by the caller.
+            None uses default.
+        default: Folder used when path is omitted.
+
+    Returns:
+        The absolute game folder.
+    """
+    folder = Path(path).resolve() if path else default.resolve()
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
 def assign_roles(seed: Optional[int] = None) -> Dict[str, str]:
     """Shuffle the nine published roles and assign a name to each.
 
@@ -233,6 +249,22 @@ def _modularity_gap(truth_path: Path, updates: list) -> Optional[float]:
     return mean_gap(truth_scores, recovered_scores)
 
 
+def keep_going(label: str, operation: Callable[[], Any]) -> None:
+    """Run one finishing step.
+
+    A failure is printed.
+    The exception is not raised.
+
+    Args:
+        label: Name of the step, used in the log line.
+        operation: The score or cost write.
+    """
+    try:
+        operation()
+    except Exception as exc:
+        print(f"{label} failed: {exc}", flush=True)
+
+
 def write_cost(
     directory: Path,
     wall_seconds: float,
@@ -272,9 +304,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--max-days", type=int, default=10)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--model", default=SERVICE_MODEL)
+    parser.add_argument("--output", default=None)
     args = parser.parse_args(argv)
     roles = assign_roles(args.seed)
-    latest = OUTPUT_BASE / "latest"
+    output = prepare_game_dir(args.output, OUTPUT_BASE / "doagent")
+    print(f"DOAgent game directory: {output}", flush=True)
     usage = {"tokens": 0, "reported": False}
 
     def counted(messages: list, tools: list) -> Dict[str, Any]:
@@ -287,49 +321,40 @@ def main(argv: list[str] | None = None) -> None:
     originals = install_timestamps()
     started = time.perf_counter()
     try:
-        session = play(
-            roles,
-            args.logging_level,
-            counted,
-            max_days=args.max_days,
-            shared_data={"type": "file"},
-            scenario_name="werewolf_doagent",
-            output_base=str(OUTPUT_BASE),
-            truth_path=latest / "truth.json",
-        )
+        try:
+            session = play(
+                roles,
+                args.logging_level,
+                counted,
+                max_days=args.max_days,
+                shared_data={"type": "file"},
+                scenario_name="werewolf_doagent",
+                output_base=str(output),
+                truth_path=output / "truth.json",
+            )
+        except Exception as exc:
+            print(f"DOAgent game failed: {type(exc).__name__}: {exc}", flush=True)
+            raise
+        print(f"DOAgent records: {session.run_path}", flush=True)
         wall_seconds = time.perf_counter() - started
         try:
-            write_run_artifacts(session, roles, latest)
-            write_cost(
-                OUTPUT_BASE,
-                wall_seconds,
-                usage["tokens"] if usage["reported"] else None,
+            keep_going(
+                "Gap scoring",
+                lambda: write_run_artifacts(session, roles, output),
+            )
+            keep_going(
+                "Cost scoring",
+                lambda: write_cost(
+                    output,
+                    wall_seconds,
+                    usage["tokens"] if usage["reported"] else None,
+                ),
             )
         finally:
             session.close()
+        print(f"DOAgent game finished. Scores in {output}.", flush=True)
     finally:
         restore_timestamps(originals)
-
-
-def accept_model_reply(
-    has_tool_call: bool,
-    elapsed: float,
-    minimum_seconds: float = 1.0,
-) -> None:
-    """Raise when a model reply cannot be stored.
-
-    Args:
-        has_tool_call: Whether the reply included a tool call.
-        elapsed: Seconds the round trip took.
-        minimum_seconds: Fastest reply that can be kept.
-
-    Raises:
-        RuntimeError: The reply had no tool call, or it returned too quickly.
-    """
-    if not has_tool_call:
-        raise RuntimeError("model reply had no tool call")
-    if elapsed < minimum_seconds:
-        raise RuntimeError(f"model reply returned in {elapsed:.1f}s")
 
 
 def log_model_request(messages: list, tools: list, kind: str, detail: str) -> None:
@@ -352,11 +377,83 @@ def log_model_request(messages: list, tools: list, kind: str, detail: str) -> No
     print(user, flush=True)
 
 
+def generation_call(
+    operation: Callable[[], Any],
+    pause: Callable[[float], None] = time.sleep,
+) -> Any:
+    """Call operation up to four times.
+
+    Wait five seconds after each failure.
+
+    Args:
+        operation: One model completion.
+        pause: Wait function used after a failure.
+
+    Returns:
+        The value returned by operation.
+
+    Raises:
+        Exception: Chat Completion failed too many times.
+    """
+    rounds = 0
+    while True:
+        rounds += 1
+        try:
+            return operation()
+        except Exception as exc:
+            print(f"Chat Generation Error: {exc}", flush=True)
+            pause(5)
+            if rounds > 3:
+                raise Exception("Chat Completion failed too many times") from exc
+
+
+def reply_action(message: Any) -> Optional[Dict[str, Any]]:
+    """Return the tool arguments from one model message.
+
+    Args:
+        message: The first choice message from the model.
+
+    Returns:
+        The parsed tool arguments.
+        None when the message has no tool call or the arguments are not JSON.
+    """
+    tool_calls = getattr(message, "tool_calls", None)
+    if not tool_calls:
+        return None
+    try:
+        parsed = json.loads(tool_calls[0].function.arguments)
+    except (json.JSONDecodeError, TypeError, AttributeError, IndexError, KeyError):
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    return parsed
+
+
+def unused_reply(tokens: Optional[int] = None) -> Dict[str, Any]:
+    """Return the action used when a model reply cannot be applied.
+
+    Args:
+        tokens: Token count from the reply, when the model reported one.
+
+    Returns:
+        An action of no_action and an empty explanation.
+    """
+    return {
+        "action": "no_action",
+        "target": None,
+        "explanation": "",
+        "tokens": tokens,
+    }
+
+
 def call_model(messages: list, tools: list, model: str = SERVICE_MODEL) -> Dict[str, Any]:
     """Call the university model with the published tools.
 
-    A reply with no tool call is tried again.
-    A reply that returns in under a second is tried again.
+    A call that throws is tried four times, five seconds apart.
+    That whole attempt is tried again, up to five times.
+    The call uses temperature 0.7.
+    A reply with no tool call, or arguments that are not JSON, is no_action.
+    The same result is used when every attempt throws.
 
     Args:
         messages: System and user messages.
@@ -365,39 +462,49 @@ def call_model(messages: list, tools: list, model: str = SERVICE_MODEL) -> Dict[
 
     Returns:
         The tool arguments, and the message text as the explanation.
-
-    Raises:
-        RuntimeError: Every attempt was rejected.
+        When the reply cannot be used, action is the text no_action.
     """
     from openai import OpenAI
 
     client = OpenAI(api_key=proxy_api_key(), base_url=PROXY_BASE_URL)
+    print("Model call started.", flush=True)
+    started = time.perf_counter()
+    arguments: Optional[Dict[str, Any]] = None
+    total: Optional[int] = None
+    message: Any = None
 
-    def once() -> Dict[str, Any]:
-        print("Model call started.", flush=True)
-        started = time.perf_counter()
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            tools=tools,
-            tool_choice="required",
+    def once() -> Any:
+        return generation_call(
+            lambda: client.chat.completions.create(
+                model=model,
+                messages=messages,
+                tools=tools,
+                tool_choice="required",
+                temperature=0.7,
+            )
         )
-        elapsed = time.perf_counter() - started
-        print(f"Model call finished in {elapsed:.1f}s.", flush=True)
+
+    try:
+        response = call_with_retry(once)
         message = response.choices[0].message
-        try:
-            accept_model_reply(bool(message.tool_calls), elapsed)
-        except RuntimeError as exc:
-            log_model_request(messages, tools, "Rejected", str(exc))
-            raise
-        log_model_request(messages, tools, "Kept", f"{elapsed:.1f}s")
-        arguments = json.loads(message.tool_calls[0].function.arguments)
-        total = None
+        arguments = reply_action(message)
         if response.usage is not None:
             total = response.usage.total_tokens
-        return {"action": arguments, "explanation": message.content or "", "tokens": total}
-
-    return call_with_retry(once)
+    except Exception as exc:
+        log_model_request(messages, tools, "Rejected", str(exc))
+        return unused_reply()
+    finally:
+        elapsed = time.perf_counter() - started
+        print(f"Model call finished in {elapsed:.1f}s.", flush=True)
+    if arguments is None:
+        log_model_request(messages, tools, "Rejected", "model reply had no tool call")
+        return unused_reply(total)
+    log_model_request(messages, tools, "Kept", f"{elapsed:.1f}s")
+    return {
+        "action": arguments,
+        "explanation": getattr(message, "content", None) or "",
+        "tokens": total,
+    }
 
 
 if __name__ == "__main__":

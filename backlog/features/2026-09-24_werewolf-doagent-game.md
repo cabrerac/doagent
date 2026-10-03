@@ -4,7 +4,7 @@ title: "Implement Werewolf as a DOAgent game"
 status: "In Progress"
 priority: "High"
 created: "2026-09-24"
-last_updated: "2026-10-02"
+last_updated: "2026-10-04"
 category: "features"
 related_cips:
 - "0014"
@@ -32,7 +32,8 @@ Do not import their environment class or their agent class.
 
 `run_werewolf_doagent.py`, `werewolf_doagent.py`, `werewolf_session.py`, and `werewolf_player.py` are the DOAgent side.
 The environment plays the night and the day.
-A live model game is running on the VM and has not been scored yet.
+No new model game is running.
+The next one starts after the tracked runners are on the VM.
 
 ## Acceptance Criteria
 
@@ -64,14 +65,28 @@ The published prompt files stay unchanged.
 
 ## Progress Updates
 
+### 2026-10-04
+
+The DOAgent game matches the service arm on the rules, the temperature, the player name, and retries for a thrown call.
+An unusable reply is no_action and the game continues.
+A sheriff stays on the ballot only when continue_running is true.
+A failed gap or cost write is logged and does not fail the process.
+The level 2 explanation and each arm's own history text stay.
+Runs go to werewolf_runs/<name>/<index>/doagent and service.
+The MARBLE environment and agent files are on the VM.
+The tracked runners and the repeat count are still open.
+werewolf_kimi_2 is not running.
+Do not replay kimi_4.
+
 ### 2026-10-02
 
 The first Kimi DOAgent game was scored.
 It reached day 10 with many abstentions because the prompt omitted the game state.
 That is fixed.
 A reply under one second is retried.
-`werewolf_kimi_2` is running on the VM with the fix.
-The live model acceptance box stays open until that game writes truth, gap, and cost.
+`werewolf_kimi_2` was the planned VM run.
+It was not left running.
+The live model acceptance box stays open until a game on this code writes truth, gap, and cost.
 
 ### 2026-10-01
 

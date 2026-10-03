@@ -102,6 +102,7 @@ def modularity_of(choices: Mapping[str, str]) -> float:
 
     Returns:
         Modularity of the cliques formed by equal choices.
+        Zero when no two participants chose the same label.
 
     Raises:
         ValueError: Fewer than two participants made a choice.
@@ -116,7 +117,7 @@ def modularity_of(choices: Mapping[str, str]) -> float:
             if choices[left] == choices[right]:
                 edges.append((left, right))
     if not edges:
-        raise ValueError("modularity needs at least one link")
+        return 0.0
     return modularity(edges, groups)
 
 

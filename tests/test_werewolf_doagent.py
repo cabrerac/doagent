@@ -7,10 +7,15 @@ import unittest
 from contextlib import redirect_stdout
 
 from experiments.multiagentbench.run_werewolf_doagent import (
-    accept_model_reply,
     assign_roles,
+    call_model,
+    generation_call,
+    keep_going,
     log_model_request,
     play,
+    prepare_game_dir,
+    reply_action,
+    unused_reply,
     write_cost,
     write_run_artifacts,
 )
@@ -20,6 +25,7 @@ from experiments.multiagentbench.werewolf_player import (
     fill_prompt,
     label_player_messages,
     load_prompt,
+    task_suffix,
     werewolf_policy,
 )
 from experiments.multiagentbench.werewolf_session import lines_for
@@ -201,7 +207,10 @@ def _printed_request(kind: str, detail: str) -> str:
 class PromptTests(unittest.TestCase):
     def test_published_wolf_prompt_fills_history(self) -> None:
         prompt = load_prompt("werewolf_action")
-        filled = fill_prompt(prompt["user"], "night opens", "", "")
+        filled = fill_prompt(
+            prompt["user"],
+            {"public_chat": "night opens", "game_state": "", "player info": ""},
+        )
         self.assertIn("night opens", filled)
         self.assertNotIn("<<public_chat>>", filled)
         self.assertTrue(prompt["tools"])
@@ -255,16 +264,59 @@ class PromptTests(unittest.TestCase):
         self.assertTrue(messages[1]["content"].startswith("You are Nicole."))
         self.assertIn("Alive players: Ethel", messages[1]["content"])
 
-    def test_fast_reply_is_rejected(self) -> None:
-        with self.assertRaises(RuntimeError):
-            accept_model_reply(True, 0.1)
+    def test_villager_prompt_gets_the_task_block(self) -> None:
+        text = task_suffix(
+            "villager",
+            ["exile_werewolf", "protect_seer", "poison_werewolf"],
+            True,
+        )
+        self.assertIn("exile_werewolf:", text)
+        self.assertNotIn("poison_werewolf", text)
+        self.assertIn("cooperative strategy", text)
 
-    def test_missing_tool_call_is_rejected(self) -> None:
-        with self.assertRaises(RuntimeError):
-            accept_model_reply(False, 30.0)
+    def test_wolf_prompt_skips_the_strategy_line(self) -> None:
+        text = task_suffix("wolf", ["exile_werewolf", "poison_werewolf"], False)
+        self.assertIn("exile_werewolf:", text)
+        self.assertNotIn("poison_werewolf", text)
+        self.assertNotIn("cooperative strategy", text)
 
-    def test_slow_tool_call_is_kept(self) -> None:
-        accept_model_reply(True, 12.0)
+    def test_witch_prompt_includes_the_potion_tasks(self) -> None:
+        text = task_suffix(
+            "witch",
+            ["poison_werewolf", "rescue_villager", "exile_werewolf"],
+            True,
+        )
+        self.assertIn("poison_werewolf:", text)
+        self.assertIn("rescue_villager:", text)
+
+    def test_model_call_uses_temperature_0_7(self) -> None:
+        import inspect
+
+        source = inspect.getsource(call_model)
+        self.assertIn("temperature=0.7", source)
+        self.assertIn("call_with_retry", source)
+        self.assertIn("generation_call", source)
+        self.assertIn("unused_reply", source)
+
+    def test_sheriff_prompt_fills_the_election_fields(self) -> None:
+        env = WerewolfEnv({"Lacy": "wolf", "Ethel": "villager", "Mary": "villager"})
+        env.reset()
+        env._phase = "sheriff_speech"
+        env._candidates = ["Lacy", "Ethel"]
+        env._candidate_index = 1
+        env._election_speeches = [("Lacy", "I serve")]
+        obs = env._observation("Ethel")
+        prompt = load_prompt("sheriff_speech")
+        fields = {
+            "public_chat": "chat",
+            "game_state": obs["game_state"],
+            "player info": obs["player_info"],
+        }
+        fields.update(obs["fields"])
+        filled = fill_prompt(prompt["user"], fields)
+        self.assertNotIn("<<", filled)
+        self.assertIn("I serve", filled)
+        self.assertIn("Lacy, Ethel", filled)
 
     def test_rejected_request_prints_the_user_prompt(self) -> None:
         text = _printed_request("Rejected", "model reply returned in 0.1s")
@@ -340,7 +392,176 @@ def _night_complete(messages, tools):
     }
 
 
+class ReplyTests(unittest.TestCase):
+    def test_generation_call_waits_five_seconds(self) -> None:
+        waits = []
+        tries = {"count": 0}
+
+        def operation() -> str:
+            tries["count"] += 1
+            if tries["count"] < 3:
+                raise TimeoutError("Request timed out.")
+            return "ok"
+
+        result = generation_call(operation, pause=waits.append)
+        self.assertEqual(result, "ok")
+        self.assertEqual(waits, [5, 5])
+
+    def test_generation_call_stops_after_four_failures(self) -> None:
+        waits = []
+
+        def operation() -> str:
+            raise TimeoutError("Request timed out.")
+
+        with self.assertRaises(Exception) as caught:
+            generation_call(operation, pause=waits.append)
+        self.assertEqual(str(caught.exception), "Chat Completion failed too many times")
+        self.assertEqual(waits, [5, 5, 5, 5])
+
+    def test_missing_tool_call_is_unused(self) -> None:
+        message = type("Message", (), {"tool_calls": None})()
+        self.assertIsNone(reply_action(message))
+        self.assertEqual(unused_reply(3)["action"], "no_action")
+        self.assertEqual(unused_reply(3)["target"], None)
+        self.assertEqual(unused_reply(3)["tokens"], 3)
+
+    def test_arguments_that_are_not_json_are_unused(self) -> None:
+        call = type(
+            "Call",
+            (),
+            {"function": type("Fn", (), {"arguments": "not json"})()},
+        )()
+        message = type("Message", (), {"tool_calls": [call]})()
+        self.assertIsNone(reply_action(message))
+
+    def test_missing_speech_uses_the_service_sentence(self) -> None:
+        env = WerewolfEnv({"Lacy": "wolf", "Ethel": "villager"})
+        env.reset()
+        env._phase = "player_speech"
+        env._speech_order = ["Ethel"]
+        env._speaker_index = 0
+        step = env.step({"Ethel": "no_action"})
+        contents = [line["content"] for line in step["observations"]["game_line"]]
+        self.assertIn("Error during generation for player Ethel.", contents)
+
+    def test_published_speech_field_is_kept(self) -> None:
+        env = WerewolfEnv({"Lacy": "wolf", "Ethel": "villager"})
+        env.reset()
+        env._phase = "player_speech"
+        env._speech_order = ["Ethel"]
+        env._speaker_index = 0
+        step = env.step({"Ethel": {"action": {"speech_content": "I am Ethel."}}})
+        contents = [line["content"] for line in step["observations"]["game_line"]]
+        self.assertIn("I am Ethel.", contents)
+
+    def test_seer_does_not_invent_a_result(self) -> None:
+        env = WerewolfEnv({"Lacy": "wolf", "David": "seer", "Ethel": "villager"})
+        env.reset()
+        env._phase = "seer"
+        step = env.step({"David": "no_action"})
+        contents = [line["content"] for line in step["observations"]["game_line"]]
+        text = " ".join(contents)
+        self.assertIn("Seer action failed.", text)
+        self.assertIn("Seer has checked a player's identity.", text)
+        self.assertNotIn("not a werewolf", text)
+        self.assertEqual(env._seer_checks, [])
+
+
+class SheriffSpeechTests(unittest.TestCase):
+    def test_a_candidate_who_continues_stays_on_the_ballot(self) -> None:
+        env = WerewolfEnv({"Lacy": "wolf", "Ethel": "villager", "Mary": "villager"})
+        env.reset()
+        env._phase = "sheriff_speech"
+        env._candidates = ["Lacy", "Ethel"]
+        env._candidate_index = 0
+        step = env.step(
+            {
+                "Lacy": {
+                    "action": {
+                        "continue_running": True,
+                        "speech_content": "I stay.",
+                    }
+                }
+            }
+        )
+        contents = [line["content"] for line in step["observations"]["game_line"]]
+        self.assertIn("I stay.", contents)
+        self.assertNotIn("Lacy has withdrawn from the sheriff election.", contents)
+        self.assertEqual(env._final_candidates, ["Lacy"])
+        self.assertEqual(env.action_name, "sheriff_speech")
+
+    def test_a_candidate_who_does_not_continue_withdraws(self) -> None:
+        env = WerewolfEnv({"Lacy": "wolf", "Ethel": "villager", "Mary": "villager"})
+        env.reset()
+        env._phase = "sheriff_speech"
+        env._candidates = ["Lacy", "Ethel"]
+        env._final_candidates = ["Lacy"]
+        env._candidate_index = 1
+        step = env.step({"Ethel": {"action": {"speech_content": "I step down."}}})
+        contents = [line["content"] for line in step["observations"]["game_line"]]
+        self.assertIn("Ethel has withdrawn from the sheriff election.", contents)
+        self.assertEqual(env._final_candidates, ["Lacy"])
+        self.assertEqual(env.action_name, "vote_for_sheriff")
+        self.assertEqual(env.asked, ["Mary"])
+        self.assertEqual(env._observation("Mary")["fields"]["candidate_list"], "Lacy")
+
+    def test_an_unusable_sheriff_speech_withdraws(self) -> None:
+        env = WerewolfEnv({"Lacy": "wolf", "Mary": "villager"})
+        env.reset()
+        env._phase = "sheriff_speech"
+        env._candidates = ["Lacy"]
+        env._candidate_index = 0
+        step = env.step({"Lacy": "no_action"})
+        contents = [line["content"] for line in step["observations"]["game_line"]]
+        self.assertIn("Error during generation for player Lacy.", contents)
+        self.assertIn("Lacy has withdrawn from the sheriff election.", contents)
+        self.assertEqual(env._final_candidates, [])
+
+
+class FolderTests(unittest.TestCase):
+    def test_a_game_folder_is_created(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        root = Path(tempfile.mkdtemp())
+        folder = prepare_game_dir(str(root / "01" / "doagent"), root / "service")
+        self.assertEqual(folder, (root / "01" / "doagent").resolve())
+        self.assertTrue(folder.is_dir())
+
+
+class ScoreTests(unittest.TestCase):
+    def test_a_score_failure_is_logged(self) -> None:
+        def boom() -> None:
+            raise ValueError("modularity needs at least two choices")
+
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            keep_going("Gap scoring", boom)
+        self.assertIn(
+            "Gap scoring failed: modularity needs at least two choices",
+            buffer.getvalue(),
+        )
+
+
 class NightTests(unittest.TestCase):
+    def test_night_closes_after_the_witch_is_gone(self) -> None:
+        env = WerewolfEnv(
+            {"Lacy": "wolf", "Mary": "guard", "Ethel": "villager"},
+            max_days=1,
+        )
+        env.reset()
+        env.step({"Mary": {"protect_target": "Mary"}})
+        step = env.step({"Lacy": {"attack": True, "target": "Ethel"}})
+        contents = [line["content"] for line in step["observations"]["game_line"]]
+        self.assertIn("Ethel", env._alive)
+        self.assertNotIn("Ethel", env.asked)
+        self.assertNotIn("Seer has checked a player's identity.", contents)
+        self.assertNotIn("Witch has made her decision on potion use.", contents)
+        self.assertEqual(env.phases[0]["phase"], "night-1")
+        self.assertEqual(env.phases[0]["deaths"], ["Ethel"])
+        self.assertEqual(env.phases[0]["wolf_target"], "Ethel")
+
+
     def test_private_night_lines_stay_with_their_roles(self) -> None:
         session = play(NIGHT_ROLES, 2, _night_complete)
         try:
@@ -352,8 +573,7 @@ class NightTests(unittest.TestCase):
             self.assertIn("The result is werewolf.", lines_for(outcomes, "David"))
             self.assertNotIn("The result is werewolf.", lines_for(outcomes, "Ethel"))
             self.assertIn("Night deaths: nobody.", lines_for(outcomes, "Ethel"))
-            self.assertIn("Daily tasks:", lines_for(outcomes, "Ethel"))
-            self.assertIn("exile_werewolf", lines_for(outcomes, "Ethel"))
+            self.assertNotIn("Daily tasks:", lines_for(outcomes, "Ethel"))
             self.assertIn("Exile: nobody.", lines_for(outcomes, "Ethel"))
         finally:
             session.close()

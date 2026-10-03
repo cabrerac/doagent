@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from experiments.multiagentbench.recover import compare, slice_log
+from experiments.multiagentbench.recover import compare, modularity_of, slice_log
 from experiments.multiagentbench.truth import read_truth, write_truth
 
 POPULATION = 9
@@ -48,6 +48,17 @@ def _logs() -> dict:
         for villager in VILLAGERS:
             day[villager] += f"\n{wolf} voted for David"
     return {"night-1": night, "day-1": day}
+
+
+class ModularityTests(unittest.TestCase):
+    def test_split_vote_scores_zero(self) -> None:
+        votes = {
+            "Sandra": "Patricia",
+            "Jami": "Sandra",
+            "Stephanie": "Jami",
+            "Patricia": "Stephanie",
+        }
+        self.assertEqual(modularity_of(votes), 0.0)
 
 
 class LogSliceTests(unittest.TestCase):
