@@ -6,6 +6,16 @@ import io
 import unittest
 from contextlib import redirect_stdout
 
+from experiments.multiagentbench.cost import (
+    EXPLANATION_SUFFIX,
+    explanation_overhead,
+    overhead_from_records,
+    projected_storage,
+    service_log_paths,
+    summarize_repetition,
+    token_levels,
+    write_cost,
+)
 from experiments.multiagentbench.run_werewolf_doagent import (
     assign_roles,
     call_model,
@@ -16,7 +26,6 @@ from experiments.multiagentbench.run_werewolf_doagent import (
     prepare_game_dir,
     reply_action,
     unused_reply,
-    write_cost,
     write_run_artifacts,
 )
 from experiments.multiagentbench.truth import read_truth
@@ -66,16 +75,152 @@ class RoleTests(unittest.TestCase):
             self.assertTrue((directory / "truth.json").is_file())
             self.assertTrue((directory / "gap.json").is_file())
             (directory / "note.txt").write_text("run", encoding="utf-8")
-            write_cost(directory, 1.5, None)
+            record = directory / "outcome.jsonl"
+            record.write_text("line\n", encoding="utf-8")
+            write_cost(
+                directory,
+                1.5,
+                None,
+                [record, directory / "trace.jsonl"],
+            )
             import json
 
             cost = json.loads((directory / "cost.json").read_text(encoding="utf-8"))
-            self.assertGreater(cost["file_count"], 0)
-            self.assertGreater(cost["storage_bytes"], 0)
+            self.assertEqual(cost["file_count"], 1)
+            self.assertEqual(cost["storage_bytes"], record.stat().st_size)
             self.assertIsNone(cost["tokens"])
             self.assertEqual(cost["wall_seconds"], 1.5)
         finally:
             session.close()
+
+
+class CostTests(unittest.TestCase):
+    def test_level_0_drops_trace_and_explanation(self) -> None:
+        records = [
+            {
+                "kind": "agent_update",
+                "id": "a",
+                "actor": "John",
+                "timestamp": "t",
+                "payload": {
+                    "decision": {
+                        "explanation": "because",
+                        "request": {},
+                        "response": {"reasoning": {"steps": [1]}},
+                    }
+                },
+                "provenance": {"created_by": "John"},
+                "accountability": {"owner": "John"},
+            },
+            {
+                "kind": "trace",
+                "id": "b",
+                "actor": "John",
+                "timestamp": "t",
+                "payload": {"from_id": "x", "to_id": "y"},
+                "provenance": {"created_by": "John"},
+                "accountability": {"owner": "John"},
+            },
+        ]
+        level_0 = projected_storage(records, 0)
+        level_2 = projected_storage(records, 2)
+        self.assertEqual(level_0["file_count"], 1)
+        self.assertEqual(level_2["file_count"], 2)
+        self.assertLess(level_0["storage_bytes"], level_2["storage_bytes"])
+
+    def test_service_cost_counts_player_logs(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        directory = Path(tempfile.mkdtemp())
+        (directory / "checkpoint_Day1.json").write_text("{}", encoding="utf-8")
+        log = directory / "1-wolf-John_log.txt"
+        log.write_text("voted for Mary\n", encoding="utf-8")
+        self.assertEqual(service_log_paths(directory), [log])
+        write_cost(directory, 2.0, 10, service_log_paths(directory))
+        import json
+
+        cost = json.loads((directory / "cost.json").read_text(encoding="utf-8"))
+        self.assertEqual(cost["file_count"], 1)
+        self.assertEqual(cost["storage_bytes"], log.stat().st_size)
+
+    def test_explanation_overhead_counts_request_and_reply(self) -> None:
+        def encode(text: str) -> list[int]:
+            return [1] * len(text)
+
+        user = f"You are John.\n\nDecide.{EXPLANATION_SUFFIX}"
+        overhead = explanation_overhead(user, "because", encode)
+        self.assertEqual(overhead, len(EXPLANATION_SUFFIX) + len("because"))
+        self.assertEqual(explanation_overhead("Decide.", "because", encode), len("because"))
+
+    def test_level_tokens_drop_the_explanation(self) -> None:
+        levels = token_levels(100, 10)
+        self.assertEqual(levels, {"0": 90, "1": 90, "2": 100})
+        self.assertEqual(token_levels(5, 9), {"0": 0, "1": 0, "2": 5})
+
+    def test_summary_subtracts_explanations_from_a_level_2_session(self) -> None:
+        import json
+        import tempfile
+        from pathlib import Path
+
+        def encode(text: str) -> list[int]:
+            return [1] * len(text)
+
+        record = {
+            "kind": "agent_update",
+            "payload": {
+                "decision": {
+                    "explanation": "hi",
+                    "response": {"explanation": "hi"},
+                }
+            },
+        }
+        repetition = Path(tempfile.mkdtemp())
+        records = repetition / "doagent" / "werewolf_doagent_run_x" / "records"
+        records.mkdir(parents=True)
+        (records / "agent_update.jsonl").write_text(json.dumps(record) + "\n", encoding="utf-8")
+        (repetition / "doagent" / "cost.json").write_text(
+            json.dumps({"tokens": 1000, "wall_seconds": 3.5}),
+            encoding="utf-8",
+        )
+        summary = summarize_repetition(repetition, encode)
+        overhead = overhead_from_records([record], encode)
+        self.assertEqual(summary["doagent"]["2"]["tokens"], 1000)
+        self.assertEqual(summary["doagent"]["0"]["tokens"], 1000 - overhead)
+        self.assertEqual(summary["doagent"]["1"]["tokens"], 1000 - overhead)
+        self.assertEqual(summary["doagent"]["0"]["wall_seconds"], 3.5)
+        self.assertGreater(overhead, len("hi"))
+
+    def test_summary_uses_the_stored_split(self) -> None:
+        import json
+        import tempfile
+        from pathlib import Path
+
+        repetition = Path(tempfile.mkdtemp())
+        records = repetition / "doagent" / "werewolf_doagent_run_x" / "records"
+        records.mkdir(parents=True)
+        record = {
+            "kind": "agent_update",
+            "payload": {"decision": {"explanation": "hi", "response": {"explanation": "hi"}}},
+        }
+        (records / "agent_update.jsonl").write_text(json.dumps(record) + "\n", encoding="utf-8")
+        (repetition / "doagent" / "cost.json").write_text(
+            json.dumps(
+                {
+                    "tokens": 50,
+                    "wall_seconds": 1.0,
+                    "tokens_by_level": {"0": 10, "1": 10, "2": 50},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        def encode(text: str) -> list[int]:
+            raise AssertionError(text)
+
+        summary = summarize_repetition(repetition, encode)
+        self.assertEqual(summary["doagent"]["0"]["tokens"], 10)
+        self.assertEqual(summary["doagent"]["2"]["tokens"], 50)
 
 
 class SpeechOrderTests(unittest.TestCase):

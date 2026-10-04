@@ -18,6 +18,14 @@ import yaml
 
 from doagent import Session
 from examples._shared.llm_client import PROXY_BASE_URL, proxy_api_key
+from experiments.multiagentbench.cost import (
+    cl100k_encode,
+    doagent_record_paths,
+    explanation_overhead,
+    token_levels,
+    user_text,
+    write_cost,
+)
 from experiments.multiagentbench.metrics import entropy
 from experiments.multiagentbench.recover import (
     entropy_from_logs,
@@ -265,38 +273,6 @@ def keep_going(label: str, operation: Callable[[], Any]) -> None:
         print(f"{label} failed: {exc}", flush=True)
 
 
-def write_cost(
-    directory: Path,
-    wall_seconds: float,
-    tokens: Optional[int],
-) -> None:
-    """Write storage, file count, tokens, and wall time for one run.
-
-    Args:
-        directory: Run directory to measure after the artifacts exist.
-        wall_seconds: Seconds spent playing the game.
-        tokens: Total model tokens for the run.
-            None when the model call did not report usage.
-    """
-    directory.mkdir(parents=True, exist_ok=True)
-    others = [
-        item
-        for item in directory.rglob("*")
-        if item.is_file() and item.name != "cost.json"
-    ]
-    payload = {
-        "storage_bytes": 0,
-        "file_count": len(others) + 1,
-        "tokens": tokens,
-        "wall_seconds": wall_seconds,
-    }
-    encoded = json.dumps(payload, indent=2).encode("utf-8")
-    payload["storage_bytes"] = sum(item.stat().st_size for item in others) + len(encoded)
-    encoded = json.dumps(payload, indent=2).encode("utf-8")
-    payload["storage_bytes"] = sum(item.stat().st_size for item in others) + len(encoded)
-    (directory / "cost.json").write_text(encoded.decode("utf-8"), encoding="utf-8")
-
-
 def main(argv: list[str] | None = None) -> None:
     """Load nine roles, play on disk, and write the truth file, the gap, and the cost."""
     parser = argparse.ArgumentParser(description="DOAgent Werewolf")
@@ -310,17 +286,27 @@ def main(argv: list[str] | None = None) -> None:
     output = prepare_game_dir(args.output, OUTPUT_BASE / "doagent")
     print(f"DOAgent game directory: {output}", flush=True)
     usage = {"tokens": 0, "reported": False}
-
-    def counted(messages: list, tools: list) -> Dict[str, Any]:
-        raw = call_model(messages, tools, args.model)
-        if raw.get("tokens") is not None:
-            usage["tokens"] += int(raw["tokens"])
-            usage["reported"] = True
-        return raw
-
+    prompts: list[tuple[str, str]] = []
     originals = install_timestamps()
     started = time.perf_counter()
+    client = None
     try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=proxy_api_key(), base_url=PROXY_BASE_URL)
+
+        def counted(messages: list, tools: list) -> Dict[str, Any]:
+            raw = call_model(messages, tools, args.model, client)
+            if raw.get("tokens") is not None:
+                usage["tokens"] += int(raw["tokens"])
+                usage["reported"] = True
+            if args.logging_level >= 2:
+                explanation = raw.get("explanation")
+                if not isinstance(explanation, str):
+                    explanation = ""
+                prompts.append((user_text(messages), explanation))
+            return raw
+
         try:
             session = play(
                 roles,
@@ -337,24 +323,35 @@ def main(argv: list[str] | None = None) -> None:
             raise
         print(f"DOAgent records: {session.run_path}", flush=True)
         wall_seconds = time.perf_counter() - started
+        record_paths = doagent_record_paths(session.run_path)
         try:
             keep_going(
                 "Gap scoring",
                 lambda: write_run_artifacts(session, roles, output),
             )
-            keep_going(
-                "Cost scoring",
-                lambda: write_cost(
-                    output,
-                    wall_seconds,
-                    usage["tokens"] if usage["reported"] else None,
-                ),
-            )
         finally:
             session.close()
+        def score_cost() -> None:
+            tokens = usage["tokens"] if usage["reported"] else None
+            levels = None
+            if args.logging_level >= 2 and tokens is not None:
+                try:
+                    overhead = 0
+                    for user, explanation in prompts:
+                        overhead += explanation_overhead(user, explanation, cl100k_encode)
+                    levels = token_levels(tokens, overhead)
+                except Exception as exc:
+                    print(f"Token projection failed: {exc}", flush=True)
+            write_cost(output, wall_seconds, tokens, record_paths, levels)
+
+        keep_going("Cost scoring", score_cost)
         print(f"DOAgent game finished. Scores in {output}.", flush=True)
     finally:
-        restore_timestamps(originals)
+        try:
+            if client is not None:
+                client.close()
+        finally:
+            restore_timestamps(originals)
 
 
 def log_model_request(messages: list, tools: list, kind: str, detail: str) -> None:
@@ -446,7 +443,12 @@ def unused_reply(tokens: Optional[int] = None) -> Dict[str, Any]:
     }
 
 
-def call_model(messages: list, tools: list, model: str = SERVICE_MODEL) -> Dict[str, Any]:
+def call_model(
+    messages: list,
+    tools: list,
+    model: str = SERVICE_MODEL,
+    client: Any = None,
+) -> Dict[str, Any]:
     """Call the university model with the published tools.
 
     A call that throws is tried four times, five seconds apart.
@@ -454,19 +456,25 @@ def call_model(messages: list, tools: list, model: str = SERVICE_MODEL) -> Dict[
     The call uses temperature 0.7.
     A reply with no tool call, or arguments that are not JSON, is no_action.
     The same result is used when every attempt throws.
+    A client passed in is reused and left open.
+    A client this function opens is closed before it returns.
 
     Args:
         messages: System and user messages.
         tools: Tool schemas from the published prompt file.
         model: Model name sent to the proxy.
+        client: Open client reused for this call.
+            A new client is opened when this is omitted.
 
     Returns:
         The tool arguments, and the message text as the explanation.
         When the reply cannot be used, action is the text no_action.
     """
-    from openai import OpenAI
+    owns_client = client is None
+    if client is None:
+        from openai import OpenAI
 
-    client = OpenAI(api_key=proxy_api_key(), base_url=PROXY_BASE_URL)
+        client = OpenAI(api_key=proxy_api_key(), base_url=PROXY_BASE_URL)
     print("Model call started.", flush=True)
     started = time.perf_counter()
     arguments: Optional[Dict[str, Any]] = None
@@ -496,6 +504,8 @@ def call_model(messages: list, tools: list, model: str = SERVICE_MODEL) -> Dict[
     finally:
         elapsed = time.perf_counter() - started
         print(f"Model call finished in {elapsed:.1f}s.", flush=True)
+        if owns_client:
+            client.close()
     if arguments is None:
         log_model_request(messages, tools, "Rejected", "model reply had no tool call")
         return unused_reply(total)

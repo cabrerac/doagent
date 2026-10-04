@@ -3,6 +3,7 @@ pettingzoo[mpe]
 mpe2
 pygame
 openai
+tiktoken
 autogen-agentchat
 autogen-ext[magentic-one,openai]
 

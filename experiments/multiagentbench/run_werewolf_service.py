@@ -354,18 +354,21 @@ def game_directory(shared_memory_path: str) -> Path:
 def _write_game_cost(env: Any, wall_seconds: float, usage: Dict[str, Any]) -> None:
     """Write the cost file for one service game.
 
+    The size counts the player logs.
+
     Args:
         env: The Werewolf environment for this game.
         wall_seconds: Seconds spent in the game.
         usage: Token totals collected during the game.
     """
-    from experiments.multiagentbench.run_werewolf_doagent import write_cost
+    from experiments.multiagentbench.cost import service_log_paths, write_cost
 
     path = getattr(env, "shared_memory_path", None)
     if not path:
         return
     tokens = usage["tokens"] if usage.get("reported") else None
-    write_cost(game_directory(path), wall_seconds, tokens)
+    directory = game_directory(path)
+    write_cost(directory, wall_seconds, tokens, service_log_paths(directory))
 
 
 def _attach_truth(env: Any) -> None:
