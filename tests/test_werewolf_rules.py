@@ -5,6 +5,7 @@ from __future__ import annotations
 import unittest
 
 from experiments.multiagentbench.werewolf_doagent import WerewolfEnv, _majority
+from experiments.multiagentbench.werewolf_end import night_side_wiped
 
 
 def _wolf_guard_village() -> WerewolfEnv:
@@ -66,6 +67,23 @@ class NightRuleTests(unittest.TestCase):
         env.step({"Mary": {"protect_target": "Mary"}})
         env.step({"Lacy": {"attack": True, "target": "Ethel"}})
         self.assertEqual(env.phases[-1]["wolf_target"], "Ethel")
+
+
+class ServiceNightEndTests(unittest.TestCase):
+    def test_a_night_that_removes_the_last_wolf_stops_before_the_day(self) -> None:
+        health = {"Lacy": 0, "Ethel": 1, "Mary": 1}
+        roles = {"Lacy": "wolf", "Ethel": "villager", "Mary": "villager"}
+        self.assertTrue(night_side_wiped(health, roles))
+
+    def test_a_night_that_removes_the_last_villager_stops_before_the_day(self) -> None:
+        health = {"Lacy": 1, "John": 1, "Ethel": 0}
+        roles = {"Lacy": "wolf", "John": "wolf", "Ethel": "villager"}
+        self.assertTrue(night_side_wiped(health, roles))
+
+    def test_a_night_with_both_sides_alive_continues_into_the_day(self) -> None:
+        health = {"Lacy": 1, "Ethel": 1, "Mary": 0}
+        roles = {"Lacy": "wolf", "Ethel": "villager", "Mary": "villager"}
+        self.assertFalse(night_side_wiped(health, roles))
 
 
 class DayRuleTests(unittest.TestCase):
