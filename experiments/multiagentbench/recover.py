@@ -257,6 +257,161 @@ def mean_gap(
     return sum(distances) / len(distances)
 
 
+def phase_bounds(phase: str) -> tuple[str, str]:
+    """Return the start and end markers for one night or day.
+
+    Args:
+        phase: Phase name such as night-1 or day-2.
+
+    Returns:
+        The start marker and the end marker.
+    """
+    kind, number_text = phase.split("-", 1)
+    number = int(number_text)
+    if kind == "night":
+        return f"Night {number} begins", f"Day {number} begins"
+    return f"Day {number} begins", f"Night {number + 1} begins"
+
+
+def span_log(text: str, origin: str, current: str) -> str:
+    """Return the log text from a fact's birth through the current episode.
+
+    Args:
+        text: Full log for one participant.
+        origin: Episode where the fact was created.
+        current: Episode being scored.
+
+    Returns:
+        The text between those bounds.
+        The whole log when a marker is missing.
+    """
+    start_marker, _ignored = phase_bounds(origin)
+    _ignored_start, end_marker = phase_bounds(current)
+    start = text.find(start_marker)
+    if start < 0:
+        start = 0
+    end = text.find(end_marker, start)
+    if end < 0:
+        return text[start:]
+    return text[start:end]
+
+
+def line_span(
+    episodes: Sequence[Mapping[str, Any]],
+    origin: str,
+    current: str,
+) -> tuple[int, int]:
+    """Return the line range from a fact's birth through the current episode.
+
+    Args:
+        episodes: Environment episodes in order.
+        origin: Episode where the fact was created.
+        current: Episode being scored.
+
+    Returns:
+        Start index and end index in the delivered line list.
+    """
+    start = 0
+    end = 0
+    seen_origin = False
+    for episode in episodes:
+        name = str(episode["episode"])
+        if name == origin:
+            seen_origin = True
+        if not seen_origin:
+            start = int(episode.get("end_line") or 0)
+        end = int(episode.get("end_line") or 0)
+        if name == current:
+            break
+    return start, end
+
+
+def recover_curve(
+    document: Mapping[str, Any],
+    text_for_fact: Any,
+    votes_by_episode: Mapping[str, Optional[Mapping[str, str]]],
+) -> list[dict[str, Any]]:
+    """Rebuild game entropy and modularity for each episode.
+
+    Args:
+        document: Environment episode curve.
+        text_for_fact: Called as text_for_fact(origin, current, player_id).
+            Returns the text that player received from the fact's birth through this episode.
+        votes_by_episode: Episode name to recovered exile votes.
+            Missing when the day has no recovered vote.
+
+    Returns:
+        One row per episode, with game_entropy and modularity.
+    """
+    rows = []
+    for episode in document.get("episodes", []):
+        name = str(episode["episode"])
+        audience = list(episode.get("audience") or [])
+        population = len(audience)
+        scores = []
+        for fact in episode.get("facts") or []:
+            proposition = str(fact["proposition"])
+            origin = str(fact["origin"])
+            holders = 0
+            for player_id in audience:
+                if proposition in text_for_fact(origin, name, player_id):
+                    holders += 1
+            scores.append(entropy(holders, population))
+        game_entropy = sum(scores) / len(scores) if scores else 0.0
+        modularity = None
+        reference_votes = episode.get("votes") or {}
+        if len(reference_votes) >= 2:
+            found = votes_by_episode.get(name) or {}
+            chosen = {
+                player: found[player]
+                for player in reference_votes
+                if player in found
+            }
+            if len(chosen) == len(reference_votes):
+                modularity = modularity_of(chosen)
+        rows.append(
+            {
+                "episode": name,
+                "game_entropy": game_entropy,
+                "modularity": modularity,
+            }
+        )
+    return rows
+
+
+def curve_gaps(
+    document: Mapping[str, Any],
+    recovered: Sequence[Mapping[str, Any]],
+) -> dict[str, Optional[float]]:
+    """Return the mean distance between the environment curve and the recovered curve.
+
+    Args:
+        document: Environment episode curve.
+        recovered: Rows from recover_curve, in the same order.
+
+    Returns:
+        entropy and modularity distances.
+        modularity is None when no day recorded a vote score.
+    """
+    entropy_truth: list[float] = []
+    entropy_recovered: list[Optional[float]] = []
+    modularity_truth: list[float] = []
+    modularity_recovered: list[Optional[float]] = []
+    episodes = document.get("episodes", [])
+    for episode, row in zip(episodes, recovered):
+        entropy_truth.append(float(episode["game_entropy"]))
+        entropy_recovered.append(row.get("game_entropy"))
+        if episode.get("modularity") is None:
+            continue
+        modularity_truth.append(float(episode["modularity"]))
+        modularity_recovered.append(row.get("modularity"))
+    entropy_gap = mean_gap(entropy_truth, entropy_recovered) if entropy_truth else None
+    modularity_gap = (
+        mean_gap(modularity_truth, modularity_recovered) if modularity_truth else None
+    )
+    return {"entropy": entropy_gap, "modularity": modularity_gap}
+
+
 def compare(
     truth: Mapping[str, object],
     logs_by_phase: Mapping[str, Mapping[str, str]],

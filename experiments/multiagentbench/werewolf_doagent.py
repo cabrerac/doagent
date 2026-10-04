@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Mapping, Optional
 
+from experiments.multiagentbench.episode_curve import FactBook
+
 
 class WerewolfEnv:
     """Owns one night and the day after it.
@@ -55,6 +57,8 @@ class WerewolfEnv:
         self._seer_checks: List[Dict[str, str]] = []
         self._use_daily_tasks = True
         self.phases: List[Dict[str, Any]] = []
+        self.curve = FactBook(self._roles)
+        self._curve_close: Optional[tuple] = None
 
     @property
     def agents(self) -> list[str]:
@@ -110,6 +114,8 @@ class WerewolfEnv:
         self._day_speeches = []
         self._seer_checks = []
         self.phases = []
+        self.curve = FactBook(self._roles)
+        self._curve_close = None
         return self._open_ask()
 
     def step(self, actions: Mapping[str, Any]) -> Dict[str, Any]:
@@ -123,6 +129,19 @@ class WerewolfEnv:
             New game lines are under observations["game_line"].
         """
         lines = self._apply(actions)
+        for line in lines:
+            self.curve.deliver(
+                str(line.get("content") or ""),
+                list(line.get("recipients") or []),
+            )
+        pending = self._curve_close
+        self._curve_close = None
+        if pending is not None:
+            kind, episode, votes = pending
+            if kind == "night":
+                self.curve.close_night(episode)
+            else:
+                self.curve.close_day(episode, votes)
         observations = self._open_ask()
         observations["game_line"] = lines
         return {
@@ -375,13 +394,9 @@ class WerewolfEnv:
         lines = []
         if target in self._alive and target != self._last_protected:
             self._protected = target
-            lines.append(
-                _line(
-                    guard_id,
-                    [guard_id],
-                    f"Guard protects {target}.",
-                )
-            )
+            proposition = f"Guard protects {target}."
+            self.curve.create(f"night-{self._day}", proposition, [guard_id])
+            lines.append(_line(guard_id, [guard_id], proposition))
         else:
             self._protected = None
             lines.append(
@@ -427,6 +442,7 @@ class WerewolfEnv:
             if killed and majority in self._alive:
                 self._dead.append(majority)
             target_text = f"target {majority}"
+            self.curve.create(f"night-{self._day}", target_text, wolves)
             self._phase = "seer"
         else:
             self._rounds_left -= 1
@@ -474,12 +490,10 @@ class WerewolfEnv:
             result = "not a werewolf"
         self._seer_checks.append({"player": target, "result": result})
         self._phase = "witch"
+        proposition = f"Seer checked {target}. The result is {result}."
+        self.curve.create(f"night-{self._day}", proposition, [seer_id])
         return [
-            _line(
-                seer_id,
-                [seer_id],
-                f"Seer checked {target}. The result is {result}.",
-            ),
+            _line(seer_id, [seer_id], proposition),
             public,
         ]
 
@@ -504,6 +518,8 @@ class WerewolfEnv:
                 self._dead.append(str(poison_target))
             self._poison = 0
             note = f"Witch poisoned {poison_target}."
+        if note.startswith("Witch saved") or note.startswith("Witch poisoned"):
+            self.curve.create(f"night-{self._day}", note, [witch_id])
         self._phase = "resolve"
         return [
             _line(witch_id, [witch_id], note),
@@ -573,6 +589,9 @@ class WerewolfEnv:
                 "deaths": list(self._dead),
             }
         )
+        for player_id in list(self._dead):
+            self.curve.remove(player_id)
+        self._curve_close = ("night", f"night-{self._day}", None)
         remaining = self._eligible()
         if _side_wiped(remaining, self._roles):
             self._drop_night_dead()
@@ -683,6 +702,7 @@ class WerewolfEnv:
             player_id: _field(actions.get(player_id), "action_vote") or "abstain"
             for player_id in self._alive
         }
+        episode = f"day-{self._day}"
         exiled = _majority(votes, self._sheriff)
         if exiled and exiled in self._alive:
             self._alive.remove(exiled)
@@ -697,6 +717,9 @@ class WerewolfEnv:
                 "votes": votes,
             }
         )
+        if exiled:
+            self.curve.remove(exiled)
+        self._curve_close = ("day", episode, votes)
         holder = exiled if exiled == self._sheriff else None
         if self._offer_badge(holder, "night"):
             pass

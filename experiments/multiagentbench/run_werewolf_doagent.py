@@ -26,11 +26,13 @@ from experiments.multiagentbench.cost import (
     user_text,
     write_cost,
 )
-from experiments.multiagentbench.metrics import entropy
+from experiments.multiagentbench.episode_curve import write_document
 from experiments.multiagentbench.recover import (
-    entropy_from_logs,
+    curve_gaps,
+    line_span,
     mean_gap,
     modularity_of,
+    recover_curve,
     vote_rounds,
     write_gap,
 )
@@ -183,6 +185,7 @@ def play(
         if on_step is not None:
             on_step(env)
         round_id += 1
+    session.werewolf_curve = env.curve.document()
     return session
 
 
@@ -194,36 +197,90 @@ def write_run_artifacts(session: Session, roles: Mapping[str, str], directory: P
         roles: Player id to role name.
         directory: Directory that receives truth.json and gap.json.
     """
-    outcomes = session.inspect("outcome")
+    outcomes = list(session.inspect("outcome"))
     updates = list(session.inspect("agent_update"))
-    texts = {player_id: lines_for(outcomes, player_id) for player_id in roles}
-    for record in updates:
-        actor = getattr(record, "actor", None)
-        if actor not in texts:
-            continue
-        texts[actor] = f"{texts[actor]}\n{json.dumps(record.payload, default=str)}"
-    facts = []
-    gaps = []
-    population = len(roles)
-    for outcome in outcomes:
-        observations = outcome.payload.get("observations") or {}
-        for line in observations.get("game_line") or []:
-            content = str(line.get("content", ""))
-            holders = list(line.get("recipients") or [])
-            facts.append({"name": content, "holders": holders})
-            recovered = entropy_from_logs(texts, content, population)
-            if recovered is None:
-                continue
-            gaps.append(abs(entropy(len(holders), population) - recovered))
     directory.mkdir(parents=True, exist_ok=True)
     truth_path = directory / "truth.json"
     if not truth_path.is_file():
-        write_truth(truth_path, {"players": dict(roles), "facts": facts})
-    entropy_value = sum(gaps) / len(gaps) if gaps else None
-    write_gap(
-        directory / "gap.json",
-        {"entropy": entropy_value, "modularity": _modularity_gap(truth_path, updates)},
+        write_truth(truth_path, {"players": dict(roles)})
+    document = getattr(session, "werewolf_curve", None)
+    if not document:
+        write_gap(
+            directory / "gap.json",
+            {"entropy": None, "modularity": _modularity_gap(truth_path, updates)},
+        )
+        return
+    write_document(directory / "curve.json", document)
+    lines = _delivered_lines(outcomes)
+    episodes = document.get("episodes") or []
+    recovered = recover_curve(
+        document,
+        _text_for_fact(lines, episodes),
+        _exile_votes(updates, episodes),
     )
+    write_gap(directory / "gap.json", curve_gaps(document, recovered))
+
+
+def _delivered_lines(outcomes: list) -> list[dict]:
+    """Return game lines in the order the environment delivered them.
+
+    Args:
+        outcomes: Outcome records from the session.
+
+    Returns:
+        One line dict per delivered game line.
+    """
+    lines = []
+    for outcome in outcomes:
+        payload = outcome.payload if hasattr(outcome, "payload") else outcome
+        observations = payload.get("observations") or {}
+        for line in observations.get("game_line") or []:
+            lines.append(line)
+    return lines
+
+
+def _text_for_fact(lines: list[dict], episodes: list) -> Callable:
+    """Return text one player received from a fact's birth through an episode.
+
+    Args:
+        lines: Delivered game lines in order.
+        episodes: Environment episodes, including end_line.
+
+    Returns:
+        A function of origin, current episode, and player id.
+    """
+
+    def text_for(origin: str, current: str, player_id: str) -> str:
+        start, end = line_span(episodes, origin, current)
+        parts = []
+        for line in lines[start:end]:
+            if player_id in list(line.get("recipients") or []):
+                parts.append(str(line.get("content") or ""))
+        return "\n".join(parts)
+
+    return text_for
+
+
+def _exile_votes(updates: list, episodes: list) -> dict[str, Optional[dict[str, str]]]:
+    """Align each day episode with the exile votes recovered from updates.
+
+    Args:
+        updates: Agent update records in order.
+        episodes: Environment episodes in order.
+
+    Returns:
+        Day episode name to the vote map for that day.
+    """
+    rounds = vote_rounds(updates)
+    found: dict[str, Optional[dict[str, str]]] = {}
+    index = 0
+    for episode in episodes:
+        name = str(episode.get("episode") or "")
+        if not name.startswith("day-"):
+            continue
+        found[name] = rounds[index] if index < len(rounds) else None
+        index += 1
+    return found
 
 
 def _modularity_gap(truth_path: Path, updates: list) -> Optional[float]:

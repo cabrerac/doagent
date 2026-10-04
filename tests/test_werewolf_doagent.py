@@ -279,6 +279,18 @@ class TruthTests(unittest.TestCase):
             write_run_artifacts(session, NIGHT_ROLES, directory)
             gap = json.loads((directory / "gap.json").read_text(encoding="utf-8"))
             self.assertEqual(gap["modularity"], 0.0)
+            self.assertEqual(gap["entropy"], 0.0)
+            curve = json.loads((directory / "curve.json").read_text(encoding="utf-8"))
+            propositions = [
+                fact["proposition"]
+                for episode in curve["episodes"]
+                for fact in episode["facts"]
+            ]
+            self.assertIn("target Ethel", propositions)
+            self.assertIn("Guard protects Ethel.", propositions)
+            self.assertNotIn("Werewolves have chosen their target.", propositions)
+            for outcome in session.inspect("outcome"):
+                self.assertNotIn("curve", outcome.payload.get("observations") or {})
         finally:
             session.close()
 

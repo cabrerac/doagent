@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import builtins
+import json
 import os
 import sys
 import time
@@ -20,7 +21,17 @@ from typing import Any, Callable, Dict, Optional
 import yaml
 
 from examples._shared.llm_client import PROXY_BASE_URL, proxy_api_key
-from experiments.multiagentbench.recover import compare, logs_for_phases, write_gap
+from experiments.multiagentbench.recover import (
+    choices_from_logs,
+    compare,
+    curve_gaps,
+    logs_for_phases,
+    player_logs,
+    recover_curve,
+    slice_log,
+    span_log,
+    write_gap,
+)
 from experiments.multiagentbench.truth import read_truth, write_truth
 from experiments.multiagentbench.werewolf_player import label_player_messages
 from experiments.multiagentbench.werewolf_truth import day_phase, night_phase
@@ -403,6 +414,17 @@ def _write_game_gap(env: Any) -> None:
         env: The Werewolf environment for this game.
     """
     directory = game_directory(env.shared_memory_path)
+    curve_path = directory / "curve.json"
+    if curve_path.is_file():
+        document = json.loads(curve_path.read_text(encoding="utf-8"))
+        logs = player_logs(directory)
+        gaps = curve_gaps(document, _recover_service_curve(document, logs))
+        write_gap(directory / "gap.json", gaps)
+        print(
+            f"entropy_gap={gaps['entropy']} modularity_gap={gaps['modularity']}",
+            flush=True,
+        )
+        return
     truth_path = directory / "truth.json"
     if not truth_path.is_file():
         return
@@ -413,6 +435,36 @@ def _write_game_gap(env: Any) -> None:
         f"entropy_gap={gaps['entropy_gap']} modularity_gap={gaps['modularity_gap']}",
         flush=True,
     )
+
+
+def _recover_service_curve(document: dict, logs: dict[str, str]) -> list[dict]:
+    """Rebuild the curve from player logs, one episode at a time.
+
+    Args:
+        document: Environment episode curve.
+        logs: Player name to full log text.
+
+    Returns:
+        Recovered episode rows.
+    """
+
+    def text_for(origin: str, current: str, player_id: str) -> str:
+        episode = next(
+            item for item in document["episodes"] if item["episode"] == current
+        )
+        if player_id not in set(episode.get("audience") or []):
+            return ""
+        return span_log(logs.get(player_id, ""), origin, current)
+
+    votes: dict[str, Optional[dict[str, str]]] = {}
+    for episode in document.get("episodes") or []:
+        reference = episode.get("votes") or {}
+        if len(reference) < 2:
+            continue
+        name = str(episode["episode"])
+        day_logs = {player: slice_log(text, name) for player, text in logs.items()}
+        votes[name] = choices_from_logs(day_logs, list(reference))
+    return recover_curve(document, text_for, votes)
 
 
 def _write_service_config(model: str = SERVICE_MODEL) -> Path:
