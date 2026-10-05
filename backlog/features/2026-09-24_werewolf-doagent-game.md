@@ -4,7 +4,7 @@ title: "Implement Werewolf as a DOAgent game"
 status: "In Progress"
 priority: "High"
 created: "2026-09-24"
-last_updated: "2026-10-04"
+last_updated: "2026-10-05"
 category: "features"
 related_cips:
 - "0014"
@@ -32,8 +32,9 @@ Do not import their environment class or their agent class.
 
 `run_werewolf_doagent.py`, `werewolf_doagent.py`, `werewolf_session.py`, and `werewolf_player.py` are the DOAgent side.
 The environment plays the night and the day.
-No new model game is running.
-The next one starts after the tracked runners are on the VM.
+Pair 1 of `werewolf_kimi_5` has finished.
+The next scores are accessibility entropy and the rise residual on that pair.
+A new pair waits until the updated MARBLE environment file is on the VM.
 
 ## Acceptance Criteria
 
@@ -64,6 +65,22 @@ The published prompt files stay unchanged.
 - CIP: 0014
 
 ## Progress Updates
+
+### 2026-10-05
+
+Pair 1 recovers the delivery-entropy curve on both arms.
+The entropy gap is 0.
+That curve counts the original night sentence only.
+Marie's check on Lewis stays at one holder.
+Her election speech states the same result in other words, and the phrase is in all nine service logs.
+Accessibility entropy would count that speech.
+The rise residual asks whether one stored listener set explains the new holders.
+DOAgent has that set on the outcome line.
+The service log does not.
+Those two scores are defined and not yet computed on the pair.
+The episode curve code is local.
+The MARBLE environment file is gitignored and is not yet the copy on the VM.
+Do not score repetition 02.
 
 ### 2026-10-04
 

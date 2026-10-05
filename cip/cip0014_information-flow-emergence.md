@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-09-24"
 id: "0014"
-last_updated: "2026-10-04"
+last_updated: "2026-10-05"
 status: "Accepted"
 compressed: false
 related_requirements: []
@@ -127,6 +127,51 @@ Report the spread of the n gaps along with the mean.
 Average inside each game before averaging across games.
 Do not rank the systems by which raw entropy is larger.
 
+### Evaluation aim (2026-10-05)
+
+The evaluation uses information-theory metrics and emergent-behaviour metrics.
+DOAgent does not cause that behaviour.
+Both arms use the same model and the same prompts.
+DOAgent facilitates the analysis, interpretation, and explanation of the metrics.
+The service logs can recover many of the same numbers.
+The separation is whether the record explains a difference between two metrics.
+
+Delivery entropy is the game curve already defined.
+A fact is a true night outcome.
+Holders are living players who were sent the original sentence.
+One holder scores 0.
+Every living player holding it scores 1.
+No holders, or fewer than two living players, scores 0.
+The game entropy is the mean of those fact scores.
+Death removes a player from the audience and from every fact they held.
+
+Accessibility entropy uses the same formula and a wider holder rule.
+A living player also holds the fact when a later line states the same result in other words.
+A line that states a different result does not spread the true fact.
+The rise is the accessibility holders minus the delivery holders.
+
+The rise residual is the explanation metric.
+A rise is explained when one stored line states the result, is not the original sentence, and its listener set includes every player in the rise.
+The residual is 0 when that listener set matches.
+The residual is 1 when the record has no listener set on that line.
+DOAgent stores the listener set on the outcome line.
+The service log contains the words and does not store a listener set on the speech.
+Do not build that set by searching which files contain the words.
+That search recovers accessibility entropy for both arms and removes the explanation gap.
+
+Pair 1, `werewolf_kimi_5` repetition 01, recovers delivery entropy on both arms.
+The entropy gap is 0 at every episode.
+Marie's night check on Lewis stays at one holder on that curve.
+Her election speech states the same result, and that phrase is in all nine service logs.
+Accessibility entropy for that fact would rise to the village.
+That curve and the rise residual are defined and not yet scored on the run.
+The Fisher metric is not computed.
+The inaccessible game needs an exponential family this transcript does not provide.
+The closest statement is the bottleneck: one recipient, then the speech that makes the result accessible.
+Repetition 02 was killed and is not scored.
+Modularity remains the exile-vote camp shape.
+It does not explain the entropy curves.
+
 The evidence is Werewolf.
 The same procedure can be reused on another scenario.
 These runs do not by themselves show that the gap would match in every scenario.
@@ -210,7 +255,22 @@ The attribution study this paper is not doing is CIP-0012.
 - [ ] Service runs with a truth file and log-only recovery
 - [ ] DOAgent runs with a truth file and session-only recovery
 - [ ] Mean gap and spread of gaps for both sets
+- [ ] Accessibility entropy and the rise residual on a finished pair
 - [ ] Discussion note on information topography
+
+### 2026-10-05
+
+The evaluation aim is to measure information spread and emergent disclosure, then show that DOAgent explains the difference.
+DOAgent does not cause the behaviour.
+Pair 1 recovers delivery entropy on both arms, so that gap is 0.
+The service logs also contain Marie's public restatement of the Lewis check, in all nine files.
+Accessibility entropy and the rise residual are the next scores.
+The rise residual is 0 only when one stored listener set accounts for the new holders.
+The Fisher metric stays out.
+The episode curve is in the working tree.
+`werewolf_env.py` is gitignored and still has to be copied to the VM before the next pair.
+Pair 1 has no `curve.json` from the run.
+Repetition 02 stays unscored.
 
 ### 2026-10-04
 
