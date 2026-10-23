@@ -64,14 +64,14 @@ Local: `python -m examples.push.run`
 
 ### Notebooks (Google Colab)
 
-The demos can be open in Colab, run top to bottom.
+The demos can be opened in Colab and run top to bottom.
 
 
-| Notebook          | Colab                                                                      | What it does                                               |
-| ----------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| 01_minimal_demo   | ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg) | Session + in-memory store, stub env, one step, inspect     |
-| 02_push_demo      | ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg) | File store, PettingZoo push, analysis                      |
-| 03_gridworld_demo | ![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg) | File store, grid + topology + participation, full analysis |
+| Notebook          | Colab | What it does                                               |
+| ----------------- | ----- | ---------------------------------------------------------- |
+| 01_minimal_demo   | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/01_minimal_demo.ipynb) | Session + in-memory store, stub env, one step, inspect     |
+| 02_push_demo      | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/02_push_demo.ipynb) | File store, PettingZoo push, analysis                      |
+| 03_gridworld_demo | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cabrerac/doagent/blob/main/notebooks/03_gridworld_demo.ipynb) | File store, grid + topology + participation, full analysis |
 
 
 
@@ -87,7 +87,7 @@ pip install pettingzoo[mpe] mpe2 pygame   # only for push
 python -m examples.push.run
 ```
 
-Extra options (topology, mongo, participation): `[examples/README.md](examples/README.md)`. Notebook notes: `[notebooks/README.md](notebooks/README.md)`.
+Extra options (topology, mongo, participation): [examples/README.md](examples/README.md). Notebook notes: [notebooks/README.md](notebooks/README.md).
 
 ## Your own environment (checklist)
 
