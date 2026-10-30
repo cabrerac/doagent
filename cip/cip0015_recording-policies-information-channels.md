@@ -1381,8 +1381,9 @@ That task has not been started.
 The scored run is output/hidden_profile_20261030_011812.
 It holds all 18 deals at logging levels 0, 1, and 2.
 campaign.json in that folder is the fixed record.
-It names commit d8c5039 and marks the worktree dirty.
-The study command, the recovery curves, and this close are still uncommitted.
+Commit 386d1a8 records the score, the question figures, and these notes.
+campaign.json names that commit.
+The study command, the recovery curves, and the campaign code are still untracked.
 Reported chances match the chances implied by the held facts.
 Relative entropy is 0 for the rules and for session levels 0, 1, and 2.
 The Brier score is 0.153.

@@ -164,8 +164,8 @@ One timestamped study command is the next task.
 It has not been started.
 The open lines above stay open.
 The scored run is output/hidden_profile_20261030_011812.
-campaign.json records the 18 deals, logging levels 0, 1, and 2, and commit d8c5039.
-The worktree is still dirty.
+campaign.json records the 18 deals, logging levels 0, 1, and 2, and commit 386d1a8.
+The study command, the recovery curves, and the campaign code are still untracked.
 Relative entropy of the reported chances is 0 for the rules and for every session level.
 The Brier score is 0.153 and log loss is 0.493 bits.
 MARBLE views do not state those chances.

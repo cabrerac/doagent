@@ -61,3 +61,5 @@ The scored folder is output/hidden_profile_20261030_011812.
 It holds all 18 deals, the score, the figures, and campaign.json.
 A second run with the same stamp is refused.
 The single-deal commands are still in place.
+Commit 386d1a8 does not include that command.
+The command file is still untracked.

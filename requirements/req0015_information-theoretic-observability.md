@@ -4,7 +4,7 @@ title: "Quantifiable Information-Theoretic Observability"
 status: "In Progress"
 priority: "High"
 created: "2026-10-07"
-last_updated: "2026-10-22"
+last_updated: "2026-10-30"
 related_tenets:
 - "data-first-shared-model"
 - "interpretability-and-traceability"
@@ -90,3 +90,9 @@ Hidden Profile is the primary environment, and the group guessing game links the
 
 Hidden Profile now has framework-independent rules, a scripted policy, and an exact distribution over 18 deals.
 The controlled runs are not scored, and the two implementations have not been built.
+
+### 2026-10-30
+
+The Hidden Profile campaign is scored.
+All 18 deals were read at logging levels 0, 1, and 2.
+The group guessing game, LLM agents, and Werewolf are not started.
