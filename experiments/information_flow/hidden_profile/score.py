@@ -15,7 +15,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 
-from experiments.information_flow.hidden_profile.access import COMPONENT_LOGS
+from experiments.information_flow.hidden_profile.access import COMPONENT_LOGS, analyst_logs
 from experiments.information_flow.hidden_profile.compare import (
     AGENT_LOGS,
     ONE_LOG,
@@ -24,8 +24,8 @@ from experiments.information_flow.hidden_profile.compare import (
     _view,
     compare_deals,
 )
-from experiments.information_flow.hidden_profile.parse import parse_doagent
-from experiments.information_flow.hidden_profile.reading import session_reading
+from experiments.information_flow.hidden_profile.parse import parse_doagent, parse_marble
+from experiments.information_flow.hidden_profile.reading import log_reading, session_reading
 from experiments.information_flow.hidden_profile.reference import reference_report
 from experiments.information_flow.hidden_profile.rules import (
     DEFAULT_CONFIG,
@@ -33,7 +33,11 @@ from experiments.information_flow.hidden_profile.rules import (
     run_episode,
 )
 from experiments.information_flow.hidden_profile.run_doagent import run_session
-from experiments.information_flow.hidden_profile.service_trace import TRACE_NAME
+from experiments.information_flow.hidden_profile.service_trace import (
+    TRACE_NAME,
+    parse_service_trace,
+    trace_reading,
+)
 from experiments.information_flow.queries import Answer
 
 LABELS = {
@@ -206,6 +210,126 @@ def score_deals(
     )
 
 
+def score_saved(
+    output_base: str | Path,
+    deal_indexes: Sequence[int] | None = None,
+    config: HiddenProfileConfig = DEFAULT_CONFIG,
+    logging_levels: Sequence[int] = (0, 1, 2),
+) -> ScoreReport:
+    """Score saved deals and write the table and the plot.
+
+    Args:
+        output_base: Directory that holds the deal folders.
+        deal_indexes: Deals to score.
+            Every enumerated deal is scored when this is omitted.
+        config: Hidden profile configuration.
+        logging_levels: Session levels whose record files are scored.
+
+    Returns:
+        The scored views and the pairwise counts.
+
+    Raises:
+        ValueError: A saved deal or a requested record file is missing.
+    """
+    folder = Path(output_base)
+    report = reference_report(config)
+    indexes = tuple(range(len(report.deals)) if deal_indexes is None else deal_indexes)
+    by_deal: dict[int, dict[str, ViewAnswers]] = {}
+    for index in indexes:
+        deal = report.deals[index]
+        events = run_episode(index, config, dict(deal.allocation)).events
+        message_id = _bridge_message_id(events, report.bridge_fact_id)
+        by_deal[index] = _saved_views(
+            folder / f"deal-{index}",
+            events,
+            message_id,
+            report.bridge_fact_id,
+            config,
+            logging_levels,
+        )
+    views = _view_scores(by_deal, folder)
+    pairs, questions = _pair_scores(by_deal)
+    score_path = folder / "score.json"
+    plot_path = folder / "frontier.png"
+    population = "all enumerated deals" if len(indexes) == len(report.deals) else "selected deals"
+    _write_score(score_path, len(indexes), views, pairs, questions, population)
+    _write_plot(plot_path, views)
+    return ScoreReport(
+        deals=len(indexes),
+        views=views,
+        pairs=pairs,
+        questions=questions,
+        score_path=score_path,
+        plot_path=plot_path,
+    )
+
+
+def _saved_views(
+    deal_folder: Path,
+    rules_events,
+    message_id: str,
+    bridge_fact_id: str,
+    config: HiddenProfileConfig,
+    logging_levels: Sequence[int],
+) -> dict[str, ViewAnswers]:
+    """Read one saved deal into the scored views."""
+    if not deal_folder.is_dir():
+        raise ValueError("a saved deal is missing")
+    named = {
+        "rules": _view("rules", rules_events, message_id, bridge_fact_id, config),
+    }
+    for level in logging_levels:
+        records = deal_folder / f"D{level}" / "records.json"
+        if not records.is_file():
+            raise ValueError("a saved deal is missing")
+        named[f"D{level}"] = _view(
+            f"D{level}",
+            parse_doagent(records),
+            message_id,
+            bridge_fact_id,
+            config,
+            session_reading(records),
+        )
+    log_dir = deal_folder / "marble" / "logs"
+    named.update(
+        {
+            "S1": _view(
+                "S1",
+                parse_marble(log_dir, analyst_logs(log_dir, "S1", ONE_LOG)),
+                message_id,
+                bridge_fact_id,
+                config,
+                log_reading(analyst_logs(log_dir, "S1", ONE_LOG)),
+            ),
+            "Sk": _view(
+                "Sk",
+                parse_marble(log_dir, analyst_logs(log_dir, "Sk", AGENT_LOGS)),
+                message_id,
+                bridge_fact_id,
+                config,
+                log_reading(analyst_logs(log_dir, "Sk", AGENT_LOGS)),
+            ),
+            "Sall": _view(
+                "Sall",
+                parse_marble(log_dir, analyst_logs(log_dir, "Sall")),
+                message_id,
+                bridge_fact_id,
+                config,
+                log_reading(analyst_logs(log_dir, "Sall")),
+            ),
+            "Sstructured": _view(
+                "Sstructured",
+                parse_service_trace(log_dir / TRACE_NAME),
+                message_id,
+                bridge_fact_id,
+                config,
+                trace_reading(log_dir / TRACE_NAME),
+            ),
+        }
+    )
+    return named
+
+
 def _slots(view: ViewAnswers) -> tuple[tuple[str, Answer], ...]:
     """Return each scored answer and its slot name."""
     rows: list[tuple[str, Answer]] = [
@@ -234,7 +358,12 @@ def _view_scores(
     """Return match share and average cost for each view."""
     scores = []
     deal_count = len(by_deal)
-    for name in LABELS:
+    present = tuple(
+        name
+        for name in LABELS
+        if all(name in views for views in by_deal.values())
+    )
+    for name in present:
         matched = 0
         total = 0
         read_bytes = 0
@@ -267,10 +396,11 @@ def _view_scores(
 def _stored_bytes(folder: Path, index: int, name: str) -> int:
     """Return the bytes stored for one view of one deal."""
     deal = folder / f"deal-{index}"
-    if name in ("D0", "D2"):
-        return (deal / name / "records.json").stat().st_size
-    if name == "D1":
-        return (deal / "doagent" / "records.json").stat().st_size
+    if name in ("D0", "D1", "D2"):
+        records = deal / name / "records.json"
+        if name == "D1" and not records.is_file():
+            records = deal / "doagent" / "records.json"
+        return records.stat().st_size
     logs = deal / "marble" / "logs"
     if name == "S1":
         return (logs / ONE_LOG).stat().st_size
@@ -287,15 +417,20 @@ def _pair_scores(
     by_deal: Mapping[int, Mapping[str, ViewAnswers]],
 ) -> tuple[tuple[PairScore, ...], tuple[QuestionScore, ...]]:
     """Return pairwise counts for every session level and MARBLE view."""
+    sessions = tuple(
+        name
+        for name in _SESSIONS
+        if all(name in views for views in by_deal.values())
+    )
     pair_counts = {
         (session, marble): [0, 0, 0, 0]
-        for session in _SESSIONS
+        for session in sessions
         for marble in _MARBLE_NAMES
     }
     question_counts: dict[tuple[str, str, str], list[int]] = {}
     for views in by_deal.values():
         truth = dict(_slots(views["rules"]))
-        for session in _SESSIONS:
+        for session in sessions:
             session_slots = dict(_slots(views[session]))
             for marble in _MARBLE_NAMES:
                 marble_slots = dict(_slots(views[marble]))
@@ -349,6 +484,7 @@ def _write_score(
     views: Sequence[ViewScore],
     pairs: Sequence[PairScore],
     questions: Sequence[QuestionScore],
+    population: str = "all enumerated deals",
 ) -> None:
     """Write the score table.
 
@@ -358,10 +494,11 @@ def _write_score(
         views: Match share and cost for each view.
         pairs: Pairwise counts for each session level and MARBLE view.
         questions: Pairwise counts for each question.
+        population: Which deals the score covers.
     """
     payload = {
         "deals": deals,
-        "population": "all enumerated deals",
+        "population": population,
         "sample_interval": None,
         "views": [
             {

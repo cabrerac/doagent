@@ -2,13 +2,15 @@
 author: "Christian Cabrera"
 created: "2026-09-24"
 id: "0014"
-last_updated: "2026-10-05"
-status: "Accepted"
+last_updated: "2026-10-07"
+status: "Deferred"
 compressed: false
+blocked_by: "0015"
 related_requirements: []
 related_cips:
 - "0012"
 - "0002"
+- "0015"
 tags:
 - cip
 - evaluation
@@ -31,7 +33,7 @@ title: "Information Flow on MultiAgentBench (Service vs DOAgent)"
 - [ ] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented (add reason, use superseded_by if replaced)
-- [ ] Deferred - Postponed (use blocked_by field to indicate blocker)
+- [x] Deferred - Postponed pending the controlled evaluation in CIP-0015
 
 ## Summary
 
@@ -257,6 +259,16 @@ The attribution study this paper is not doing is CIP-0012.
 - [ ] Mean gap and spread of gaps for both sets
 - [ ] Accessibility entropy and the rise residual on a finished pair
 - [ ] Discussion note on information topography
+
+### 2026-10-07
+
+Further Werewolf runs are deferred pending CIP-0015.
+Pair 1 remains a pilot and a record of the first comparison.
+Its complete service logs recover the existing normalized holder-support curve as well as the DOAgent session.
+That result does not establish an information-retention advantage for DOAgent.
+The binary rise residual is no longer a primary result because the service audience can be reconstructed from the complete log union or protocol semantics.
+CIP-0015 defines a controlled stochastic process, fair structured baselines, Shannon and Hartley measures, analysis cost, recording cost, and kill tests.
+No new server campaign begins until that controlled evaluation passes its formal and estimator gates.
 
 ### 2026-10-05
 

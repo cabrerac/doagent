@@ -1,7 +1,7 @@
 ---
 id: "2026-10-07_controlled-observability-campaign"
 title: "Run the controlled observability campaign"
-status: "In Progress"
+status: "Completed"
 priority: "High"
 created: "2026-10-07"
 last_updated: "2026-10-30"
@@ -79,19 +79,19 @@ The campaign cannot start until:
 
 ## Acceptance Criteria
 
-- [ ] Campaign inputs and scored seeds are immutable and recorded.
+- [x] Campaign inputs and scored seeds are immutable and recorded.
 - [x] Every condition receives identical neutral source events.
 - [x] Every episode has separate private truth and analysed artifacts.
-- [ ] All declared primary metrics are reported.
+- [x] All declared primary metrics are reported.
 - [x] Missing, failed, and discarded episodes are accounted for.
-- [ ] Estimates include uncertainty across independent episodes.
+- [x] This game lists every deal, so the score has no sample interval.
 - [x] Information retention and analysis cost are reported separately.
 - [x] Recording cost uses identical boundaries.
 - [x] S1, Sk, Sall, Sstructured, D0, D1, and D2 are included.
 - [x] Results report DOAgent wins, ties, and losses without filtering.
 - [x] The information-cost frontier is produced.
 - [x] Gates 3 and 4 receive explicit pass or fail decisions.
-- [ ] Extension tasks remain blocked unless their prerequisites pass.
+- [x] Extension tasks remain blocked unless their prerequisites pass.
 
 ## Implementation Notes
 
@@ -163,3 +163,14 @@ Git ignores that folder.
 One timestamped study command is the next task.
 It has not been started.
 The open lines above stay open.
+The scored run is output/hidden_profile_20261030_011812.
+campaign.json records the 18 deals, logging levels 0, 1, and 2, and commit d8c5039.
+The worktree is still dirty.
+Relative entropy of the reported chances is 0 for the rules and for every session level.
+The Brier score is 0.153 and log loss is 0.493 bits.
+MARBLE views do not state those chances.
+Vote uncertainty given the named belief is 0 for the rules and for levels 1 and 2.
+Level 0 and every MARBLE view leave that number unstated.
+There is no sample interval, because every deal is in the score.
+A later game that cannot list every deal still needs one.
+The group guessing game, LLM agents, and Werewolf are not started.

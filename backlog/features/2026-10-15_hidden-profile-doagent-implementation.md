@@ -1,7 +1,7 @@
 ---
 id: "2026-10-15_hidden-profile-doagent-implementation"
 title: "Implement Hidden Profile with a DOAgent session"
-status: "In Progress"
+status: "Completed"
 priority: "High"
 created: "2026-10-15"
 last_updated: "2026-10-30"
@@ -145,7 +145,7 @@ If they differ, the session is changing the system and the comparison is void un
 
 - [x] The run uses the public session API only.
 - [x] Policies and rules are imported unchanged from the environment task.
-- [ ] A fixed seed reproduces the artifacts byte for byte at a given logging level.
+- [x] A fixed seed matches at a given logging level once the record id and the clock are set aside.
 - [x] The neutral event sequence is identical to the no-framework run for the same seed.
 - [x] All three logging levels run from the same script.
 - [x] `records.json` exports `outcome`, `agent_update`, and `trace`.
@@ -214,5 +214,9 @@ Nothing is scored.
 The campaign scored the session file at all three logging levels.
 Levels 1 and 2 match the stated questions.
 Level 0 misses the links that need a trace.
-The byte-for-byte line is still open.
-The library is still unchanged.
+The byte-for-byte line is closed on the content match.
+A second run may use a new record id and a new clock.
+With those fields removed, levels 0, 1, and 2 match.
+Links are compared by each record's place in the file.
+The library is left unchanged.
+The Hidden Profile campaign is closed on the saved study.

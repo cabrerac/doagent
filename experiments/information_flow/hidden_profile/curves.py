@@ -123,6 +123,61 @@ def recover_curves(
     )
 
 
+def recover_saved_curves(
+    output_base: str | Path,
+    deal_indexes: Sequence[int] | None = None,
+    config: HiddenProfileConfig = DEFAULT_CONFIG,
+    logging_levels: Sequence[int] = (0, 1, 2),
+) -> CurveReport:
+    """Read saved deals and write the information curves.
+
+    Args:
+        output_base: Directory that holds the deal folders.
+        deal_indexes: Deals to read.
+            Every enumerated deal is read when this is omitted.
+        config: Hidden profile configuration.
+        logging_levels: Session levels whose record files are read.
+
+    Returns:
+        The true values, the recovered values, and the figure paths.
+
+    Raises:
+        ValueError: A saved deal is missing.
+    """
+    folder = Path(output_base)
+    report = reference_report(config)
+    indexes = tuple(range(len(report.deals)) if deal_indexes is None else deal_indexes)
+    by_deal = [
+        _read_saved(
+            index,
+            report.deals[index].count,
+            folder,
+            config,
+            report.bridge_fact_id,
+            logging_levels,
+        )
+        for index in indexes
+    ]
+    points = _points(report, by_deal, config)
+    curves_path = folder / "curves.json"
+    belief_plot = folder / "belief_entropy.png"
+    bridge_plot = folder / "bridge_quantities.png"
+    multi_plot = folder / "hold_multi_information.png"
+    population = "all enumerated deals" if len(indexes) == len(report.deals) else "selected deals"
+    _write_table(curves_path, len(indexes), points, population)
+    _write_belief_plot(belief_plot, points, config)
+    _write_bridge_plot(bridge_plot, points)
+    _write_multi_plot(multi_plot, points, config)
+    return CurveReport(
+        deals=len(indexes),
+        points=points,
+        curves_path=curves_path,
+        belief_plot=belief_plot,
+        bridge_plot=bridge_plot,
+        multi_plot=multi_plot,
+    )
+
+
 def _read_deal(
     index: int,
     allocation: tuple[tuple[str, tuple[str, ...]], ...],
@@ -156,6 +211,48 @@ def _read_deal(
             for name, events in parsed.items()
         },
     }
+
+
+def _read_saved(
+    index: int,
+    count: int,
+    folder: Path,
+    config: HiddenProfileConfig,
+    bridge_fact_id: str,
+    logging_levels: Sequence[int],
+) -> dict[str, object]:
+    """Read the quantities each saved view states for one deal."""
+    deal_folder = folder / f"deal-{index}"
+    if not deal_folder.is_dir():
+        raise ValueError("a saved deal is missing")
+    parsed: dict[str, tuple] = {}
+    for level in logging_levels:
+        records = deal_folder / f"D{level}" / "records.json"
+        if not records.is_file():
+            raise ValueError("a saved deal is missing")
+        parsed[f"D{level}"] = parse_doagent(records)
+    log_dir = deal_folder / "marble" / "logs"
+    parsed.update(
+        {
+            "S1": parse_marble(log_dir, analyst_logs(log_dir, "S1", ONE_LOG)),
+            "Sk": parse_marble(log_dir, analyst_logs(log_dir, "Sk", AGENT_LOGS)),
+            "Sall": parse_marble(log_dir, analyst_logs(log_dir, "Sall")),
+            "Sstructured": parse_service_trace(log_dir / TRACE_NAME),
+        }
+    )
+    return {
+        "count": count,
+        "views": {
+            name: _stated(events, config, bridge_fact_id)
+            for name, events in parsed.items()
+        },
+    }
+
+
+def _recorded_views(by_deal: Sequence[Mapping[str, object]]) -> tuple[str, ...]:
+    """Return the views present in every saved deal, in plot order."""
+    stated = by_deal[0]["views"]
+    return tuple(name for name in _VIEW_ORDER if name in stated)
 
 
 def _stated(
@@ -299,7 +396,7 @@ def _belief_points(report, by_deal, config: HiddenProfileConfig) -> list[CurvePo
         for agent_id in config.agents:
             truth = _reference_belief(report, agent_id, round_index)
             rows.append(_point("belief_entropy", "rules", "Rules", truth, agent_id, round_index))
-            for name in _VIEW_ORDER:
+            for name in _recorded_views(by_deal):
                 rows.append(
                     _point(
                         "belief_entropy",
@@ -318,7 +415,7 @@ def _holder_points(report, by_deal, config: HiddenProfileConfig) -> list[CurvePo
     rows = [
         _point("bridge_holder_entropy", "rules", "Rules", report.bridge_holder_entropy)
     ]
-    for name in _VIEW_ORDER:
+    for name in _recorded_views(by_deal):
         rows.append(
             _point(
                 "bridge_holder_entropy",
@@ -340,7 +437,7 @@ def _delivery_points(report, by_deal, config: HiddenProfileConfig) -> list[Curve
             report.bridge_delivery_mutual_information,
         )
     ]
-    for name in _VIEW_ORDER:
+    for name in _recorded_views(by_deal):
         rows.append(
             _point(
                 "bridge_delivery_mutual_information",
@@ -366,7 +463,7 @@ def _multi_points(report, by_deal, config: HiddenProfileConfig) -> list[CurvePoi
                 round_index=round_index,
             )
         )
-        for name in _VIEW_ORDER:
+        for name in _recorded_views(by_deal):
             rows.append(
                 _point(
                     "bridge_hold_multi_information",
@@ -551,17 +648,23 @@ def _product(factors: Sequence[Sequence[str]]) -> tuple[tuple[str, ...], ...]:
     return tuple(rows)
 
 
-def _write_table(path: Path, deals: int, points: Sequence[CurvePoint]) -> None:
+def _write_table(
+    path: Path,
+    deals: int,
+    points: Sequence[CurvePoint],
+    population: str = "all enumerated deals",
+) -> None:
     """Write the curve table.
 
     Args:
         path: Destination of the table.
         deals: How many deals were read.
         points: True values and recovered values.
+        population: Which deals the curves cover.
     """
     payload = {
         "deals": deals,
-        "population": "all enumerated deals",
+        "population": population,
         "points": [
             {
                 "quantity": point.quantity,

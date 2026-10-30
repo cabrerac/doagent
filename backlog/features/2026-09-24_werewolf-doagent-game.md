@@ -4,10 +4,11 @@ title: "Implement Werewolf as a DOAgent game"
 status: "In Progress"
 priority: "High"
 created: "2026-09-24"
-last_updated: "2026-10-05"
+last_updated: "2026-10-07"
 category: "features"
 related_cips:
 - "0014"
+- "0015"
 owner: "Christian Cabrera"
 dependencies:
 - "2026-09-24_multiagentbench-werewolf-setup"
@@ -33,8 +34,8 @@ Do not import their environment class or their agent class.
 `run_werewolf_doagent.py`, `werewolf_doagent.py`, `werewolf_session.py`, and `werewolf_player.py` are the DOAgent side.
 The environment plays the night and the day.
 Pair 1 of `werewolf_kimi_5` has finished.
-The next scores are accessibility entropy and the rise residual on that pair.
-A new pair waits until the updated MARBLE environment file is on the VM.
+Pair 1 is retained as a pilot for CIP-0015.
+Further scoring and new pairs are paused until the controlled information-theoretic evaluation passes its kill tests.
 
 ## Acceptance Criteria
 
@@ -63,8 +64,19 @@ The published prompt files stay unchanged.
 ## Related
 
 - CIP: 0014
+- CIP: 0015
 
 ## Progress Updates
+
+### 2026-10-07
+
+The server campaign is paused.
+The existing holder-support score is a normalized Hartley measure of propagation breadth.
+It does not by itself measure how much execution information each artifact retains.
+The complete service-log union recovers the pair 1 delivery curve, so a DOAgent advantage cannot be assumed.
+The binary rise residual is not a primary result because the audience can be reconstructed from all service logs or protocol semantics.
+Pair 1 remains a pilot.
+CIP-0015 must pass its formal model, estimator, and fair-baseline gates before another Werewolf pair runs.
 
 ### 2026-10-05
 

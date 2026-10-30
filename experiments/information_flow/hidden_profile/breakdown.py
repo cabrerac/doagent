@@ -99,14 +99,19 @@ class Breakdown:
 def plot_breakdown(
     output_base: str | Path,
     config: HiddenProfileConfig = DEFAULT_CONFIG,
+    deal_indexes: Sequence[int] | None = None,
+    logging_levels: Sequence[int] = (0, 1, 2),
 ) -> Breakdown:
     """Read the saved deals and write the dimension figures.
 
     The deals must already contain the session files and the MARBLE logs.
 
     Args:
-        output_base: Directory that holds deal-0, deal-1, and the figures.
+        output_base: Directory that holds the deal folders and the figures.
         config: Hidden profile configuration.
+        deal_indexes: Deals to read.
+            Every enumerated deal is read when this is omitted.
+        logging_levels: Session levels whose record files are read.
 
     Returns:
         The match counts and the figure paths.
@@ -116,11 +121,12 @@ def plot_breakdown(
     """
     folder = Path(output_base)
     report = reference_report(config)
-    results = _score_saved(folder, report, config)
+    indexes = tuple(range(len(report.deals)) if deal_indexes is None else deal_indexes)
+    results = _score_saved(folder, report, config, indexes, logging_levels)
     questions_plot = folder / "questions.png"
     dimensions_plot = folder / "dimensions.png"
     table_path = folder / "breakdown.json"
-    _write_table(table_path, len(report.deals), results)
+    _write_table(table_path, len(indexes), results)
     _write_questions(questions_plot, results)
     _write_dimensions(dimensions_plot, results)
     return Breakdown(
@@ -132,15 +138,22 @@ def plot_breakdown(
     )
 
 
-def _score_saved(folder: Path, report, config: HiddenProfileConfig) -> tuple[QuestionResult, ...]:
+def _score_saved(
+    folder: Path,
+    report,
+    config: HiddenProfileConfig,
+    deal_indexes: Sequence[int],
+    logging_levels: Sequence[int],
+) -> tuple[QuestionResult, ...]:
     """Score each saved deal against the rules."""
     totals: dict[tuple[str, str, str, str], list[int]] = {}
-    for index, deal in enumerate(report.deals):
+    for index in deal_indexes:
+        deal = report.deals[index]
         rules = run_episode(index, config, dict(deal.allocation)).events
         message_id = _bridge_message_id(rules, report.bridge_fact_id)
         recipient = _recipient(rules, message_id)
         questions = _questions(config, report.bridge_fact_id, message_id, recipient, rules)
-        views = _load_views(folder / f"deal-{index}")
+        views = _load_views(folder / f"deal-{index}", logging_levels)
         views["rules"] = rules
         for question in questions:
             truth = question.answer(rules)
@@ -161,20 +174,29 @@ def _score_saved(folder: Path, report, config: HiddenProfileConfig) -> tuple[Que
     )
 
 
-def _load_views(deal: Path) -> dict[str, tuple[ExecutionEvent, ...]]:
+def _load_views(
+    deal: Path,
+    logging_levels: Sequence[int],
+) -> dict[str, tuple[ExecutionEvent, ...]]:
     """Return the saved session files and MARBLE logs for one deal."""
     if not deal.is_dir():
         raise ValueError("a saved deal is missing")
+    loaded: dict[str, tuple[ExecutionEvent, ...]] = {}
+    for level in logging_levels:
+        records = deal / f"D{level}" / "records.json"
+        if not records.is_file():
+            raise ValueError("a saved deal is missing")
+        loaded[f"D{level}"] = parse_doagent(records)
     log_dir = deal / "marble" / "logs"
-    return {
-        "D0": parse_doagent(deal / "D0" / "records.json"),
-        "D1": parse_doagent(deal / "D1" / "records.json"),
-        "D2": parse_doagent(deal / "D2" / "records.json"),
-        "S1": parse_marble(log_dir, analyst_logs(log_dir, "S1", ONE_LOG)),
-        "Sk": parse_marble(log_dir, analyst_logs(log_dir, "Sk", AGENT_LOGS)),
-        "Sall": parse_marble(log_dir, analyst_logs(log_dir, "Sall")),
-        "Sstructured": parse_service_trace(log_dir / TRACE_NAME),
-    }
+    loaded.update(
+        {
+            "S1": parse_marble(log_dir, analyst_logs(log_dir, "S1", ONE_LOG)),
+            "Sk": parse_marble(log_dir, analyst_logs(log_dir, "Sk", AGENT_LOGS)),
+            "Sall": parse_marble(log_dir, analyst_logs(log_dir, "Sall")),
+            "Sstructured": parse_service_trace(log_dir / TRACE_NAME),
+        }
+    )
+    return loaded
 
 
 def _questions(
@@ -439,12 +461,13 @@ def _write_questions(path: Path, results: Sequence[QuestionResult]) -> None:
     import numpy as np
 
     keys, labels = _question_labels(results)
+    views = _present_views(results)
     grid = []
     notes = []
     for label in keys:
         row = []
         note = []
-        for view in _VIEWS:
+        for view in views:
             item = _find(results, label, view)
             if item.stated == 0:
                 row.append(np.nan)
@@ -458,7 +481,7 @@ def _write_questions(path: Path, results: Sequence[QuestionResult]) -> None:
     colors = plt.cm.RdYlGn.copy()
     colors.set_bad("#d9d9d9")
     image = axis.imshow(np.array(grid, dtype=float), cmap=colors, vmin=0, vmax=1, aspect="auto")
-    axis.set_xticks(range(len(_VIEWS)), [LABELS[view] for view in _VIEWS], rotation=30, ha="right")
+    axis.set_xticks(range(len(views)), [LABELS[view] for view in views], rotation=30, ha="right")
     axis.set_yticks(range(len(labels)), labels, fontsize=8)
     for row_index, row in enumerate(notes):
         for column_index, text in enumerate(row):
@@ -482,10 +505,11 @@ def _write_dimensions(path: Path, results: Sequence[QuestionResult]) -> None:
     import matplotlib.pyplot as plt
 
     figure, axes = plt.subplots(1, 3, figsize=(12, 4), sharey=True)
-    positions = list(range(len(_VIEWS)))
+    views = _present_views(results)
+    positions = list(range(len(views)))
     for axis, dimension in zip(axes, _DIMENSIONS):
         for offset, kind, color in ((-0.15, "record", "#4C78A8"), (0.15, "link", "#F58518")):
-            shares = [_kind_share(results, dimension, kind, view) for view in _VIEWS]
+            shares = [_kind_share(results, dimension, kind, view) for view in views]
             axis.bar(
                 [position + offset for position in positions],
                 [0 if share is None else share for share in shares],
@@ -494,13 +518,19 @@ def _write_dimensions(path: Path, results: Sequence[QuestionResult]) -> None:
                 label=kind.capitalize() + " questions",
             )
         axis.set_title(dimension)
-        axis.set_xticks(positions, [LABELS[view] for view in _VIEWS], rotation=30, ha="right")
+        axis.set_xticks(positions, [LABELS[view] for view in views], rotation=30, ha="right")
         axis.set_ylim(0, 1.05)
     axes[0].set_ylabel("Share of stated questions recovered")
     axes[0].legend(loc="upper left", fontsize=8)
     figure.tight_layout()
     figure.savefig(path, bbox_inches="tight")
     plt.close(figure)
+
+
+def _present_views(results: Sequence[QuestionResult]) -> tuple[str, ...]:
+    """Return the views that have at least one saved row, in plot order."""
+    present = {item.view for item in results}
+    return tuple(view for view in _VIEWS if view in present)
 
 
 def _question_labels(results: Sequence[QuestionResult]) -> tuple[tuple[str, ...], tuple[str, ...]]:

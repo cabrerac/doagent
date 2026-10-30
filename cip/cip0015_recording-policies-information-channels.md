@@ -958,7 +958,7 @@ Extension tasks remain Proposed until their dependency gates succeed.
 - [x] Freeze the query suite and decoders
 - [x] Freeze the Hidden Profile reference configuration
 - [x] Pass Gate 3 with fair baselines
-- [ ] Run the controlled scored campaign
+- [x] Run the controlled scored campaign
 - [x] Pass Gate 4 with a measurable result or justified tie
 - [ ] Optionally implement the group guessing game and measure multi-information
 - [ ] Run LLM validation
@@ -1378,3 +1378,22 @@ They are three separate passes, not one study command.
 The library README stays the install and demo guide.
 The next task is one timestamped study run.
 That task has not been started.
+The scored run is output/hidden_profile_20261030_011812.
+It holds all 18 deals at logging levels 0, 1, and 2.
+campaign.json in that folder is the fixed record.
+It names commit d8c5039 and marks the worktree dirty.
+The study command, the recovery curves, and this close are still uncommitted.
+Reported chances match the chances implied by the held facts.
+Relative entropy is 0 for the rules and for session levels 0, 1, and 2.
+The Brier score is 0.153.
+Log loss is 0.493 bits.
+The log files and the structured file do not state the chances.
+Vote uncertainty given the named belief is 0 for the rules and for levels 1 and 2.
+Level 0 does not name that belief, so that number is unstated.
+Every MARBLE view leaves it unstated too.
+There is no sample interval, because every deal is in the score.
+The recovery curves are recovery.png in that folder.
+The group guessing game, LLM agents, and Werewolf stay later.
+The session file matches once the record id and the clock are set aside.
+That line is closed on the content match.
+The library is left unchanged.
