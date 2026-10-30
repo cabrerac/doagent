@@ -1,0 +1,22 @@
+coordinate_mode: chain
+llm: none
+environment:
+  type: HiddenProfile
+  max_iterations: 4
+task:
+  content: Share private facts and vote for a route.
+agents:
+  - agent_id: agent-a
+    profile: traveller
+  - agent_id: agent-b
+    profile: traveller
+  - agent_id: agent-c
+    profile: traveller
+relationships:
+  - [agent-a, agent-b, talks_to]
+  - [agent-b, agent-c, talks_to]
+  - [agent-c, agent-a, talks_to]
+memory:
+  type: BaseMemory
+metrics: {}
+engine_planner: {}
