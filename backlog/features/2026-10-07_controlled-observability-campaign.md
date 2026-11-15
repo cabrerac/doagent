@@ -4,7 +4,7 @@ title: "Run the controlled observability campaign"
 status: "Completed"
 priority: "High"
 created: "2026-10-07"
-last_updated: "2026-10-30"
+last_updated: "2026-11-15"
 category: "features"
 related_cips:
 - "0015"
@@ -165,7 +165,7 @@ It has not been started.
 The open lines above stay open.
 The scored run is output/hidden_profile_20261030_011812.
 campaign.json records the 18 deals, logging levels 0, 1, and 2, and commit 386d1a8.
-The study command, the recovery curves, and the campaign code are still untracked.
+On this date the study command, the recovery curves, and the campaign code were still untracked.
 Relative entropy of the reported chances is 0 for the rules and for every session level.
 The Brier score is 0.153 and log loss is 0.493 bits.
 MARBLE views do not state those chances.
@@ -174,3 +174,10 @@ Level 0 and every MARBLE view leave that number unstated.
 There is no sample interval, because every deal is in the score.
 A later game that cannot list every deal still needs one.
 The group guessing game, LLM agents, and Werewolf are not started.
+
+### 2026-11-15
+
+The study command, the recovery curves, and the campaign code are on main in commit ebf545a.
+A local change writes one question figure per dimension and is not committed.
+The next evaluation game is not chosen.
+Traitors is a candidate beside the group guessing game, model-backed Hidden Profile agents, Werewolf repeats, and a Who&When-shaped replay.

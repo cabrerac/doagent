@@ -4,7 +4,7 @@ title: "Run the Hidden Profile study into one timestamped folder"
 status: "Completed"
 priority: "Medium"
 created: "2026-10-30"
-last_updated: "2026-10-30"
+last_updated: "2026-11-15"
 category: "features"
 related_cips:
 - "0015"
@@ -62,4 +62,14 @@ It holds all 18 deals, the score, the figures, and campaign.json.
 A second run with the same stamp is refused.
 The single-deal commands are still in place.
 Commit 386d1a8 does not include that command.
-The command file is still untracked.
+On this date the command file was still untracked.
+
+### 2026-11-15
+
+The study command is on main in commit ebf545a.
+The recovery curves and the campaign code are in that same commit.
+Run it with `python -m experiments.runners.hidden_profile_study`.
+A local change, not committed, writes one question figure per dimension.
+The files are questions_accountability.png, questions_traceability.png, and questions_explainability.png.
+The two Hidden Profile tests pass in .wvenv.
+The next evaluation game is not chosen.

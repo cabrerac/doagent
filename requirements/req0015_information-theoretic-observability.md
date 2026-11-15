@@ -4,7 +4,7 @@ title: "Quantifiable Information-Theoretic Observability"
 status: "In Progress"
 priority: "High"
 created: "2026-10-07"
-last_updated: "2026-10-30"
+last_updated: "2026-11-15"
 related_tenets:
 - "data-first-shared-model"
 - "interpretability-and-traceability"
@@ -96,3 +96,10 @@ The controlled runs are not scored, and the two implementations have not been bu
 The Hidden Profile campaign is scored.
 All 18 deals were read at logging levels 0, 1, and 2.
 The group guessing game, LLM agents, and Werewolf are not started.
+
+### 2026-11-15
+
+The study command, the recovery curves, and the campaign code are on main in commit ebf545a.
+One question figure per dimension is written only in a local change.
+The next evaluation game is not chosen.
+Traitors is a candidate beside the group guessing game, model-backed Hidden Profile agents, Werewolf repeats, and a Who&When-shaped replay.

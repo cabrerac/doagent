@@ -2,7 +2,7 @@
 author: "Christian Cabrera"
 created: "2026-10-07"
 id: "0015"
-last_updated: "2026-10-30"
+last_updated: "2026-11-15"
 status: "In Progress"
 compressed: false
 related_requirements:
@@ -1374,16 +1374,22 @@ The question about which update produced the group choice is not in the game.
 The figures for this pilot sit in output/hidden_profile.
 That folder has no timestamp, and git ignores output.
 The plot functions live in the Hidden Profile package.
-They are three separate passes, not one study command.
+The study command runs those passes together.
 The library README stays the install and demo guide.
-The next task is one timestamped study run.
-That task has not been started.
+The timestamped study command is on main in commit ebf545a.
 The scored run is output/hidden_profile_20261030_011812.
 It holds all 18 deals at logging levels 0, 1, and 2.
 campaign.json in that folder is the fixed record.
 Commit 386d1a8 records the score, the question figures, and these notes.
 campaign.json names that commit.
-The study command, the recovery curves, and the campaign code are still untracked.
+The study command, the recovery curves, and the campaign code are in commit ebf545a.
+A local change, not committed, writes one question figure per dimension.
+The dimensions are accountability, traceability, and explainability.
+The two Hidden Profile tests pass.
+The next evaluation game is not chosen.
+Candidates are a Who&When-shaped replay, the group guessing game, model-backed Hidden Profile agents, Werewolf repeats, and Traitors.
+Traitors is the same family as Werewolf.
+Recruitment and the final end vote are the pieces Werewolf does not already provide.
 Reported chances match the chances implied by the held facts.
 Relative entropy is 0 for the rules and for session levels 0, 1, and 2.
 The Brier score is 0.153.
@@ -1394,7 +1400,7 @@ Level 0 does not name that belief, so that number is unstated.
 Every MARBLE view leaves it unstated too.
 There is no sample interval, because every deal is in the score.
 The recovery curves are recovery.png in that folder.
-The group guessing game, LLM agents, and Werewolf stay later.
+No later game is chosen yet.
 The session file matches once the record id and the clock are set aside.
 That line is closed on the content match.
 The library is left unchanged.
