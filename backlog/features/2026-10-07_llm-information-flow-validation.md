@@ -4,7 +4,7 @@ title: "Validate information-flow measures with LLM agents"
 status: "Proposed"
 priority: "Medium"
 created: "2026-10-07"
-last_updated: "2026-10-15"
+last_updated: "2026-11-15"
 category: "features"
 related_cips:
 - "0015"
@@ -105,3 +105,10 @@ Any behavioural difference between models is secondary.
 ### 2026-10-07
 
 Task proposed as the first external-validity extension after successful controlled measurement.
+
+### 2026-11-15
+
+Model-backed agents for the paper go through CIP-0017.
+That study asks link questions on HiddenBench and Traitors.
+This task stays the gated information-flow extension under CIP-0015.
+It is not the next work.

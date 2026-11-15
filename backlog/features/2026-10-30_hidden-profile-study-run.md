@@ -73,3 +73,11 @@ A local change, not committed, writes one question figure per dimension.
 The files are questions_accountability.png, questions_traceability.png, and questions_explainability.png.
 The two Hidden Profile tests pass in .wvenv.
 The next evaluation game is not chosen.
+
+### 2026-11-15
+
+The per-dimension figures are on main in commit 9663235.
+The note above that calls them a local change is out of date.
+The follow-on evaluation is CIP-0017.
+This task stays Completed.
+The scripted run is the calibration case for `2026-11-15_hidden-profile-store-calibration`.

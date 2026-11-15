@@ -4,7 +4,7 @@ title: "Add the group guessing game as a second environment"
 status: "Proposed"
 priority: "Low"
 created: "2026-10-15"
-last_updated: "2026-10-21"
+last_updated: "2026-11-15"
 category: "features"
 related_cips:
 - "0015"
@@ -111,3 +111,11 @@ Task created as a gated follow-up so the second environment cannot start before 
 The design sketch now matches the plan.
 Agents guess numbers that must sum to a hidden target and hear whether the sum was too high or too low.
 The uncertainty of the values still consistent with that feedback is `log2` of how many remain.
+
+### 2026-11-15
+
+This game is not the follow-on evaluation.
+CIP-0017 takes HiddenBench and Traitors instead.
+Published work already measures information quantities on a group guessing game.
+This task stays Proposed and gated.
+It is not the next work.

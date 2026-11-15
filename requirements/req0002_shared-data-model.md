@@ -4,7 +4,7 @@ title: "Shared Data Model as Agent Interface"
 status: "Implemented"
 priority: "High"
 created: "2026-01-22"
-last_updated: "2026-02-21"
+last_updated: "2026-11-15"
 related_tenets:
 - "data-first-shared-model"
 stakeholders:
@@ -33,6 +33,9 @@ This requirement is about outcomes: a shared data model is the default medium fo
 
 ## Notes (Optional)
 This requirement does not prescribe a specific data backend or protocol.
+REQ-0016 strengthens the outcome.
+The shared model must be the only medium, not only an available one.
+CIP-0016 holds that design.
 
 ## References
 - **Related Tenets**: data-first-shared-model
@@ -45,3 +48,10 @@ Requirement drafted.
 
 ### 2026-02-21
 Iteration 2 complete. CIP-0002 moved to Implemented. Shared data model defined with record envelope, listen semantics, provenance (flat attribution), accountability, three adapters (InMemory, File, Mongo), collection-per-kind storage, state deduplication on by default, trace graph, and adapter contract documentation. All backlog items closed. Iteration 3 items noted in CIP-0002: partial/no-outcome environments, SQL/stream adapters (deferred).
+
+### 2026-11-15
+
+The implemented criteria still hold.
+Several environments still pass observations around the store or read it without the visibility rules.
+That gap is REQ-0016, designed in CIP-0016.
+This requirement stays Implemented.

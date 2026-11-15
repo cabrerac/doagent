@@ -181,3 +181,11 @@ The study command, the recovery curves, and the campaign code are on main in com
 A local change writes one question figure per dimension and is not committed.
 The next evaluation game is not chosen.
 Traitors is a candidate beside the group guessing game, model-backed Hidden Profile agents, Werewolf repeats, and a Who&When-shaped replay.
+
+### 2026-11-15
+
+The per-dimension figures are on main in commit 9663235.
+The follow-on evaluation is chosen.
+It is CIP-0017, with HiddenBench first and Traitors second.
+This campaign stays the scored information-theoretic run.
+The group guessing game is not the follow-on.

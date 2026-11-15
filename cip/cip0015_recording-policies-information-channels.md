@@ -12,6 +12,8 @@ related_cips:
 - "0002"
 - "0006"
 - "0007"
+- "0016"
+- "0017"
 tags:
 - cip
 - evaluation
@@ -1404,3 +1406,15 @@ No later game is chosen yet.
 The session file matches once the record id and the clock are set aside.
 That line is closed on the content match.
 The library is left unchanged.
+
+### 2026-11-15
+
+The per-dimension question figures are on main in commit 9663235.
+The note above that calls that split a local change is out of date.
+The next evaluation is chosen.
+CIP-0017 asks link questions on HiddenBench and on Traitors, with one run read three ways.
+The scripted study in this CIP is the calibration case for that evaluation.
+The library stays unchanged for this CIP.
+The store-as-only-medium contract is CIP-0016, and it is a precondition of CIP-0017.
+The group guessing game is not taken forward.
+Werewolf stays the external case already reported here.
