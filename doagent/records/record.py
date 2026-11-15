@@ -14,9 +14,9 @@ except ImportError:  # pragma: no cover
 class Provenance(TypedDict, total=False):
     """Flat provenance attribution for a record.
 
-    Answers "who created this record, from what inputs, using what tools?" One attribution per record (matches the design choice of one agent_update per agent per step).
-    Records are immutable; provenance is set at write time.
-    In a later iteration, one trace edge per ``derived_from`` source will be derived from provenance for graph traversal.
+    Names who created the record, from which inputs, and with which tools.
+    Each record carries one attribution.
+    Provenance is set when the record is written.
     """
 
     created_by: str
@@ -32,8 +32,7 @@ INITIAL_STATE_ID = "initial_state"
 class Accountability(TypedDict, total=False):
     """Accountability metadata for a record.
 
-    Ownership and governance context: who is responsible for this record, under which policy, and within what scope.
-    Kept on the envelope so decisions can be reviewed, challenged, and governed without a separate record type.
+    Names who is responsible for the record, under which policy, and within what scope.
     All fields are optional.
     """
 
@@ -130,6 +129,7 @@ class SimpleRecord:
     payload: Dict[str, Any]
     provenance: Provenance = field(default_factory=dict)
     accountability: Accountability = field(default_factory=dict)
+    audience: List[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

@@ -1,5 +1,6 @@
 """Tests for shared data adapters and records."""
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -106,6 +107,36 @@ class TestSharedData(unittest.TestCase):
             reloaded = FileSharedData(temp_dir)
             self.assertEqual(reloaded.read(record.id), record)
             self.assertEqual(list(reloaded.list()), [record])
+
+    def test_file_adapter_keeps_audience_on_reload(self) -> None:
+        """A stored audience survives a flush and a reload."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            adapter = FileSharedData(temp_dir)
+            record = new_record(
+                actor="env", kind="note", payload={"n": 1}, audience=["agent-1"],
+            )
+            adapter.write(record)
+            adapter.flush()
+            reloaded = FileSharedData(temp_dir).read(record.id)
+            self.assertEqual(reloaded, record)
+            self.assertEqual(reloaded.audience, ["agent-1"])
+
+    def test_file_adapter_reads_records_stored_without_audience(self) -> None:
+        """A file whose records have no audience field loads with an empty audience."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stored = {
+                "id": "r1",
+                "timestamp": "2026-01-01T00:00:00+00:00",
+                "actor": "agent-1",
+                "kind": "note",
+                "payload": {"n": 1},
+                "provenance": {},
+            }
+            path = Path(temp_dir) / "note.jsonl"
+            path.write_text(json.dumps(stored) + "\n", encoding="utf-8")
+            record = FileSharedData(temp_dir).read("r1")
+            self.assertIsNotNone(record)
+            self.assertEqual(record.audience, [])
 
 
 if __name__ == "__main__":

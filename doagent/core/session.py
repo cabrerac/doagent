@@ -1,6 +1,7 @@
 """Session-based API for transparent DOAgent usage.
 
-Users create a Session, wrap their env, create agents, and run their loop. Recording happens internally.
+Users create a Session, wrap their env, create agents, and run their loop.
+Recording happens internally.
 
 Supports all three DOA principles:
 - Shared-data model: records, adapters, trace, deduplication.
@@ -131,7 +132,11 @@ class WrappedEnv:
         self._agent_update_ids: Dict[str, str] = {}
 
     def reset(self, **kwargs: Any) -> Dict[str, Any]:
-        """Reset the underlying env. Returns observations dict."""
+        """Reset the underlying env.
+
+        Returns:
+            The observations, keyed by agent id.
+        """
         self._prev_outcome_id = INITIAL_STATE_ID
         self._round_id = 0
         self._agent_update_ids = {}
@@ -143,7 +148,14 @@ class WrappedEnv:
         return result
 
     def step(self, actions: Dict[str, Any]) -> Dict[str, Any]:
-        """Step the env and record outcome + traces. Returns extracted step data."""
+        """Step the env and record the outcome and its traces.
+
+        Args:
+            actions: The action of each agent, keyed by agent id.
+
+        Returns:
+            The observations, rewards, and done flags taken from the step result.
+        """
         self._round_id += 1
         raw_result = self._env.step(actions)
         extracted = self._adapter(raw_result)
@@ -218,10 +230,12 @@ class SessionAgent:
         Args:
             observation: The env observation for this agent.
             round_id: Current round number.
-            inputs: Structured inputs for the request, used directly when
-                given, so a policy can receive keys such as observation and
-                shared_map.
+            inputs: Structured inputs for the request, used directly when given.
+                A policy can then receive keys such as observation and shared_map.
                 Defaults to the observation alone.
+
+        Returns:
+            A dict with the chosen action and the full policy response.
         """
         obs = _serializable(observation)
         request_inputs = _serializable(inputs) if inputs is not None else {"observation": obs}
@@ -412,10 +426,8 @@ class Session:
     ) -> None:
         """Register a participant using Session-level API.
 
-        Accepts an agent id, a dict holding agent_id or id, or an object
-        exposing either of those attributes.
-        The session turns it into a participation record for the configured
-        registry.
+        Accepts an agent id, a dict holding agent_id or id, or an object with either attribute.
+        The session turns it into a participation record for the configured registry.
         It also appends a participation event to the shared data model.
         """
         registry = self._participation_registry
@@ -510,10 +522,10 @@ class Session:
             )
 
     def visible_participants(self, agent_id: str) -> List[Dict[str, Any]]:
-        """Who is currently in, from *agent_id*'s topology-filtered view.
+        """Return who is currently in, as seen by one agent.
 
-        Membership is rebuilt from the participation records this agent can see,
-        under the same filter as visible_records.
+        Membership is rebuilt from the participation records this agent may read.
+        The filter is the same as in visible_records.
         Join and leave events are replayed in order.
         For a federated leaf agent, a hub roster event replaces the view.
         """
@@ -582,8 +594,7 @@ class Session:
         Outcomes, traces, and agent decisions can all be read back after a run.
 
         Args:
-            kind: One of "outcome", "trace", "agent_update", or
-                "participation".
+            kind: One of "outcome", "trace", "agent_update", or "participation".
 
         Returns:
             List of records of that kind.
@@ -609,13 +620,11 @@ class Session:
           Mongo storage takes "uri" or "mongo_uri".
           Add a scenario_name to have the run_id and metadata.json created.
         - scenario_name: str, for example "gridworld" or "push".
-          With file or mongo storage, this creates the run_id, the output
-          folder, and metadata.json.
+          With file or mongo storage, this creates the run_id, the output folder, and metadata.json.
         - output_base: str, default "./output".
           Base directory for run folders when scenario_name is set.
         - run_config: {"logging_level": 0|1|2}.
-        - topology: a mode of "centralised", "peer_to_peer", or "federated",
-          plus a visibility map.
+        - topology: a mode of "centralised", "peer_to_peer", or "federated", plus a visibility map.
           It also accepts "on_membership_change" and "on_hub_membership".
         - policies: {name: entry_point_or_callable, ...}.
         - participation: bool, default False.
@@ -825,8 +834,8 @@ class Session:
     ) -> str:
         """Record a decision made externally (e.g. multiprocessing workers).
 
-        Registers the agent_update on the wrapped env, so the next call to
-        env.step includes it in the outcome and trace records.
+        Registers the agent_update on the wrapped env.
+        The next call to env.step then includes it in the outcome and trace records.
         """
         obs = _serializable(observation)
         request: Dict[str, Any] = {
@@ -876,16 +885,29 @@ class Session:
         agent_id: str,
         kind: Optional[str] = None,
     ) -> List[SimpleRecord]:
-        """Return the records visible to one agent under the configured topology.
+        """Return the records one agent may read.
 
-        - CENTRALISED: all records of the given kind, or every kind if the kind is omitted.
-        - PEER_TO_PEER: only records from the agent itself and its visible
-          peers, taken from the live visibility map.
+        The topology decides which authors the agent may read.
+
+        - CENTRALISED: every author.
+        - PEER_TO_PEER: the agent itself and its visible peers, taken from the live visibility map.
           Join and leave update that map through on_membership_change.
-          By default, named agents keep their YAML links, and only an agent
-          absent from the topology file is meshed with the current members.
-        - FEDERATED: only records authored by the hub.
-          When the agent is the hub itself, all records are returned, since the hub aggregates.
+          By default, named agents keep their YAML links.
+          Only an agent absent from the topology file is meshed with the current members.
+        - FEDERATED: the hub only.
+          The hub itself may read every author.
+
+        A record with an audience is then kept only for its author and the agents in that audience.
+        The audience applies in every topology, and the hub must be named like any other agent.
+        An audience never shows a record to an agent that may not read its author.
+
+        Args:
+            agent_id: Id of the agent that reads.
+            kind: Record kind to select.
+                Omit it to read every kind.
+
+        Returns:
+            The records that agent may read.
         """
         all_records = (
             list(self._shared_data.list())
@@ -899,23 +921,18 @@ class Session:
         agent_id: str,
         records: List[SimpleRecord],
     ) -> List[SimpleRecord]:
+        """Keep the records one agent may read, by topology and then by audience."""
         mode = self._topology.mode
-
-        if mode == Topology.CENTRALISED:
-            return records
 
         if mode == Topology.PEER_TO_PEER:
             allowed: set[str] = {agent_id}
             if agent_id in self._visibility:
                 allowed.update(self._visibility[agent_id])
-            return [r for r in records if r.actor in allowed]
+            records = [r for r in records if r.actor in allowed]
+        elif mode == Topology.FEDERATED and agent_id != self._hub_id:
+            records = [r for r in records if r.actor == self._hub_id]
 
-        if mode == Topology.FEDERATED:
-            if agent_id == self._hub_id:
-                return records
-            return [r for r in records if r.actor == self._hub_id]
-
-        return records
+        return [r for r in records if _in_audience(agent_id, r)]
 
     def decision_context(
         self,
@@ -933,8 +950,7 @@ class Session:
         - kinds: one kind, or a list of kinds.
           Omit to include every kind.
         - last_n: keep only the last N records after that filter.
-        - summarise: a function from the record list to any value, such as one
-          that merges map updates.
+        - summarise: a function from the record list to any value, such as one that merges map updates.
           Omit to return the records.
 
         This shapes what the agent may read.
@@ -965,6 +981,12 @@ class Session:
     def topology(self) -> TopologyConfig:
         """The configured topology."""
         return self._topology
+
+
+def _in_audience(agent_id: str, record: SimpleRecord) -> bool:
+    """Return whether the audience of a record lets this agent read it."""
+    audience = record.audience
+    return not audience or agent_id == record.actor or agent_id in audience
 
 
 def _wrap_policy_with_metadata(

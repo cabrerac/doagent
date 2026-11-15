@@ -540,6 +540,98 @@ class TestSession(unittest.TestCase):
         self.assertEqual(records_a[0].actor, "hub")
         self.assertEqual(len(records_hub), 3)
 
+    # -- Audience: an extra limit on who may read a record --
+
+    def _write_note(self, session, actor, audience=None):
+        """Helper: write one note record through the store and return its id."""
+        from doagent.core import new_record
+        record = new_record(actor=actor, kind="note", payload={}, audience=audience)
+        session.shared_data.write(record)
+        return record.id
+
+    def _note_ids(self, session, agent_id):
+        """Helper: ids of the note records one agent may read."""
+        return {rec.id for rec in session.visible_records(agent_id, kind="note")}
+
+    def test_audience_empty_keeps_the_topology_rule(self):
+        from doagent.core import TopologyConfig, Topology
+        session = Session(
+            InMemorySharedData(), topology=TopologyConfig(mode=Topology.CENTRALISED),
+        )
+        open_note = self._write_note(session, "a")
+        empty_note = self._write_note(session, "a", audience=[])
+
+        for reader in ("a", "b", "c"):
+            self.assertEqual(self._note_ids(session, reader), {open_note, empty_note})
+
+    def test_audience_centralised_hides_record_from_other_agents(self):
+        from doagent.core import TopologyConfig, Topology
+        session = Session(
+            InMemorySharedData(), topology=TopologyConfig(mode=Topology.CENTRALISED),
+        )
+        from_env = self._write_note(session, "env", audience=["b"])
+        from_a = self._write_note(session, "a", audience=["b"])
+
+        self.assertEqual(self._note_ids(session, "b"), {from_env, from_a})
+        self.assertEqual(self._note_ids(session, "c"), set())
+        # The author reads its own record without being named.
+        self.assertEqual(self._note_ids(session, "a"), {from_a})
+
+    def test_audience_peer_to_peer_narrows_but_never_widens(self):
+        from doagent.core import TopologyConfig, Topology
+        session = Session(
+            InMemorySharedData(),
+            topology=TopologyConfig(mode=Topology.PEER_TO_PEER),
+            visibility={"b": ["a"], "c": ["a"]},
+        )
+        from_a = self._write_note(session, "a", audience=["b"])
+        # b is named, but d is not one of b's peers.
+        from_d = self._write_note(session, "d", audience=["b"])
+
+        self.assertEqual(self._note_ids(session, "b"), {from_a})
+        self.assertEqual(self._note_ids(session, "c"), set())
+        self.assertEqual(self._note_ids(session, "a"), {from_a})
+        self.assertEqual(self._note_ids(session, "d"), {from_d})
+
+    def test_audience_federated_applies_to_agents_and_hub(self):
+        from doagent.core import TopologyConfig, Topology
+        session = Session(
+            InMemorySharedData(),
+            topology=TopologyConfig(mode=Topology.FEDERATED),
+            hub_id="hub",
+        )
+        hub_to_a = self._write_note(session, "hub", audience=["a"])
+        hub_to_all = self._write_note(session, "hub")
+        # The hub is not named, and b may only read the hub.
+        a_to_b = self._write_note(session, "a", audience=["b"])
+        a_to_hub = self._write_note(session, "a", audience=["hub"])
+
+        self.assertEqual(self._note_ids(session, "a"), {hub_to_a, hub_to_all})
+        self.assertEqual(self._note_ids(session, "b"), {hub_to_all})
+        self.assertEqual(
+            self._note_ids(session, "hub"), {hub_to_a, hub_to_all, a_to_hub},
+        )
+        self.assertNotIn(a_to_b, self._note_ids(session, "hub"))
+
+    def test_audience_applies_to_decision_context_but_not_inspect(self):
+        session = Session.from_config({
+            "shared_data": {"type": "memory"},
+            "topology": {"mode": "centralised"},
+        })
+        private = self._write_note(session, "env", audience=["a"])
+
+        seen_by_a = [rec.id for rec in session.decision_context("a", kinds="note")]
+        seen_by_b = [rec.id for rec in session.decision_context("b", kinds="note")]
+
+        self.assertEqual(seen_by_a, [private])
+        self.assertEqual(seen_by_b, [])
+        self.assertEqual([rec.id for rec in session.inspect("note")], [private])
+
+    def test_new_record_rejects_a_single_string_audience(self):
+        from doagent.core import new_record
+        with self.assertRaises(TypeError):
+            new_record(actor="a", kind="note", payload={}, audience="b")
+
     def test_decision_context_kinds_last_n_and_summarise(self):
         session = Session.from_config({
             "shared_data": {"type": "memory"},

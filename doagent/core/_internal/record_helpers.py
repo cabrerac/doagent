@@ -1,13 +1,12 @@
 """Record factory helpers for agent_update, trace, outcome, explanation, and participation records.
 
-Used internally by RecordWriter, FunctionAgent, and StubAgent.
-Not part of the public Session API; users configure recording via Session and RunConfig.
+Recording is normally configured through Session and RunConfig.
 """
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Sequence
 from uuid import uuid4
 
 from ...records import ExplanationRecord, SimpleRecord
@@ -21,8 +20,29 @@ def new_record(
     provenance: Optional[Dict[str, Any]] = None,
     accountability: Optional[Dict[str, Any]] = None,
     record_id: Optional[str] = None,
+    audience: Optional[Sequence[str]] = None,
 ) -> SimpleRecord:
-    """Create a record with a standard envelope."""
+    """Create a record with a standard envelope.
+
+    Args:
+        actor: Id of the agent or component that writes the record.
+        kind: Record kind, such as "outcome" or "agent_update".
+        payload: Record content.
+        provenance: Optional attribution for the record.
+        accountability: Optional ownership metadata for the record.
+        record_id: Optional id.
+            A new id is generated when it is omitted.
+        audience: Optional ids of the agents allowed to read the record.
+            Omit it to place no extra limit on readers.
+
+    Returns:
+        The new record.
+
+    Raises:
+        TypeError: If audience is a single string instead of a list of ids.
+    """
+    if isinstance(audience, str):
+        raise TypeError("audience must be a list of agent ids, not a single string")
     timestamp = datetime.now(timezone.utc).isoformat()
     return SimpleRecord(
         id=record_id or str(uuid4()),
@@ -32,6 +52,7 @@ def new_record(
         payload=payload,
         provenance=provenance or {},
         accountability=accountability or {},
+        audience=list(audience or []),
     )
 
 

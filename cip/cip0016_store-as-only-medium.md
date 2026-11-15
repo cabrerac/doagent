@@ -3,7 +3,7 @@ author: "Christian Cabrera"
 created: "2026-11-15"
 id: "0016"
 last_updated: "2026-11-15"
-status: "Accepted"
+status: "In Progress"
 compressed: false
 related_requirements:
 - "0016"
@@ -29,7 +29,7 @@ title: "Shared Store as the Only Medium"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [ ] In Progress - Actively being implemented
+- [x] In Progress - Actively being implemented
 - [ ] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented
@@ -216,7 +216,7 @@ The existing session tests stay green for callers that pass inputs.
 
 ## Implementation Status
 
-- [ ] Audience on records and in the visibility filter
+- [x] Audience on records and in the visibility filter
 - [ ] One addressed record per private observation
 - [ ] Decision records separated from message records
 - [ ] Default decision input taken from the store
@@ -254,3 +254,19 @@ Backlog tasks are not created yet.
 Six backlog tasks were added.
 The audience filter is the first task.
 No task is in progress.
+
+### 2026-11-15
+
+Status moved to In Progress.
+The audience task is complete.
+The audience is one new field on the record envelope, empty by default, and every existing field is kept.
+It is not stored inside accountability, because that block is dropped at logging level 0.
+Three rules were settled during implementation.
+The author of a record always reads it.
+The federated hub must be named in an audience like any other agent.
+An audience never shows a record to an agent that may not read its author.
+
+Peer-to-peer and federated topologies stay as they are.
+An agent reads the environment only through an author it can already see, a peer or the hub.
+An observation written by the environment stays hidden from an agent that cannot see that author.
+The audience does not open that path.
