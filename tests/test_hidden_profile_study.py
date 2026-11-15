@@ -52,7 +52,9 @@ class HiddenProfileStudyTests(unittest.TestCase):
         for name in (
             "score.json",
             "frontier.png",
-            "questions.png",
+            "questions_accountability.png",
+            "questions_traceability.png",
+            "questions_explainability.png",
             "dimensions.png",
             "curves.json",
             "belief_entropy.png",

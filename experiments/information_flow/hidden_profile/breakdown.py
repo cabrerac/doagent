@@ -84,14 +84,14 @@ class Breakdown:
     Args:
         deals: How many deals were read.
         results: One row per question and view.
-        questions_plot: Path of the question figure.
+        question_plots: One question figure per dimension.
         dimensions_plot: Path of the dimension figure.
         table_path: Path of the written table.
     """
 
     deals: int
     results: tuple[QuestionResult, ...]
-    questions_plot: Path
+    question_plots: tuple[Path, ...]
     dimensions_plot: Path
     table_path: Path
 
@@ -123,16 +123,15 @@ def plot_breakdown(
     report = reference_report(config)
     indexes = tuple(range(len(report.deals)) if deal_indexes is None else deal_indexes)
     results = _score_saved(folder, report, config, indexes, logging_levels)
-    questions_plot = folder / "questions.png"
     dimensions_plot = folder / "dimensions.png"
     table_path = folder / "breakdown.json"
     _write_table(table_path, len(indexes), results)
-    _write_questions(questions_plot, results)
+    question_plots = _write_questions(folder, results)
     _write_dimensions(dimensions_plot, results)
     return Breakdown(
         deals=len(report.deals),
         results=results,
-        questions_plot=questions_plot,
+        question_plots=question_plots,
         dimensions_plot=dimensions_plot,
         table_path=table_path,
     )
@@ -447,12 +446,15 @@ def _write_table(path: Path, deals: int, results: Sequence[QuestionResult]) -> N
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
-def _write_questions(path: Path, results: Sequence[QuestionResult]) -> None:
-    """Save one cell per question and view.
+def _write_questions(folder: Path, results: Sequence[QuestionResult]) -> tuple[Path, ...]:
+    """Save one question figure per dimension.
 
     Args:
-        path: Destination of the figure.
+        folder: Directory that holds the figures.
         results: Match counts per question and view.
+
+    Returns:
+        The figure paths, in dimension order.
     """
     import matplotlib
 
@@ -460,36 +462,54 @@ def _write_questions(path: Path, results: Sequence[QuestionResult]) -> None:
     import matplotlib.pyplot as plt
     import numpy as np
 
-    keys, labels = _question_labels(results)
     views = _present_views(results)
-    grid = []
-    notes = []
-    for label in keys:
-        row = []
-        note = []
-        for view in views:
-            item = _find(results, label, view)
-            if item.stated == 0:
-                row.append(np.nan)
-                note.append("n/a")
-            else:
-                row.append(item.matched / item.stated)
-                note.append(f"{item.matched}/{item.stated}")
-        grid.append(row)
-        notes.append(note)
-    figure, axis = plt.subplots(figsize=(12, 12))
     colors = plt.cm.RdYlGn.copy()
     colors.set_bad("#d9d9d9")
-    image = axis.imshow(np.array(grid, dtype=float), cmap=colors, vmin=0, vmax=1, aspect="auto")
-    axis.set_xticks(range(len(views)), [LABELS[view] for view in views], rotation=30, ha="right")
-    axis.set_yticks(range(len(labels)), labels, fontsize=8)
-    for row_index, row in enumerate(notes):
-        for column_index, text in enumerate(row):
-            axis.text(column_index, row_index, text, ha="center", va="center", fontsize=7)
-    figure.colorbar(image, ax=axis, fraction=0.03, pad=0.02, label="Share of deals recovered")
-    figure.tight_layout()
-    figure.savefig(path, bbox_inches="tight")
-    plt.close(figure)
+    paths = []
+    for dimension in _DIMENSIONS:
+        keys, labels = _question_labels(results, dimension)
+        grid = []
+        notes = []
+        for label in keys:
+            row = []
+            note = []
+            for view in views:
+                item = _find(results, label, view)
+                if item.stated == 0:
+                    row.append(np.nan)
+                    note.append("n/a")
+                else:
+                    row.append(item.matched / item.stated)
+                    note.append(f"{item.matched}/{item.stated}")
+            grid.append(row)
+            notes.append(note)
+        height = 1.8 + 0.55 * len(labels)
+        figure, axis = plt.subplots(figsize=(12, height), constrained_layout=True)
+        image = axis.imshow(
+            np.array(grid, dtype=float),
+            cmap=colors,
+            vmin=0,
+            vmax=1,
+            aspect="auto",
+        )
+        axis.set_title(dimension)
+        axis.set_xticks(
+            range(len(views)),
+            [LABELS[view] for view in views],
+            rotation=30,
+            ha="right",
+            fontsize=9,
+        )
+        axis.set_yticks(range(len(labels)), labels, fontsize=9)
+        for row_index, row in enumerate(notes):
+            for column_index, text in enumerate(row):
+                axis.text(column_index, row_index, text, ha="center", va="center", fontsize=8)
+        figure.colorbar(image, ax=axis, fraction=0.04, pad=0.02, label="Share of deals recovered")
+        path = folder / f"questions_{dimension.lower()}.png"
+        figure.savefig(path)
+        plt.close(figure)
+        paths.append(path)
+    return tuple(paths)
 
 
 def _write_dimensions(path: Path, results: Sequence[QuestionResult]) -> None:
@@ -533,15 +553,19 @@ def _present_views(results: Sequence[QuestionResult]) -> tuple[str, ...]:
     return tuple(view for view in _VIEWS if view in present)
 
 
-def _question_labels(results: Sequence[QuestionResult]) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Return question keys and the labels drawn on the figure."""
+def _question_labels(
+    results: Sequence[QuestionResult],
+    dimension: str,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Return question keys and the labels drawn on one panel."""
     keys = []
     labels = []
     for item in results:
-        if item.label in keys:
+        if item.dimension != dimension or item.label in keys:
             continue
         keys.append(item.label)
-        labels.append(f"{item.dimension}, {item.kind}: {item.label}")
+        kind = "Record" if item.kind == "record" else "Link"
+        labels.append(f"{kind}: {item.label}")
     return tuple(keys), tuple(labels)
 
 
