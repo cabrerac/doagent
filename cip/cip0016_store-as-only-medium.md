@@ -2,8 +2,8 @@
 author: "Christian Cabrera"
 created: "2026-11-15"
 id: "0016"
-last_updated: "2026-11-15"
-status: "In Progress"
+last_updated: "2026-11-16"
+status: "Implemented"
 compressed: false
 related_requirements:
 - "0016"
@@ -30,7 +30,7 @@ title: "Shared Store as the Only Medium"
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
 - [x] In Progress - Actively being implemented
-- [ ] Implemented - Work complete, awaiting verification
+- [x] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented
 - [ ] Deferred - Postponed
@@ -229,10 +229,10 @@ The existing session tests stay green for callers that pass inputs.
 ## References
 
 - `doagent/core/session.py`, decide, visible_records, decision_context, and the recommended loop.
-- `doagent/core/_internal/record_writer.py`, the empty source list on agent decisions.
-- `doagent/records/record.py`, derived_from on provenance.
-- `experiments/information_flow/hidden_profile/run_doagent.py`, observations passed in from the loop.
-- `experiments/multiagentbench/run_werewolf_doagent.py`, outcomes read through inspect.
+- `doagent/core/_internal/record_writer.py`, shown ids on a decision and the message written for other agents.
+- `doagent/records/record.py`, audience and derived_from on the envelope.
+- `experiments/information_flow/hidden_profile/run_doagent.py`, decisions that read the store.
+- `experiments/multiagentbench/run_werewolf_doagent.py`, player lines read through the visibility call.
 - CIP-0015, the study that left the library unchanged.
 - CIP-0017, the evaluation that depends on this contract.
 
@@ -305,3 +305,9 @@ Each agent can see the environment, and the audience still hides the other agent
 The combined outcome stays in the store for existing readers and is addressed to the environment, so agents are not shown it.
 Werewolf players read lines from the observation records the visibility rules allow.
 The session example reads from the store.
+
+### 2026-11-16
+
+The implementation checklist is complete.
+Status is Implemented.
+Verification and closure are still open.

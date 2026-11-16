@@ -4,7 +4,7 @@ title: "Link Questions about Group Behaviour"
 status: "In Progress"
 priority: "High"
 created: "2026-11-15"
-last_updated: "2026-11-15"
+last_updated: "2026-11-16"
 related_tenets:
 - "interpretability-and-traceability"
 - "provenance-and-accountability"
@@ -68,10 +68,10 @@ The provenance tenet requires them to be traceable to the records that were actu
 - [ ] Record questions and link questions are stated for accountability, traceability, and explainability.
 - [ ] The same questions are answered by a judge on the traces, by that judge on the records, and by query on the records.
 - [ ] Accuracy, cost of answering, and cost of recording are reported separately for each reading.
-- [ ] A repeated decision with named records withheld or added is available as a check on stated reasons.
+- [x] A repeated decision with named records withheld or added is available as a check on stated reasons.
 - [ ] The information-pooling setting has a known correct decision and classifies each wrong vote.
 - [ ] The deception setting has hidden roles, a private channel, and a reported share of wrong votes that change when records from the deceiving agents are withheld.
-- [ ] A scripted run with exact answers checks the links before any model-backed campaign.
+- [x] A scripted run with exact answers checks the links before any model-backed campaign.
 - [ ] Ties and cases where the query does not beat the judge are reported as such.
 
 ## Notes
@@ -119,3 +119,10 @@ CIP-0016 is the precondition.
 
 Four CIP-0017 backlog tasks now exist.
 All four wait on the CIP-0016 tasks.
+
+### 2026-11-16
+
+The scripted Hidden Profile run checks the links, and a decision can be repeated with records withheld or added.
+The judge can be asked the same questions from traces and from records.
+The model-backed campaigns are still open.
+Status stays In Progress.
