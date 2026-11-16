@@ -1,7 +1,7 @@
 ---
 id: "2026-11-15_decision-repeat"
 title: "Repeat one decision with records withheld or added"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-11-15"
 last_updated: "2026-11-15"
@@ -29,11 +29,11 @@ The repeat does not continue the rest of the run.
 
 ## Acceptance Criteria
 
-- [ ] A repeat uses the original shown records except for the named withheld or added set.
-- [ ] Other agents' later actions are not re-simulated.
-- [ ] A stated repeat count runs the original input and the changed input the same number of times.
-- [ ] Each repeat is stored as a record linked to the original decision.
-- [ ] A scripted policy with a known effect of removing one record is covered by a test.
+- [x] A repeat uses the original shown records except for the named withheld or added set.
+- [x] Other agents' later actions are not re-simulated.
+- [x] A stated repeat count runs the original input and the changed input the same number of times.
+- [x] Each repeat is stored as a record linked to the original decision.
+- [x] A scripted policy with a known effect of removing one record is covered by a test.
 
 ## Implementation Notes
 
@@ -54,3 +54,11 @@ This task replays one decision.
 Task created from the accepted CIP-0016.
 Not started.
 Blocked by the shown-link task.
+
+### 2026-11-16
+
+Completed.
+`Session.repeat_decision` reruns one decision.
+The changed input is the original shown set with the named ids removed or added.
+Each repeat is a `decision_repeat` record addressed to the acting agent.
+Its provenance points at the original decision.

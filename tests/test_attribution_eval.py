@@ -45,8 +45,10 @@ class TestAdditionTeamExample(unittest.TestCase):
         self.assertIn("checker", actors)
 
         checker_view = session.decision_context("checker", kinds="agent_update")
-        self.assertTrue(checker_view)
-        self.assertTrue(all(r.actor == "orchestrator" for r in checker_view))
+        checker_actors = {record.actor for record in checker_view}
+        self.assertIn("orchestrator", checker_actors)
+        self.assertIn("checker", checker_actors)
+        self.assertNotIn("solver", checker_actors)
 
         check_updates = [
             r

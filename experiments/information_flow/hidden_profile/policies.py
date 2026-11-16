@@ -43,11 +43,40 @@ def _observation(request: Mapping[str, object]) -> Mapping[str, object]:
     inputs = request.get("inputs")
     if isinstance(inputs, Mapping) and "observation" in inputs:
         observation = inputs["observation"]
+    elif isinstance(inputs, Mapping) and isinstance(inputs.get("records"), Sequence):
+        observation = _latest_observation(inputs["records"])
     else:
         observation = request
     if not isinstance(observation, Mapping):
         raise ValueError("observation must be a mapping")
     return observation
+
+
+def _latest_observation(records: Sequence[object]) -> Mapping[str, object]:
+    """Return the observation from the latest observation record.
+
+    Args:
+        records: Records the library showed the agent.
+
+    Returns:
+        The observation mapping.
+
+    Raises:
+        ValueError: No observation record is present.
+    """
+    found: Mapping[str, object] | None = None
+    for record in records:
+        if not isinstance(record, Mapping) or record.get("kind") != "observation":
+            continue
+        payload = record.get("payload")
+        if not isinstance(payload, Mapping):
+            continue
+        observation = payload.get("observation")
+        if isinstance(observation, Mapping):
+            found = observation
+    if found is None:
+        raise ValueError("observation must be a mapping")
+    return found
 
 
 def _disclose(observation: Mapping[str, object]) -> dict[str, object]:

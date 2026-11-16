@@ -31,6 +31,10 @@ _DEDUP_DEFAULT = object()
 """Sentinel to distinguish 'not provided' from explicit None (opt-out)."""
 
 
+_OMITTED = object()
+"""Sentinel for a decide() call that passes no observation."""
+
+
 def _create_run_folders_and_metadata(
     output_base: str | Path,
     scenario_name: str,
@@ -132,7 +136,10 @@ class WrappedEnv:
         self._agent_update_ids: Dict[str, str] = {}
 
     def reset(self, **kwargs: Any) -> Dict[str, Any]:
-        """Reset the underlying env.
+        """Reset the underlying env and store one observation record per agent.
+
+        Each record is written by the environment and addressed to that agent.
+        The observations are still returned to the caller.
 
         Returns:
             The observations, keyed by agent id.
@@ -142,13 +149,24 @@ class WrappedEnv:
         self._agent_update_ids = {}
         result = self._env.reset(**kwargs)
         if isinstance(result, tuple) and len(result) == 2:
-            return dict(result[0])
-        if isinstance(result, dict):
-            return dict(result)
-        return result
+            observations = dict(result[0])
+        elif isinstance(result, dict):
+            observations = dict(result)
+        else:
+            observations = result
+        if isinstance(observations, dict):
+            self._record_writer.on_addressed_observations(
+                observations=observations,
+                round_id=0,
+                env_actor=self._env_actor,
+            )
+        return observations
 
     def step(self, actions: Dict[str, Any]) -> Dict[str, Any]:
-        """Step the env and record the outcome and its traces.
+        """Step the env and record the outcome, its traces, and one observation per agent.
+
+        The combined outcome is unchanged.
+        Each observation record is addressed to one agent.
 
         Args:
             actions: The action of each agent, keyed by agent id.
@@ -160,6 +178,11 @@ class WrappedEnv:
         raw_result = self._env.step(actions)
         extracted = self._adapter(raw_result)
 
+        self._record_writer.on_addressed_observations(
+            observations=extracted["observations"],
+            round_id=self._round_id,
+            env_actor=self._env_actor,
+        )
         self._prev_outcome_id = self._record_writer.on_outcome_and_traces(
             round_id=self._round_id,
             actions=actions,
@@ -205,6 +228,7 @@ class SessionAgent:
         goal: str = "default",
         payload_type: Optional[str] = None,
         tools: Optional[Dict[str, Callable[..., Any]]] = None,
+        visible_records: Optional[Callable[..., List[SimpleRecord]]] = None,
     ) -> None:
         self._agent_id = agent_id
         self._policy = policy
@@ -213,6 +237,7 @@ class SessionAgent:
         self._goal = goal
         self._payload_type = payload_type
         self._tools: Dict[str, Callable[..., Any]] = tools or {}
+        self._visible_records = visible_records
 
     @property
     def agent_id(self) -> str:
@@ -220,25 +245,44 @@ class SessionAgent:
 
     def decide(
         self,
-        observation: Any,
-        round_id: int,
+        observation: Any = _OMITTED,
+        round_id: int = 1,
         *,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """Call policy with observation, record agent_update, return response.
+        """Call the policy, record the decision, and return the response.
+
+        Pass an observation or inputs to keep the previous behaviour.
+        Call decide with only a round to read the records this agent may see.
+        The library records the ids of those records.
+        The decision itself is readable only by this agent.
+        A response that carries a message stores that message for its recipients.
 
         Args:
             observation: The env observation for this agent.
+                Omit it, and omit inputs, to read the store.
             round_id: Current round number.
             inputs: Structured inputs for the request, used directly when given.
                 A policy can then receive keys such as observation and shared_map.
-                Defaults to the observation alone.
+                This overrides both the observation and the store.
 
         Returns:
             A dict with the chosen action and the full policy response.
+
+        Raises:
+            RuntimeError: If the store is requested and this agent cannot read it.
         """
-        obs = _serializable(observation)
-        request_inputs = _serializable(inputs) if inputs is not None else {"observation": obs}
+        shown_ids: Optional[List[str]] = None
+        if inputs is not None:
+            request_inputs = _serializable(inputs)
+        elif observation is _OMITTED:
+            if self._visible_records is None:
+                raise RuntimeError("This agent cannot read the store.")
+            shown = list(self._visible_records(self._agent_id))
+            shown_ids = [record.id for record in shown]
+            request_inputs = {"records": [_record_view(record) for record in shown]}
+        else:
+            request_inputs = {"observation": _serializable(observation)}
         request: DecisionRequest = {
             "id": f"req-{self._agent_id}-{round_id}-{uuid4()}",
             "actor": self._agent_id,
@@ -277,11 +321,39 @@ class SessionAgent:
             decision=decision,
             response=response,
             payload_type=self._payload_type,
+            sources=shown_ids,
+            audience=[self._agent_id],
+            message=response.get("message"),
+            recipients=response.get("recipients"),
+            round_id=round_id,
         )
         self._env._register_agent_update(self._agent_id, record_id)
 
         action = response.get("choice", {}).get("action")
         return {"action": action, "response": response}
+
+    def call_policy(
+        self,
+        inputs: Dict[str, Any],
+        round_id: int,
+    ) -> Dict[str, Any]:
+        """Call the policy and return its response without storing a decision.
+
+        Args:
+            inputs: Request inputs for this call.
+            round_id: Round number passed to the policy.
+
+        Returns:
+            The policy response.
+        """
+        request: DecisionRequest = {
+            "id": f"req-{self._agent_id}-{round_id}-{uuid4()}",
+            "actor": self._agent_id,
+            "goal": self._goal,
+            "context": {"round": round_id},
+            "inputs": inputs,
+        }
+        return dict(self._policy(request))
 
 
 # ---------------------------------------------------------------------------
@@ -303,14 +375,13 @@ class Session:
         env = session.wrap_env(make_env(create_fn, width=10))
         agents = session.create_agents(agent_configs)
 
-        observations = env.reset(seed=42)
+        env.reset(seed=42)
         for round_id in range(1, rounds + 1):
             actions = {}
             for agent_id, agent in agents.items():
-                result = agent.decide(observations[agent_id], round_id)
+                result = agent.decide(round_id=round_id)
                 actions[agent_id] = result["action"]
-            step = env.step(actions)
-            observations = step["observations"]
+            env.step(actions)
 
         outcomes = session.inspect("outcome")
         session.close()
@@ -819,6 +890,7 @@ class Session:
                 goal=goal,
                 payload_type=payload_type,
                 tools=agent_tools,
+                visible_records=self.visible_records,
             )
         return agents
 
@@ -858,10 +930,142 @@ class Session:
             decision=decision,
             response=response,
             payload_type=payload_type,
+            audience=[agent_id],
+            message=response.get("message"),
+            recipients=response.get("recipients"),
+            round_id=round_id,
         )
         if self._wrapped_env is not None:
             self._wrapped_env._register_agent_update(agent_id, record_id)
         return record_id
+
+    def repeat_decision(
+        self,
+        agent: SessionAgent,
+        decision_id: str,
+        *,
+        withhold: Optional[Sequence[str]] = None,
+        add: Optional[Sequence[str]] = None,
+        times: int = 1,
+    ) -> List[str]:
+        """Run one decision again with records withheld or added.
+
+        The original shown records stay the same except for that named set.
+        The original input and the changed input are each run times times.
+        Nothing after that decision is run again.
+        Each result is stored and points at the original decision.
+
+        Args:
+            agent: The agent that made the original decision.
+            decision_id: Id of the decision to repeat.
+            withhold: Record ids to remove from the shown set.
+            add: Record ids to include in the changed set.
+            times: How many times to run each input.
+
+        Returns:
+            The ids of the stored repeats, baseline then changed, for each time.
+
+        Raises:
+            ValueError: If times is below 1, or the decision has no shown records.
+            KeyError: If the decision or an added record is not in the store.
+        """
+        if isinstance(times, bool) or not isinstance(times, int) or times < 1:
+            raise ValueError("times must be an integer of at least 1")
+        original = self._shared_data.read(decision_id)
+        if original is None:
+            raise KeyError(decision_id)
+        shown = list((original.provenance or {}).get("derived_from") or [])
+        if not shown:
+            raise ValueError("the decision has no shown records to repeat")
+        withheld = set(withhold or [])
+        changed = [record_id for record_id in shown if record_id not in withheld]
+        for record_id in add or []:
+            if record_id not in changed:
+                changed.append(record_id)
+        request = (original.payload.get("decision") or {}).get("request") or {}
+        round_id = (request.get("context") or {}).get("round", 1)
+        level = self._config.logging_level
+        stored: List[str] = []
+        for index in range(times):
+            for variant, record_ids in (("original", shown), ("changed", changed)):
+                response = agent.call_policy(
+                    {"records": [_record_view(self._require_record(record_id)) for record_id in record_ids]},
+                    round_id,
+                )
+                stored.append(self._store_repeat(
+                    agent_id=agent.agent_id,
+                    decision_id=decision_id,
+                    variant=variant,
+                    shown_ids=record_ids,
+                    withhold=list(withhold or []),
+                    add=list(add or []),
+                    response=response,
+                    round_id=round_id,
+                    index=index,
+                    level=level,
+                ))
+        return stored
+
+    def _require_record(self, record_id: str) -> SimpleRecord:
+        """Return one stored record.
+
+        Raises:
+            KeyError: If the id is not in the store.
+        """
+        record = self._shared_data.read(record_id)
+        if record is None:
+            raise KeyError(record_id)
+        return record
+
+    def _store_repeat(
+        self,
+        *,
+        agent_id: str,
+        decision_id: str,
+        variant: str,
+        shown_ids: Sequence[str],
+        withhold: Sequence[str],
+        add: Sequence[str],
+        response: Dict[str, Any],
+        round_id: int,
+        index: int,
+        level: int,
+    ) -> str:
+        """Store one repeat and return its id."""
+        from ._internal.record_helpers import new_record
+        from ..records import new_accountability, new_provenance
+        from .run_config import should_include_provenance_accountability
+
+        provenance = {}
+        accountability: Dict[str, Any] = {}
+        if should_include_provenance_accountability(level):
+            provenance = new_provenance(agent=agent_id, sources=[decision_id])
+            provenance["derived_from"] = [decision_id]
+            accountability = new_accountability(owner=agent_id)
+        response_clean = {
+            key: value
+            for key, value in response.items()
+            if key not in ("provenance", "accountability")
+        }
+        record = new_record(
+            actor=agent_id,
+            kind="decision_repeat",
+            payload={
+                "original_id": decision_id,
+                "variant": variant,
+                "shown": list(shown_ids),
+                "withhold": list(withhold),
+                "add": list(add),
+                "response": _serializable(response_clean),
+                "round": round_id,
+                "index": index,
+            },
+            provenance=provenance,
+            accountability=accountability,
+            audience=[agent_id],
+        )
+        self._shared_data.write(record)
+        return record.id
 
     def record_update(
         self,
@@ -894,7 +1098,8 @@ class Session:
           Join and leave update that map through on_membership_change.
           By default, named agents keep their YAML links.
           Only an agent absent from the topology file is meshed with the current members.
-        - FEDERATED: the hub only.
+        - FEDERATED: the hub, plus decisions and messages the reader wrote.
+          A leaf learns who is present from the hub.
           The hub itself may read every author.
 
         A record with an audience is then kept only for its author and the agents in that audience.
@@ -930,7 +1135,11 @@ class Session:
                 allowed.update(self._visibility[agent_id])
             records = [r for r in records if r.actor in allowed]
         elif mode == Topology.FEDERATED and agent_id != self._hub_id:
-            records = [r for r in records if r.actor == self._hub_id]
+            records = [
+                r for r in records
+                if r.actor == self._hub_id
+                or (r.actor == agent_id and r.kind in ("agent_update", "message"))
+            ]
 
         return [r for r in records if _in_audience(agent_id, r)]
 
@@ -981,6 +1190,18 @@ class Session:
     def topology(self) -> TopologyConfig:
         """The configured topology."""
         return self._topology
+
+
+def _record_view(record: SimpleRecord) -> Dict[str, Any]:
+    """Return the fields of a record that a policy may read."""
+    return {
+        "id": record.id,
+        "actor": record.actor,
+        "kind": record.kind,
+        "timestamp": record.timestamp,
+        "payload": record.payload,
+        "audience": list(record.audience),
+    }
 
 
 def _in_audience(agent_id: str, record: SimpleRecord) -> bool:

@@ -1,7 +1,7 @@
 ---
 id: "2026-11-15_store-medium-call-sites"
 title: "Move Hidden Profile, Werewolf, and the session loop onto the store"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-11-15"
 last_updated: "2026-11-15"
@@ -30,11 +30,11 @@ The recommended loop no longer hands environment state around the store.
 
 ## Acceptance Criteria
 
-- [ ] A Hidden Profile decision reads records from the store.
-- [ ] The existing Hidden Profile question checks still pass once ids and clocks are set aside.
-- [ ] Werewolf reads player-visible lines through the visibility call.
-- [ ] A Werewolf agent cannot read a record the visibility rules hide.
-- [ ] The session documentation recommends reading from the store.
+- [x] A Hidden Profile decision reads records from the store.
+- [x] The existing Hidden Profile question checks still pass once ids and clocks are set aside.
+- [x] Werewolf reads player-visible lines through the visibility call.
+- [x] A Werewolf agent cannot read a record the visibility rules hide.
+- [x] The session documentation recommends reading from the store.
 
 ## Implementation Notes
 
@@ -54,3 +54,11 @@ Callers that still pass an explicit input keep working.
 Task created from the accepted CIP-0016.
 Not started.
 Blocked by addressed observations and shown links.
+
+### 2026-11-16
+
+Completed.
+Hidden Profile calls `decide(round_id=...)`.
+The scripted policy reads the latest observation record it was shown.
+Werewolf lines come from `visible_records` for that player.
+The session example does the same.

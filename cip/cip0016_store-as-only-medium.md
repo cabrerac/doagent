@@ -217,14 +217,14 @@ The existing session tests stay green for callers that pass inputs.
 ## Implementation Status
 
 - [x] Audience on records and in the visibility filter
-- [ ] One addressed record per private observation
-- [ ] Decision records separated from message records
-- [ ] Default decision input taken from the store
-- [ ] Shown ids written by the library
-- [ ] Decision repeat with records withheld or added
-- [ ] Hidden Profile moved onto the store
-- [ ] Werewolf read moved onto the visibility call
-- [ ] Session documentation updated
+- [x] One addressed record per private observation
+- [x] Decision records separated from message records
+- [x] Default decision input taken from the store
+- [x] Shown ids written by the library
+- [x] Decision repeat with records withheld or added
+- [x] Hidden Profile moved onto the store
+- [x] Werewolf read moved onto the visibility call
+- [x] Session documentation updated
 
 ## References
 
@@ -270,3 +270,38 @@ Peer-to-peer and federated topologies stay as they are.
 An agent reads the environment only through an author it can already see, a peer or the hub.
 An observation written by the environment stays hidden from an agent that cannot see that author.
 The audience does not open that path.
+
+### 2026-11-15
+
+Reset and step each write one observation record per agent.
+The environment is the author and the audience is that agent.
+The payload holds the round and that agent's observation.
+Reset uses round 0.
+The combined outcome is still written.
+A reset that does not return a dict of observations writes none of these records.
+The records are written at every logging level.
+
+### 2026-11-16
+
+A decision record is addressed to the acting agent.
+A response that carries a message stores a separate message record.
+That message drops the reasoning and the full input.
+Call decide with no observation and no inputs to read the records the agent may see.
+The library writes those ids into the decision provenance.
+An observation or an inputs argument still overrides that default.
+Logging level 0 writes no provenance.
+In a federated setup a leaf also sees the decisions and messages it wrote.
+It still learns who is present from the hub.
+The addition team publishes the assignment as a message, because the orchestrator is the hub and the decision itself is private.
+
+### 2026-11-16
+
+A decision can be repeated with records withheld or added.
+The original input and the changed input run the same number of times.
+Each repeat is stored and points at the original decision.
+The rest of the run is not replayed.
+Hidden Profile decisions read the store.
+Each agent can see the environment, and the audience still hides the other agents' observations.
+The combined outcome stays in the store for existing readers and is addressed to the environment, so agents are not shown it.
+Werewolf players read lines from the observation records the visibility rules allow.
+The session example reads from the store.

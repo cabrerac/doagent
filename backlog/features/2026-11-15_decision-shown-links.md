@@ -1,7 +1,7 @@
 ---
 id: "2026-11-15_decision-shown-links"
 title: "Take the default decision input from the store and record what was shown"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-11-15"
 last_updated: "2026-11-15"
@@ -31,12 +31,12 @@ A run at logging level 0 still omits provenance.
 
 ## Acceptance Criteria
 
-- [ ] A decision with no explicit input is built from visible records.
-- [ ] The decision provenance lists the ids of the records that were shown.
-- [ ] The library writes that list, not the policy.
-- [ ] An explicit input still overrides the store.
-- [ ] Logging level 0 writes no source list.
-- [ ] An agent's own earlier records are part of what it can be shown.
+- [x] A decision with no explicit input is built from visible records.
+- [x] The decision provenance lists the ids of the records that were shown.
+- [x] The library writes that list, not the policy.
+- [x] An explicit input still overrides the store.
+- [x] Logging level 0 writes no source list.
+- [x] An agent's own earlier records are part of what it can be shown.
 
 ## Implementation Notes
 
@@ -57,3 +57,13 @@ That claim is not this list.
 Task created from the accepted CIP-0016.
 Not started.
 Blocked by the audience, observation, and message tasks.
+
+### 2026-11-16
+
+Completed.
+`decide(round_id=n)` reads the records that agent may see and passes them to the policy.
+The library writes their ids into derived_from.
+A provenance block returned by the policy does not replace that list.
+`decide(observation, round_id)` and an inputs argument keep the previous behaviour and write no source list.
+Logging level 0 writes no provenance.
+The second store-backed decision is shown the first decision's id.

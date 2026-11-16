@@ -481,7 +481,35 @@ def _observation(record: Mapping[str, object]) -> Mapping[str, object]:
     knowledge = payload.get("local_knowledge")
     if isinstance(knowledge, Mapping) and isinstance(knowledge.get("observation"), Mapping):
         return knowledge["observation"]
+    if isinstance(knowledge, Mapping):
+        found = _observation_from_records(knowledge.get("records"))
+        if found:
+            return found
     return {}
+
+
+def _observation_from_records(records: object) -> Mapping[str, object]:
+    """Return the latest observation stored among shown records.
+
+    Args:
+        records: Records listed on a decision, when the decision read the store.
+
+    Returns:
+        The observation mapping, or an empty mapping when none is present.
+    """
+    if not isinstance(records, Sequence) or isinstance(records, (str, bytes)):
+        return {}
+    found: Mapping[str, object] = {}
+    for record in records:
+        if not isinstance(record, Mapping) or record.get("kind") != "observation":
+            continue
+        item_payload = record.get("payload")
+        if not isinstance(item_payload, Mapping):
+            continue
+        observation = item_payload.get("observation")
+        if isinstance(observation, Mapping):
+            found = observation
+    return found
 
 
 def _round_of(record: Mapping[str, object]) -> int | None:

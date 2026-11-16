@@ -250,7 +250,7 @@ def _run_addition_team(
     )
     env.step({ORCHESTRATOR: orch["action"]})
 
-    assignment = latest_assignment(session.decision_context(SOLVER, kinds="agent_update"))
+    assignment = latest_assignment(session.decision_context(SOLVER, kinds="message"))
     if assignment is None:
         raise RuntimeError("Solver did not see an assignment from the orchestrator.")
 

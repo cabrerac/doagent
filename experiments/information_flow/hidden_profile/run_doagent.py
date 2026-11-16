@@ -18,7 +18,7 @@ from experiments.information_flow.hidden_profile.rules import (
 )
 
 OUTPUT_BASE = Path(__file__).resolve().parent / "hidden_profile_runs"
-RECORD_KINDS = ("outcome", "agent_update", "trace")
+RECORD_KINDS = ("outcome", "agent_update", "trace", "observation")
 
 
 @dataclass(frozen=True)
@@ -66,7 +66,13 @@ def run_session(
     session_config = {
         "shared_data": {"type": "file"},
         "run_config": {"logging_level": logging_level},
-        "topology": {"mode": "peer_to_peer"},
+        "topology": {
+            "mode": "peer_to_peer",
+            "visibility": {
+                agent_id: ["hidden_profile_env"]
+                for agent_id in rules.agents
+            },
+        },
         "policies": {
             agent_id: _policy_factory(agent_id)
             for agent_id in rules.agents
@@ -89,11 +95,7 @@ def run_session(
         finished = False
         for round_id in range(1, config.horizon + 2):
             actions = {
-                agent_id: agent.decide(
-                    observations[agent_id],
-                    round_id,
-                    inputs={"observation": observations[agent_id]},
-                )["action"]
+                agent_id: agent.decide(round_id=round_id)["action"]
                 for agent_id, agent in agents.items()
             }
             step = wrapped.step(actions)

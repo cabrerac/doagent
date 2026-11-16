@@ -1,7 +1,7 @@
 ---
 id: "2026-11-15_decision-message-split"
 title: "Separate private decision records from message records"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-11-15"
 last_updated: "2026-11-15"
@@ -28,11 +28,11 @@ An agent cannot learn another agent's reasoning by reading a record it is allowe
 
 ## Acceptance Criteria
 
-- [ ] A decision record is visible only to the acting agent.
-- [ ] A message record is visible only to its audience.
-- [ ] The message does not contain the acting agent's reasoning or full input.
-- [ ] A later decision by the same agent can still read its own decision record.
-- [ ] Peers can read the message without reading the decision.
+- [x] A decision record is visible only to the acting agent.
+- [x] A message record is visible only to its audience.
+- [x] The message does not contain the acting agent's reasoning or full input.
+- [x] A later decision by the same agent can still read its own decision record.
+- [x] Peers can read the message without reading the decision.
 
 ## Implementation Notes
 
@@ -51,3 +51,12 @@ This task can proceed beside the addressed-observation task.
 Task created from the accepted CIP-0016.
 Not started.
 Blocked by the audience filter.
+
+### 2026-11-16
+
+Completed.
+`SessionAgent.decide` and `Session.record_decision` address the decision to the acting agent.
+A response field named message is stored as its own record.
+recipients names that record's audience.
+An empty recipient list leaves the audience empty.
+The message payload drops reasoning, explanation, and the decision input.

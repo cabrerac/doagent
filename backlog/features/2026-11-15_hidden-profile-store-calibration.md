@@ -1,7 +1,7 @@
 ---
 id: "2026-11-15_hidden-profile-store-calibration"
 title: "Calibrate the new links on scripted Hidden Profile"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-11-15"
 last_updated: "2026-11-15"
@@ -30,11 +30,11 @@ Do not recompute the information-theoretic scores from CIP-0015.
 
 ## Acceptance Criteria
 
-- [ ] All 18 deals run through the store at logging levels 0, 1, and 2.
-- [ ] Level 1 and level 2 answer the existing record and link questions.
-- [ ] Level 0 has no stored links, and the link questions stay unanswered there.
-- [ ] A scripted withholding test matches the known effect of removing a fact.
-- [ ] The CIP-0015 bit scores are left as they are.
+- [x] All 18 deals run through the store at logging levels 0, 1, and 2.
+- [x] Level 1 and level 2 answer the existing record and link questions.
+- [x] Level 0 has no stored links, and the link questions stay unanswered there.
+- [x] A scripted withholding test matches the known effect of removing a fact.
+- [x] The CIP-0015 bit scores are left as they are.
 
 ## Implementation Notes
 
@@ -54,3 +54,12 @@ It is not a new information-theoretic campaign.
 Task created from the accepted CIP-0017.
 Not started.
 Blocked by the store call sites and the decision repeat.
+
+### 2026-11-16
+
+Completed.
+The 18 deals match the rules at logging levels 0, 1, and 2.
+Level 1 and level 2 decisions name the records that were shown.
+Level 0 decisions do not.
+Withholding the observation record stops the scripted disclosure.
+The bit scores from the earlier study were not rerun.

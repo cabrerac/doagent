@@ -131,6 +131,7 @@ def new_agent_update_record(
     provenance: Optional[Dict[str, Any]] = None,
     accountability: Optional[Dict[str, Any]] = None,
     record_id: Optional[str] = None,
+    audience: Optional[Sequence[str]] = None,
 ) -> SimpleRecord:
     """Create an agent_update record with local_knowledge and decision.
 
@@ -150,6 +151,7 @@ def new_agent_update_record(
         provenance=provenance,
         accountability=accountability,
         record_id=record_id,
+        audience=audience,
     )
 
 

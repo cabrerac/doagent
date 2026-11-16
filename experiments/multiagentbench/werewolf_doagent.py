@@ -144,6 +144,14 @@ class WerewolfEnv:
                 self.curve.close_day(episode, votes)
         observations = self._open_ask()
         observations["game_line"] = lines
+        for player_id, observation in observations.items():
+            if player_id == "game_line" or not isinstance(observation, dict):
+                continue
+            observation["received_lines"] = [
+                line
+                for line in lines
+                if player_id in (line.get("recipients") or [])
+            ]
         return {
             "observations": observations,
             "rewards": {},

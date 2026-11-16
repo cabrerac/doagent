@@ -508,6 +508,18 @@ class VisibilityTests(unittest.TestCase):
         finally:
             session.close()
 
+    def test_a_player_is_not_handed_another_players_decision(self) -> None:
+        session = play(ROLES, 2, _complete)
+        try:
+            visible = {record.id for record in session.visible_records("Ethel")}
+            for update in session.inspect("agent_update"):
+                if update.actor != "Ethel":
+                    self.assertNotIn(update.id, visible)
+            own_observations = session.visible_records("Ethel", kind="observation")
+            self.assertTrue(all(record.audience == ["Ethel"] for record in own_observations))
+        finally:
+            session.close()
+
     def test_level_0_drops_the_explanation(self) -> None:
         session = play(ROLES, 0, _complete)
         try:

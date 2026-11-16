@@ -139,12 +139,18 @@ def play(
     config: Dict[str, Any] = {
             "shared_data": dict(shared_data or {"type": "memory"}),
             "run_config": {"logging_level": logging_level},
-            "topology": {"mode": "peer_to_peer"},
+            "topology": {
+                "mode": "peer_to_peer",
+                "visibility": {
+                    player_id: ["werewolf_env"] for player_id in roles
+                },
+            },
             "policies": {
                 player_id: werewolf_policy(
                     player_id,
                     lambda player_id=player_id: lines_for(
-                        session.inspect("outcome"), player_id
+                        session.visible_records(player_id, kind="observation"),
+                        player_id,
                     ),
                     logging_level,
                     complete,

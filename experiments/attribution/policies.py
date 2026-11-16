@@ -39,6 +39,7 @@ def latest_assignment(records: List[Any]) -> Optional[Dict[str, Any]]:
 
     The search checks each decision action first.
     It then checks an assignment stored on the record.
+    A message can carry the assignment on its own.
 
     Args:
         records:
@@ -58,6 +59,9 @@ def latest_assignment(records: List[Any]) -> Optional[Dict[str, Any]]:
         local = record.payload.get("local_knowledge") or {}
         if "assignment" in local and isinstance(local["assignment"], dict):
             return dict(local["assignment"])
+        posted = record.payload.get("assignment")
+        if isinstance(posted, dict):
+            return dict(posted)
     return None
 
 
@@ -112,16 +116,16 @@ def orchestrator_policy_factory(params: Dict[str, Any]):
         inputs = request.get("inputs") or {}
         query = inputs.get("query") or params.get("query") or {}
         a, b = int(query["a"]), int(query["b"])
-        action = {
-            "type": "assign",
+        assignment = {
             "assignee": "solver",
             "op": "add",
             "a": a,
             "b": b,
         }
         return {
-            "choice": {"status": "act", "action": action},
+            "choice": {"status": "act", "action": {"type": "assign", **assignment}},
             "explanation": f"Assign solver to add {a} and {b}.",
+            "message": {"assignment": assignment},
         }
 
     return decide

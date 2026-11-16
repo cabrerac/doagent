@@ -168,7 +168,7 @@ class TestSessionIntegration(unittest.TestCase):
         self.assertGreater(len(lk["observation"]["cells"]), 0)
 
     def test_peer_to_peer_topology_filters_records(self):
-        """In P2P, agent sees only own + visible peers' records, not all agents."""
+        """A peer reads its own decision and not another agent's decision."""
         session, env, agents = self._make_session_and_agents(
             ["a", "b", "c"],
             topology_mode="peer_to_peer",
@@ -192,16 +192,8 @@ class TestSessionIntegration(unittest.TestCase):
         records_a = session.visible_records("a", kind="agent_update")
         records_c = session.visible_records("c", kind="agent_update")
 
-        actors_visible_to_a = {r.actor for r in records_a}
-        actors_visible_to_c = {r.actor for r in records_c}
-
-        self.assertIn("a", actors_visible_to_a)
-        self.assertIn("b", actors_visible_to_a)
-        self.assertNotIn("c", actors_visible_to_a)
-
-        self.assertIn("c", actors_visible_to_c)
-        self.assertNotIn("a", actors_visible_to_c)
-        self.assertNotIn("b", actors_visible_to_c)
+        self.assertEqual({r.actor for r in records_a}, {"a"})
+        self.assertEqual({r.actor for r in records_c}, {"c"})
 
     def test_coverage_increases_over_rounds(self):
         """Running the loop should discover new cells over time."""

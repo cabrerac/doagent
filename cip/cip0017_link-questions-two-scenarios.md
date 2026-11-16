@@ -2,8 +2,8 @@
 author: "Christian Cabrera"
 created: "2026-11-15"
 id: "0017"
-last_updated: "2026-11-15"
-status: "Accepted"
+last_updated: "2026-11-16"
+status: "In Progress"
 compressed: false
 related_requirements:
 - "0017"
@@ -33,7 +33,7 @@ title: "Link Questions on HiddenBench and Traitors"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [ ] In Progress - Actively being implemented
+- [x] In Progress - Actively being implemented
 - [ ] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected - Will not be implemented
@@ -309,9 +309,9 @@ The library tasks that these depend on are listed in CIP-0016.
 
 ## Implementation Status
 
-- [ ] CIP-0016 contract available
-- [ ] Scripted Hidden Profile rerun through the store
-- [ ] Model caller, trace export, and judge
+- [x] CIP-0016 contract available
+- [x] Scripted Hidden Profile rerun through the store
+- [x] Model caller, trace export, and judge
 - [ ] HiddenBench pilot and gate
 - [ ] HiddenBench campaign
 - [ ] Traitors environment
@@ -354,3 +354,20 @@ CIP-0016 remains the precondition for the library contract.
 Four backlog tasks were added.
 All four wait on the CIP-0016 tasks.
 No task is in progress.
+
+### 2026-11-16
+
+The scripted Hidden Profile game reads the store.
+All 18 deals were rerun at logging levels 0, 1, and 2.
+Level 1 and level 2 store the shown-record links.
+Level 0 stores none.
+Withholding the observation record stops the scripted disclosure.
+The information-theoretic scores were not recomputed.
+
+### 2026-11-16
+
+A model call writes its prompt and its output while the call happens.
+The export refuses record ids.
+A rate limit or a context limit is stored on that same call, and the call still stops.
+The judge is asked the same questions about the trace text and about the session records.
+On the scripted Hidden Profile run, a judge that matches the exact answers has no errors, and a judge that does not is reported.

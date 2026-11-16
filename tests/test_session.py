@@ -502,8 +502,8 @@ class TestSession(unittest.TestCase):
         records_a = session.visible_records("a", kind="agent_update")
         records_b = session.visible_records("b", kind="agent_update")
 
-        self.assertEqual(len(records_a), 2)
-        self.assertEqual(len(records_b), 2)
+        self.assertEqual([record.actor for record in records_a], ["a"])
+        self.assertEqual([record.actor for record in records_b], ["b"])
 
     def test_visible_records_peer_to_peer_filtered(self):
         from doagent.core import TopologyConfig, Topology
@@ -518,9 +518,8 @@ class TestSession(unittest.TestCase):
         records_a = session.visible_records("a", kind="agent_update")
         records_b = session.visible_records("b", kind="agent_update")
 
-        self.assertEqual(len(records_a), 2)
-        self.assertEqual(len(records_b), 1)
-        self.assertEqual(records_b[0].actor, "b")
+        self.assertEqual([record.actor for record in records_a], ["a"])
+        self.assertEqual([record.actor for record in records_b], ["b"])
 
     def test_visible_records_federated_agents_see_hub_only(self):
         from doagent.core import TopologyConfig, Topology
@@ -536,9 +535,8 @@ class TestSession(unittest.TestCase):
         records_a = session.visible_records("a", kind="agent_update")
         records_hub = session.visible_records("hub", kind="agent_update")
 
-        self.assertEqual(len(records_a), 1)
-        self.assertEqual(records_a[0].actor, "hub")
-        self.assertEqual(len(records_hub), 3)
+        self.assertEqual({record.actor for record in records_a}, {"a", "hub"})
+        self.assertEqual([record.actor for record in records_hub], ["hub"])
 
     # -- Audience: an extra limit on who may read a record --
 
@@ -626,6 +624,252 @@ class TestSession(unittest.TestCase):
         self.assertEqual(seen_by_a, [private])
         self.assertEqual(seen_by_b, [])
         self.assertEqual([rec.id for rec in session.inspect("note")], [private])
+
+    def test_reset_and_step_address_one_observation_to_each_agent(self):
+        from doagent.core import TopologyConfig, Topology
+        session = Session(
+            InMemorySharedData(),
+            topology=TopologyConfig(mode=Topology.CENTRALISED),
+        )
+        env = session.wrap_env(StubEnv(["a", "b"]), env_actor="test_env")
+        initial = env.reset(seed=1)
+
+        reset_records = session.inspect("observation")
+        self.assertEqual(len(reset_records), 2)
+        by_audience = {tuple(record.audience): record for record in reset_records}
+        self.assertEqual(by_audience[("a",)].actor, "test_env")
+        self.assertEqual(by_audience[("a",)].payload["round"], 0)
+        self.assertEqual(by_audience[("a",)].payload["observation"], initial["a"])
+        self.assertEqual(by_audience[("b",)].payload["observation"], initial["b"])
+        self.assertEqual(
+            [record.audience for record in session.visible_records("a", kind="observation")],
+            [["a"]],
+        )
+        self.assertEqual(
+            [record.audience for record in session.visible_records("b", kind="observation")],
+            [["b"]],
+        )
+
+        env.step({"a": 0, "b": 1})
+        step_records = [
+            record for record in session.inspect("observation")
+            if record.payload["round"] == 1
+        ]
+        self.assertEqual(sorted(record.audience for record in step_records), [["a"], ["b"]])
+        seen_by_a = session.visible_records("a", kind="observation")
+        self.assertEqual({record.payload["round"] for record in seen_by_a}, {0, 1})
+        self.assertTrue(all(record.audience == ["a"] for record in seen_by_a))
+
+        outcomes = session.inspect("outcome")
+        self.assertEqual(len(outcomes), 1)
+        self.assertEqual(set(outcomes[0].payload["observations"]), {"a", "b"})
+
+    def test_observation_records_are_written_at_logging_level_zero(self):
+        session = Session(InMemorySharedData(), RunConfig(logging_level=0))
+        env = session.wrap_env(StubEnv(["a"]), env_actor="test_env")
+        env.reset(seed=1)
+        records = session.inspect("observation")
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].audience, ["a"])
+        self.assertEqual(records[0].provenance, {})
+
+    def test_reset_without_an_observation_dict_writes_nothing(self):
+        class BareEnv:
+            def reset(self, **kwargs):
+                return ["a", "b"]
+
+        session = Session(InMemorySharedData())
+        env = session.wrap_env(BareEnv(), env_actor="test_env")
+        self.assertEqual(env.reset(), ["a", "b"])
+        self.assertEqual(session.inspect("observation"), [])
+
+    def test_environment_observations_stay_hidden_from_peers(self):
+        from doagent.core import TopologyConfig, Topology
+        hidden = Session(
+            InMemorySharedData(),
+            topology=TopologyConfig(mode=Topology.PEER_TO_PEER),
+            visibility={"a": ["b"], "b": ["a"]},
+        )
+        hidden.wrap_env(StubEnv(["a", "b"]), env_actor="test_env").reset(seed=1)
+        self.assertEqual(hidden.visible_records("a", kind="observation"), [])
+        self.assertEqual(hidden.visible_records("b", kind="observation"), [])
+        self.assertEqual(len(hidden.inspect("observation")), 2)
+
+        visible = Session(
+            InMemorySharedData(),
+            topology=TopologyConfig(mode=Topology.PEER_TO_PEER),
+            visibility={"a": ["test_env"], "b": ["test_env"]},
+        )
+        visible.wrap_env(StubEnv(["a", "b"]), env_actor="test_env").reset(seed=1)
+        self.assertEqual(
+            [record.audience for record in visible.visible_records("a", kind="observation")],
+            [["a"]],
+        )
+        self.assertEqual(
+            [record.audience for record in visible.visible_records("b", kind="observation")],
+            [["b"]],
+        )
+
+    def test_decision_stays_private_and_message_is_public(self):
+        from doagent.core import PolicyRegistry, Topology, TopologyConfig
+        session = Session(
+            InMemorySharedData(),
+            topology=TopologyConfig(mode=Topology.PEER_TO_PEER),
+            visibility={"b": ["a"]},
+        )
+        env = session.wrap_env(StubEnv(["a", "b"]), env_actor="test_env")
+        env.reset(seed=1)
+        registry = PolicyRegistry()
+
+        def telling(params):
+            def decide(request):
+                return {
+                    "choice": {"status": "act", "action": 0},
+                    "reasoning": "secret",
+                    "message": {
+                        "text": "public",
+                        "reasoning": "secret",
+                        "inputs": {"all": True},
+                    },
+                    "recipients": ["b"],
+                }
+            return decide
+
+        registry.register("telling", telling)
+        agents = session.create_agents(
+            [{"id": "a", "policy": {"name": "telling", "params": {}}}],
+            registry,
+        )
+        agents["a"].decide({"pos": 1}, 1)
+
+        decisions_for_b = session.visible_records("b", kind="agent_update")
+        decisions_for_a = session.visible_records("a", kind="agent_update")
+        self.assertEqual(decisions_for_b, [])
+        self.assertEqual(len(decisions_for_a), 1)
+        self.assertIn("secret", str(decisions_for_a[0].payload))
+
+        messages_for_b = session.visible_records("b", kind="message")
+        self.assertEqual(len(messages_for_b), 1)
+        self.assertEqual(messages_for_b[0].payload["text"], "public")
+        self.assertNotIn("reasoning", messages_for_b[0].payload)
+        self.assertNotIn("inputs", messages_for_b[0].payload)
+        self.assertEqual(messages_for_b[0].audience, ["b"])
+
+    def test_store_input_records_shown_ids_and_keeps_an_explicit_override(self):
+        from doagent.core import PolicyRegistry
+        seen = []
+        session = Session(InMemorySharedData())
+        env = session.wrap_env(StubEnv(["a", "b"]), env_actor="test_env")
+        env.reset(seed=1)
+        registry = PolicyRegistry()
+
+        def capture(params):
+            def decide(request):
+                seen.append(request["inputs"])
+                return {
+                    "choice": {"status": "act", "action": 0},
+                    "provenance": {"derived_from": ["fake"]},
+                }
+            return decide
+
+        registry.register("capture", capture)
+        agents = session.create_agents(
+            [{"id": "a", "policy": {"name": "capture", "params": {}}}],
+            registry,
+        )
+        agents["a"].decide(round_id=1)
+        first = session.inspect("agent_update")[-1]
+        received_ids = [record["id"] for record in seen[0]["records"]]
+        self.assertEqual(first.provenance["derived_from"], received_ids)
+        self.assertNotIn("fake", first.provenance["derived_from"])
+        shown_audiences = [record["audience"] for record in seen[0]["records"]]
+        self.assertIn(["a"], shown_audiences)
+        self.assertNotIn(["b"], shown_audiences)
+
+        agents["a"].decide(round_id=2)
+        second = session.inspect("agent_update")[-1]
+        self.assertIn(first.id, second.provenance["derived_from"])
+
+        agents["a"].decide({"pos": 9}, 3)
+        overridden = session.inspect("agent_update")[-1]
+        self.assertNotIn("derived_from", overridden.provenance)
+        self.assertEqual(overridden.payload["local_knowledge"], {"observation": {"pos": 9}})
+
+    def test_store_input_omits_provenance_at_logging_level_zero(self):
+        from doagent.core import PolicyRegistry
+        session = Session(InMemorySharedData(), RunConfig(logging_level=0))
+        env = session.wrap_env(StubEnv(["a"]), env_actor="test_env")
+        env.reset(seed=1)
+        registry = PolicyRegistry()
+
+        def quiet(params):
+            def decide(request):
+                return {"choice": {"status": "act", "action": 0}}
+            return decide
+
+        registry.register("quiet", quiet)
+        agents = session.create_agents(
+            [{"id": "a", "policy": {"name": "quiet", "params": {}}}],
+            registry,
+        )
+        agents["a"].decide(round_id=1)
+        decision = session.inspect("agent_update")[-1]
+        self.assertEqual(decision.provenance, {})
+        self.assertEqual(decision.audience, ["a"])
+
+    def test_repeat_withholds_one_record_and_links_the_original(self):
+        from doagent.core import PolicyRegistry, new_record
+        session = Session(InMemorySharedData())
+        env = session.wrap_env(StubEnv(["a"]), env_actor="test_env")
+        env.reset(seed=1)
+        kept = new_record(
+            actor="a", kind="note", payload={"fact": "keep"}, record_id="keep-me",
+        )
+        session.shared_data.write(kept)
+        registry = PolicyRegistry()
+
+        def watching(params):
+            def decide(request):
+                ids = [record["id"] for record in request["inputs"]["records"]]
+                action = "yes" if "keep-me" in ids else "no"
+                others = [record_id for record_id in ids if record_id != "keep-me"]
+                return {"choice": {"action": action}, "others": others}
+            return decide
+
+        registry.register("watching", watching)
+        agents = session.create_agents(
+            [{"id": "a", "policy": {"name": "watching", "params": {}}}],
+            registry,
+        )
+        agents["a"].decide(round_id=1)
+        decision = session.inspect("agent_update")[-1]
+        self.assertIn("keep-me", decision.provenance["derived_from"])
+
+        repeat_ids = session.repeat_decision(
+            agents["a"], decision.id, withhold=["keep-me"], times=2,
+        )
+        repeats = [session.shared_data.read(record_id) for record_id in repeat_ids]
+        self.assertEqual(len(repeats), 4)
+        for repeat in repeats:
+            self.assertEqual(repeat.provenance["derived_from"], [decision.id])
+            self.assertEqual(repeat.payload["original_id"], decision.id)
+            self.assertEqual(repeat.audience, ["a"])
+        originals = [repeat for repeat in repeats if repeat.payload["variant"] == "original"]
+        changed = [repeat for repeat in repeats if repeat.payload["variant"] == "changed"]
+        self.assertEqual(len(originals), 2)
+        self.assertEqual(len(changed), 2)
+        self.assertTrue(all(
+            repeat.payload["response"]["choice"]["action"] == "yes" for repeat in originals
+        ))
+        self.assertTrue(all(
+            repeat.payload["response"]["choice"]["action"] == "no" for repeat in changed
+        ))
+        self.assertTrue(all("keep-me" not in repeat.payload["shown"] for repeat in changed))
+        self.assertTrue(all(
+            repeat.payload["response"]["others"]
+            for repeat in changed
+        ))
+        self.assertEqual(session.inspect("outcome"), [])
 
     def test_new_record_rejects_a_single_string_audience(self):
         from doagent.core import new_record

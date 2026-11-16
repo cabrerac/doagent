@@ -39,7 +39,7 @@ class HiddenProfileDoagentTests(unittest.TestCase):
             records = json.loads(result.records_path.read_text(encoding="utf-8"))
             self.assertTrue(result.records_path.is_file())
             self.assertFalse((Path(folder) / "scoring_sink.json").exists())
-        self.assertEqual(set(records), {"agent_update", "outcome", "trace"})
+        self.assertEqual(set(records), {"agent_update", "observation", "outcome", "trace"})
         self.assertGreater(len(records["outcome"]), 0)
         self.assertGreater(len(records["agent_update"]), 0)
         self.assertGreater(len(records["trace"]), 0)
@@ -70,6 +70,89 @@ class HiddenProfileDoagentTests(unittest.TestCase):
         cost = repeated_cost("D0", play, repeats=1)
         self.assertEqual(cost.tokens, 0)
         self.assertGreaterEqual(cost.seconds, 0.0)
+
+    def test_store_links_follow_the_logging_level(self) -> None:
+        """Level 1 and 2 name the records that were shown. Level 0 does not."""
+        from experiments.information_flow.hidden_profile.rules import run_episode
+
+        for seed in range(18):
+            direct = run_episode(seed)
+            for level in (0, 1, 2):
+                with tempfile.TemporaryDirectory() as folder:
+                    result = run_session(seed, logging_level=level, output_base=folder)
+                    records = json.loads(result.records_path.read_text(encoding="utf-8"))
+                self.assertEqual(result.rules.episode(), direct)
+                decisions = records["agent_update"]
+                self.assertGreater(len(decisions), 0)
+                if level == 0:
+                    self.assertTrue(all(not decision["provenance"] for decision in decisions))
+                else:
+                    self.assertTrue(all(
+                        decision["provenance"].get("derived_from") for decision in decisions
+                    ))
+
+    def test_withholding_the_observation_stops_the_scripted_choice(self) -> None:
+        """Removing the shown observation record stops the scripted disclosure."""
+        from doagent.core import (
+            InMemorySharedData,
+            PolicyRegistry,
+            RunConfig,
+            Session,
+            Topology,
+            TopologyConfig,
+        )
+        from experiments.information_flow.hidden_profile.policies import scripted_policy
+        from experiments.information_flow.hidden_profile.rules import HiddenProfileRules
+
+        rules = HiddenProfileRules()
+        session = Session(
+            InMemorySharedData(),
+            RunConfig(logging_level=1),
+            topology=TopologyConfig(mode=Topology.PEER_TO_PEER),
+            visibility={
+                agent_id: ["hidden_profile_env"] for agent_id in rules.agents
+            },
+        )
+        registry = PolicyRegistry()
+        for agent_id in rules.agents:
+            policy = scripted_policy(agent_id)
+
+            def factory(params, policy=policy):
+                del params
+                return policy
+
+            registry.register(agent_id, factory)
+        env = session.wrap_env(rules, env_actor="hidden_profile_env")
+        agents = session.create_agents(
+            [
+                {"id": agent_id, "policy": {"name": agent_id, "params": {}}}
+                for agent_id in rules.agents
+            ],
+            registry,
+        )
+        env.reset(seed=0)
+        agent_id = rules.agents[0]
+        agents[agent_id].decide(round_id=1)
+        decision = [
+            record for record in session.inspect("agent_update") if record.actor == agent_id
+        ][-1]
+        observation_ids = [
+            record_id
+            for record_id in decision.provenance["derived_from"]
+            if session.shared_data.read(record_id).kind == "observation"
+        ]
+        self.assertTrue(observation_ids)
+        with self.assertRaises(ValueError):
+            session.repeat_decision(
+                agents[agent_id],
+                decision.id,
+                withhold=observation_ids,
+                times=1,
+            )
+        stored = session.inspect("decision_repeat")
+        self.assertEqual(len(stored), 1)
+        self.assertEqual(stored[0].payload["variant"], "original")
+        self.assertEqual(stored[0].provenance["derived_from"], [decision.id])
 
 
 if __name__ == "__main__":

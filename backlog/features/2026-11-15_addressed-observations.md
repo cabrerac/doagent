@@ -1,7 +1,7 @@
 ---
 id: "2026-11-15_addressed-observations"
 title: "Write one addressed record per private observation"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-11-15"
 last_updated: "2026-11-15"
@@ -27,11 +27,11 @@ A combined outcome that holds every agent's observation may stay for current rea
 
 ## Acceptance Criteria
 
-- [ ] Reset writes one record per private item before any decision.
-- [ ] Step writes one observation record per agent, addressed to that agent.
-- [ ] An agent cannot read another agent's private observation record.
-- [ ] The combined outcome remains available to existing readers.
-- [ ] Tests cover a reset and a step with at least two agents.
+- [x] Reset writes one record per private item before any decision.
+- [x] Step writes one observation record per agent, addressed to that agent.
+- [x] An agent cannot read another agent's private observation record.
+- [x] The combined outcome remains available to existing readers.
+- [x] Tests cover a reset and a step with at least two agents.
 
 ## Implementation Notes
 
@@ -53,3 +53,14 @@ An observation written by the environment stays hidden from an agent that cannot
 Task created from the accepted CIP-0016.
 Not started.
 The audience filter it depends on is complete.
+
+### 2026-11-15
+
+Completed.
+`RecordWriter.on_addressed_observations` writes one record of kind "observation" per agent.
+`WrappedEnv.reset` calls it with round 0.
+`WrappedEnv.step` calls it with the step round, then still writes the combined outcome.
+The environment is the author and the audience is that one agent.
+A reset that does not return a dict writes no observation records.
+In a peer-to-peer setup the records stay hidden unless the environment is already a visible author.
+Four tests were added in `tests/test_session.py`.
